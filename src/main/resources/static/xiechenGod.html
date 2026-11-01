@@ -1,0 +1,3304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>解尘颐安管理后台</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="js/image-compressor.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4361EE;
+            --primary-dark: #3a56d4;
+            --primary-light: #6366f1;
+            --deep-blue: #1e3a8a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --bg-card: rgba(255, 255, 255, 0.6);
+            --bg-hover: rgba(255, 255, 255, 0.8);
+            --border: rgba(67, 97, 238, 0.2);
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #E0EAFC 0%, #CFDEF3 50%, #E0EAFC 100%);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 2px 2px, rgba(67, 97, 238, 0.08) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .header-logo img {
+            height: 40px;
+            width: auto;
+        }
+
+        .header-logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--deep-blue), var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, var(--deep-blue), var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-badge {
+            background: rgba(67, 97, 238, 0.1);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary);
+            border: 1px solid rgba(67, 97, 238, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            border-right: 1px solid var(--glass-border);
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            color: var(--text-light);
+        }
+
+        .nav-item:hover {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--text-dark);
+        }
+
+        .nav-item.active {
+            background: rgba(67, 97, 238, 0.15);
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--deep-blue);
+        }
+
+        .page-desc {
+            color: var(--text-light);
+        }
+
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1.5px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 40px rgba(67, 97, 238, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(67, 97, 238, 0.1);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--deep-blue);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-dark);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-dark);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .config-item {
+            background: rgba(255, 255, 255, 0.4);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .config-item label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .config-item input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1.5px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(67, 97, 238, 0.15);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .file-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .ring-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .ring-card {
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .ring-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .ring-name {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-dark);
+        }
+
+        .ring-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .ring-status.enabled {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .ring-status.disabled {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .ring-player {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+        }
+
+        .play-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        .ring-info {
+            flex: 1;
+        }
+
+        .ring-current {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .ring-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 16px;
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(67, 97, 238, 0.15);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            color: var(--text-light);
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(67, 97, 238, 0.1);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(120%);
+            transition: transform 0.3s;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, var(--success), #059669);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+        }
+
+        .toast.warning {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(30, 58, 138, 0.3);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            border: 1.5px solid var(--glass-border);
+            box-shadow: 0 25px 50px rgba(67, 97, 238, 0.15);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--deep-blue);
+        }
+
+        .modal-body {
+            margin-bottom: 24px;
+            color: var(--text-light);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid var(--border);
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, var(--success), #059669);
+            border-color: var(--success);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active::after {
+            left: 32px;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .toggle-label span {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table th,
+        .user-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(67, 97, 238, 0.1);
+        }
+
+        .user-table th {
+            background: rgba(67, 97, 238, 0.05);
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 13px;
+        }
+
+        .user-table td {
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        .user-table tr:hover td {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .role-badge.older {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .role-badge.younger {
+            background: rgba(67, 97, 238, 0.2);
+            color: var(--primary);
+        }
+
+        .role-badge.admin {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .role-badge.USER {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-light);
+        }
+
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-wrapper .form-input {
+            padding-right: 45px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 16px;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main-container {
+                flex-direction: column;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .ring-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="about.html" class="header-logo">
+            <img src="/images/logo/logo-xiechen.png" alt="望山遥" onerror="this.style.display='none'">
+            <span class="header-logo-text">管理后台</span>
+        </a>
+        <div class="header-info">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span>系统运行中</span>
+            </div>
+            <div class="status-badge" id="storageStatus">
+                <span class="status-dot"></span>
+                <span>本地存储</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <nav class="sidebar">
+            <div class="nav-item active" data-page="users">
+                <span>👥</span>
+                <span>账号管理</span>
+            </div>
+            <div class="nav-item" data-page="settings">
+                <span>⚙️</span>
+                <span>系统设置</span>
+            </div>
+            <div class="nav-item" data-page="qiniu">
+                <span>📁</span>
+                <span>存储管理</span>
+            </div>
+            <div class="nav-item" data-page="ringtones">
+                <span>🔔</span>
+                <span>铃声管理</span>
+            </div>
+            <div class="nav-item" data-page="logs">
+                <span>📋</span>
+                <span>操作日志</span>
+            </div>
+            <div class="nav-item" data-page="resources">
+                <span>🎨</span>
+                <span>资源配置</span>
+            </div>
+            <div class="nav-item" data-page="crawler">
+                <span>🕷️</span>
+                <span>新闻爬虫</span>
+            </div>
+            <div class="nav-item" data-page="resume">
+                <span>📄</span>
+                <span>简历配置</span>
+            </div>
+        </nav>
+
+        <main class="content">
+            <div id="page-users" class="page active">
+                <div class="page-header">
+                    <h2 class="page-title">账号管理</h2>
+                    <p class="page-desc">管理系统用户账号，支持增删改查</p>
+                </div>
+
+                <div class="stats-grid" id="userStats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalUsers">-</div>
+                        <div class="stat-label">用户总数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="elderCount">-</div>
+                        <div class="stat-label">older (长辈)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="familyCount">-</div>
+                        <div class="stat-label">younger (子女)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="adminCount">-</div>
+                        <div class="stat-label">admin (管理员)</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">👤 用户列表</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="form-input" id="userSearchInput" placeholder="搜索用户..." style="width: 200px;">
+                            <button class="btn btn-primary" onclick="showAddUserModal()">➕ 添加用户</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="user-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>用户名</th>
+                                    <th>密码</th>
+                                    <th>昵称</th>
+                                    <th>角色</th>
+                                    <th>姓名</th>
+                                    <th>性别</th>
+                                    <th>年龄</th>
+                                    <th>电话</th>
+                                    <th>社区/小区</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <tr>
+                                    <td colspan="11" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                        加载中...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-settings" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">系统设置</h2>
+                    <p class="page-desc">配置系统参数和功能开关</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔐 注册设置</h3>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--bg-dark); border-radius: 12px;">
+                        <div class="toggle-label">
+                            <span style="font-size: 20px;">📝</span>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 4px;">开放注册</div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">开启后允许新用户注册账号</div>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" id="registrationToggle" onclick="toggleRegistration()"></div>
+                    </div>
+                    <div style="margin-top: 16px; font-size: 13px; color: var(--text-secondary);">
+                        当前状态：<span id="registrationStatus" style="font-weight: 600;">加载中...</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎙️ 百度语音功能</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--bg-dark); border-radius: 12px;">
+                            <div class="toggle-label">
+                                <span style="font-size: 20px;">🔊</span>
+                                <div>
+                                    <div style="font-weight: 600; margin-bottom: 4px;">语音合成 (TTS)</div>
+                                    <div style="font-size: 13px; color: var(--text-secondary);">开启后可将文字转换为语音播报</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch" id="ttsToggle" onclick="toggleTts()"></div>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--bg-dark); border-radius: 12px;">
+                            <div class="toggle-label">
+                                <span style="font-size: 20px;">🎤</span>
+                                <div>
+                                    <div style="font-weight: 600; margin-bottom: 4px;">语音识别 (ASR)</div>
+                                    <div style="font-size: 13px; color: var(--text-secondary);">开启后可将语音转换为文字</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch" id="asrToggle" onclick="toggleAsr()"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; font-size: 13px; color: var(--text-secondary);">
+                        <div>语音合成状态：<span id="ttsStatus" style="font-weight: 600;">加载中...</span></div>
+                        <div style="margin-top: 4px;">语音识别状态：<span id="asrStatus" style="font-weight: 600;">加载中...</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔑 七牛云配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Access Key</label>
+                            <input type="text" id="configAk" placeholder="请输入 Access Key">
+                        </div>
+                        <div class="config-item">
+                            <label>Secret Key</label>
+                            <input type="password" id="configSk" placeholder="请输入 Secret Key">
+                        </div>
+                        <div class="config-item">
+                            <label>Bucket 名称</label>
+                            <input type="text" id="configBucket" value="chat2621" placeholder="请输入 Bucket 名称">
+                        </div>
+                        <div class="config-item">
+                            <label>访问域名</label>
+                            <input type="text" id="configDomain" value="http://t9se9imi4.hn-bkt.clouddn.com/" placeholder="请输入访问域名">
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="saveConfig()">💾 保存配置</button>
+                        <button class="btn btn-outline" onclick="testConnection()">🔗 测试连接</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔔 铃声文件配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>紧急呼叫铃声URL</label>
+                            <input type="text" id="configEmergency" placeholder="紧急呼叫铃声URL">
+                        </div>
+                        <div class="config-item">
+                            <label>Ring铃声URL</label>
+                            <input type="text" id="configRing" placeholder="Ring铃声URL">
+                        </div>
+                        <div class="config-item">
+                            <label>Call铃声URL</label>
+                            <input type="text" id="configCall" placeholder="Call铃声URL">
+                        </div>
+                        <div class="config-item">
+                            <label>申请好友铃声URL</label>
+                            <input type="text" id="configFriend" placeholder="申请好友铃声URL">
+                        </div>
+                        <div class="config-item">
+                            <label>消息通知铃声URL</label>
+                            <input type="text" id="configMessage" placeholder="消息通知铃声URL">
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-primary" onclick="saveRingConfig()">💾 保存铃声配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-qiniu" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">本地存储管理</h2>
+                    <p class="page-desc">管理服务器本地存储的文件，支持上传、删除和预览</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalFiles">-</div>
+                        <div class="stat-label">文件总数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalSize">-</div>
+                        <div class="stat-label">存储空间</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todayUpload">-</div>
+                        <div class="stat-label">今日上传</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">/uploads</div>
+                        <div class="stat-label">存储路径</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📤 文件上传</h3>
+                    </div>
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">点击或拖拽文件到此处上传</div>
+                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">支持图片、视频、音频等格式，最大50MB</div>
+                    </div>
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                    <div class="progress-bar" id="uploadProgress" style="display: none;">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📂 文件列表</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="form-input" id="searchInput" placeholder="搜索文件..." style="width: 200px;">
+                            <button class="btn btn-outline" onclick="refreshFileList()">🔄 刷新</button>
+                        </div>
+                    </div>
+                    <div class="file-list" id="fileList">
+                        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            点击刷新加载文件列表
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-ringtones" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">铃声管理</h2>
+                    <p class="page-desc">管理系统各类铃声，支持上传、预览、替换和启用/禁用</p>
+                </div>
+
+                <div class="ring-grid" id="ringGrid">
+                </div>
+            </div>
+
+            <div id="page-logs" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">操作日志</h2>
+                    <p class="page-desc">查看系统操作记录，支持分页和筛选</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🔍 筛选条件</h3>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 14px; color: var(--text-secondary); min-width: 60px;">日志类型</label>
+                            <select id="logTypeFilter" class="form-input" style="width: 150px;" onchange="loadLogs()">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 14px; color: var(--text-secondary); min-width: 60px;">开始日期</label>
+                            <input type="date" id="logStartDate" class="form-input" style="width: 150px;" onchange="loadLogs()">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 14px; color: var(--text-secondary); min-width: 60px;">结束日期</label>
+                            <input type="date" id="logEndDate" class="form-input" style="width: 150px;" onchange="loadLogs()">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 14px; color: var(--text-secondary); min-width: 60px;">关键词</label>
+                            <input type="text" id="logKeyword" class="form-input" style="width: 150px;" placeholder="搜索..." onkeypress="if(event.key==='Enter')loadLogs()">
+                        </div>
+                        <button class="btn btn-primary" onclick="loadLogs()">🔍 查询</button>
+                        <button class="btn btn-outline" onclick="resetLogFilters()">🔄 重置</button>
+                        <button class="btn btn-outline" style="margin-left: auto;" onclick="clearLogs()">🗑️ 清空日志</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 操作记录</h3>
+                        <span id="logTotalCount" style="font-size: 14px; color: var(--text-secondary);">共 0 条</span>
+                    </div>
+                    <div id="logList" style="max-height: 500px; overflow-y: auto;">
+                        <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            暂无日志记录
+                        </div>
+                    </div>
+                    <div id="logPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px; border-top: 1px solid var(--border-color);">
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-resources" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">资源配置</h2>
+                    <p class="page-desc">配置 about.html 页面的背景视频、图片、图标等资源</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎬 Hero 区域配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>背景视频URL (MP4)</label>
+                            <input type="text" id="configHeroVideo" placeholder="视频链接">
+                        </div>
+                        <div class="config-item">
+                            <label>背景图片URL (备用)</label>
+                            <input type="text" id="configHeroImage" placeholder="图片链接">
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <button class="btn btn-outline btn-sm" onclick="uploadHeroVideo()">📤 上传视频</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadHeroImage()">📤 上传图片</button>
+                    </div>
+                    <input type="file" id="heroVideoInput" accept="video/*" style="display: none;">
+                    <input type="file" id="heroImageInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🖼️ Logo 配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>导航栏Logo</label>
+                            <input type="text" id="configLogoNav" placeholder="Logo图片URL">
+                        </div>
+                        <div class="config-item">
+                            <label>页脚Logo</label>
+                            <input type="text" id="configLogoFooter" placeholder="Logo图片URL">
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <button class="btn btn-outline btn-sm" onclick="uploadLogoNav()">📤 上传Logo</button>
+                    </div>
+                    <input type="file" id="logoNavInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">👤 头像配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>长辈头像</label>
+                            <input type="text" id="configAvatarElder" placeholder="长辈头像URL">
+                        </div>
+                        <div class="config-item">
+                            <label>子女头像</label>
+                            <input type="text" id="configAvatarFamily" placeholder="子女头像URL">
+                        </div>
+                        <div class="config-item">
+                            <label>管理员头像</label>
+                            <input type="text" id="configAvatarAdmin" placeholder="管理员头像URL">
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <button class="btn btn-outline btn-sm" onclick="uploadAvatar('elder')">📤 上传长辈头像</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadAvatar('family')">📤 上传子女头像</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadAvatar('admin')">📤 上传管理员头像</button>
+                    </div>
+                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 功能图标配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>健康监测图标</label>
+                            <input type="text" id="configIconHealth" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>用药管理图标</label>
+                            <input type="text" id="configIconMedicine" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>紧急呼叫图标</label>
+                            <input type="text" id="configIconEmergency" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>视频通话图标</label>
+                            <input type="text" id="configIconVideo" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>新闻资讯图标</label>
+                            <input type="text" id="configIconNews" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>AI助手图标</label>
+                            <input type="text" id="configIconAi" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>社交互动图标</label>
+                            <input type="text" id="configIconSocial" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>系统管理图标</label>
+                            <input type="text" id="configIconSystem" placeholder="图标URL">
+                        </div>
+                        <div class="config-item">
+                            <label>消息通知图标</label>
+                            <input type="text" id="configIconNotification" placeholder="图标URL">
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('health')">📤 健康</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('medicine')">📤 用药</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('emergency')">📤 紧急</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('video')">📤 视频</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('news')">📤 新闻</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('ai')">📤 AI</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('social')">📤 社交</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('system')">📤 系统</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadIcon('notification')">📤 通知</button>
+                    </div>
+                    <input type="file" id="iconInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📅 时间线图片配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>V1.0 图片</label>
+                            <input type="text" id="configTimelineV1" placeholder="图片URL">
+                        </div>
+                        <div class="config-item">
+                            <label>V2.0 图片</label>
+                            <input type="text" id="configTimelineV2" placeholder="图片URL">
+                        </div>
+                        <div class="config-item">
+                            <label>V3.0 图片</label>
+                            <input type="text" id="configTimelineV3" placeholder="图片URL">
+                        </div>
+                        <div class="config-item">
+                            <label>V4.0 图片</label>
+                            <input type="text" id="configTimelineV4" placeholder="图片URL">
+                        </div>
+                        <div class="config-item">
+                            <label>未来图片</label>
+                            <input type="text" id="configTimelineFuture" placeholder="图片URL">
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <button class="btn btn-outline btn-sm" onclick="uploadTimeline('v1')">📤 V1.0</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadTimeline('v2')">📤 V2.0</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadTimeline('v3')">📤 V3.0</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadTimeline('v4')">📤 V4.0</button>
+                        <button class="btn btn-outline btn-sm" onclick="uploadTimeline('future')">📤 未来</button>
+                    </div>
+                    <input type="file" id="timelineInput" accept="image/*" style="display: none;">
+                </div>
+
+                <div style="margin-top: 24px;">
+                    <button class="btn btn-primary" onclick="saveResourcesConfig()">💾 保存所有配置</button>
+                    <button class="btn btn-outline" onclick="loadResourcesConfig()">🔄 刷新配置</button>
+                </div>
+            </div>
+
+            <div id="page-crawler" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">新闻爬虫管理</h2>
+                    <p class="page-desc">管理新闻爬虫任务，支持手动触发和状态监控</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="crawlerEnabled">-</div>
+                        <div class="stat-label">爬虫状态</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="crawlerRunning">-</div>
+                        <div class="stat-label">运行状态</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="crawlerDelay">-</div>
+                        <div class="stat-label">请求间隔(秒)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="crawlerMaxRequests">-</div>
+                        <div class="stat-label">最大请求数</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🕷️ 爬虫控制</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(67, 97, 238, 0.05); border-radius: 12px;">
+                            <div class="toggle-label">
+                                <span style="font-size: 20px;">🔄</span>
+                                <div>
+                                    <div style="font-weight: 600; margin-bottom: 4px;">爬虫功能开关</div>
+                                    <div style="font-size: 13px; color: var(--text-secondary);">开启后定时任务将自动执行爬虫</div>
+                                </div>
+                            </div>
+                            <div class="toggle-switch" id="crawlerToggle" onclick="toggleCrawler()"></div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" id="triggerCrawlBtn" onclick="triggerCrawl()">
+                                🚀 手动触发爬虫
+                            </button>
+                            <button class="btn btn-outline" onclick="refreshCrawlerStatus()">
+                                🔄 刷新状态
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📊 爬虫配置</h3>
+                    </div>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>请求间隔 (毫秒)</label>
+                            <input type="number" id="configCrawlerDelay" value="20000" placeholder="请求间隔">
+                        </div>
+                        <div class="config-item">
+                            <label>最大请求数</label>
+                            <input type="number" id="configCrawlerMaxRequests" value="30" placeholder="最大请求数">
+                        </div>
+                        <div class="config-item">
+                            <label>单源最大文章数</label>
+                            <input type="number" id="configCrawlerMaxArticles" value="2" placeholder="单源最大文章数" disabled>
+                        </div>
+                        <div class="config-item">
+                            <label>最大线程数</label>
+                            <input type="number" id="configCrawlerMaxThreads" value="1" placeholder="最大线程数" disabled>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; font-size: 13px; color: var(--text-secondary);">
+                        ⚠️ 注意：爬虫配置修改后需要重启服务才能生效。建议请求间隔设置为 15-30 秒，避免对目标网站造成压力。
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">⏰ 定时任务配置</h3>
+                    </div>
+                    <div style="font-size: 14px; color: var(--text-dark);">
+                        <div style="margin-bottom: 12px;">系统已配置以下定时爬虫任务：</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            <span style="padding: 6px 12px; background: rgba(67, 97, 238, 0.1); border-radius: 6px;">23:00</span>
+                            <span style="padding: 6px 12px; background: rgba(67, 97, 238, 0.1); border-radius: 6px;">00:00</span>
+                            <span style="padding: 6px 12px; background: rgba(67, 97, 238, 0.1); border-radius: 6px;">03:00</span>
+                            <span style="padding: 6px 12px; background: rgba(67, 97, 238, 0.1); border-radius: 6px;">04:00</span>
+                        </div>
+                        <div style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+                            定时任务仅在时间窗口内执行（23:00-01:00 或 03:00-05:00），手动触发不受时间限制。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📝 爬虫日志</h3>
+                    </div>
+                    <div id="crawlerLogList" style="max-height: 300px; overflow-y: auto; font-size: 13px;">
+                        <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                            暂无爬虫日志
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-resume" class="page">
+                <div class="page-header">
+                    <h2 class="page-title">简历配置</h2>
+                    <p class="page-desc">配置个人简历页面的头像和昵称（仅在管理后台可修改）</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">👤 个人信息配置</h3>
+                    </div>
+                    <div style="display: flex; gap: 40px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 300px;">
+                            <div class="form-group">
+                                <label class="form-label">昵称</label>
+                                <input type="text" class="form-input" id="resumeNickname" placeholder="请输入昵称" maxlength="20" oninput="updateResumePreview()">
+                                <div style="font-size: 12px; color: var(--text-light); margin-top: 6px;">显示在简历页面的名称，建议使用英文大写</div>
+                            </div>
+                            <div style="margin-top: 20px;">
+                                <button class="btn btn-primary" onclick="saveResumeConfig()">💾 保存配置</button>
+                                <button class="btn btn-outline" onclick="loadResumeConfig()">🔄 刷新</button>
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 300px;">
+                            <div class="form-group">
+                                <label class="form-label">头像</label>
+                                <div style="display: flex; align-items: flex-start; gap: 20px;">
+                                    <div style="width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(99, 102, 241, 0.1)); border: 4px solid var(--primary); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                        <img id="resumeAvatarPreview" src="" alt="头像预览" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                        <div id="resumeAvatarPlaceholder" style="display: flex; flex-direction: column; align-items: center; color: var(--primary);">
+                                            <i class="fa fa-user" style="font-size: 42px;"></i>
+                                            <span style="font-size: 11px; margin-top: 6px;">暂无头像</span>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <input type="text" class="form-input" id="resumeAvatarUrl" placeholder="头像图片URL" style="margin-bottom: 12px;" oninput="updateResumePreview()">
+                                        <button class="btn btn-outline" onclick="uploadResumeAvatar()">📤 上传头像</button>
+                                        <div style="font-size: 12px; color: var(--text-light); margin-top: 8px;">支持 JPG、PNG 格式，建议尺寸 200x200 像素</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="file" id="resumeAvatarInput" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 预览效果</h3>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #E0EAFC 0%, #CFDEF3 100%); border-radius: 16px; padding: 30px; text-align: center;">
+                        <div style="display: inline-flex; align-items: center; gap: 24px; background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(25px); border-radius: 30px; padding: 30px 40px; border: 1.5px solid rgba(255, 255, 255, 0.7);">
+                            <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(99, 102, 241, 0.1)); border: 4px solid var(--primary); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img id="previewAvatarImg" src="" alt="预览头像" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                <i class="fa fa-user" id="previewAvatarIcon" style="font-size: 36px; color: var(--primary);"></i>
+                            </div>
+                            <div style="text-align: left;">
+                                <h2 id="previewNickname" style="font-size: 36px; font-weight: 900; background: linear-gradient(135deg, #1e3a8a, #4361EE); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">望山遥</h2>
+                                <p style="color: var(--primary); font-weight: 600; margin-top: 8px;">求职意向：Java工程师 / 全栈开发工程师</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; text-align: center;">
+                        <a href="resume.html" target="_blank" class="btn btn-primary">🔗 查看简历页面</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div>© 2026 解尘颐安智慧养老系统 - 超级管理后台</div>
+        <div id="currentTime"></div>
+    </footer>
+
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle">确认操作</div>
+            <div class="modal-body" id="modalBody">确定要执行此操作吗？</div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-danger" id="modalConfirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="userModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header" id="userModalTitle">添加用户</div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <input type="hidden" id="editUserId">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">用户名 *</label>
+                        <input type="text" class="form-input" id="userUsername" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">密码 *</label>
+                        <input type="text" class="form-input" id="userPassword" placeholder="留空则不修改">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">昵称</label>
+                        <input type="text" class="form-input" id="userNickname" placeholder="请输入昵称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">角色</label>
+                        <select class="form-select" id="userRole">
+                            <option value="older">older (长辈)</option>
+                            <option value="younger">younger (子女)</option>
+                            <option value="admin">admin (管理员)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">头像URL</label>
+                        <input type="text" class="form-input" id="userAvatar" placeholder="头像图片URL">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">真实姓名</label>
+                        <input type="text" class="form-input" id="userRealName" placeholder="请输入真实姓名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">性别</label>
+                        <select class="form-select" id="userGender">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">年龄</label>
+                        <input type="number" class="form-input" id="userAge" placeholder="请输入年龄" min="0" max="150">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">联系电话</label>
+                        <input type="text" class="form-input" id="userPhone" placeholder="请输入联系电话">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">详细地址</label>
+                        <input type="text" class="form-input" id="userAddress" placeholder="如：3号楼102">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">所属社区</label>
+                        <select class="form-select" id="userCommunity" onchange="onCommunityChange()">
+                            <option value="">请选择社区</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">小区/具体地点</label>
+                        <select class="form-select" id="userNeighborhood">
+                            <option value="">请选择小区</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label class="form-label">病史备注</label>
+                    <textarea class="form-input" id="userHistory" placeholder="请输入病史备注" style="min-height: 80px; resize: vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeUserModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveUser()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const RING_TYPES = [
+            { id: 'emergency', name: '紧急呼叫铃声', icon: '🚨', desc: '紧急呼叫时播放' },
+            { id: 'ring', name: 'Ring铃声', icon: '📞', desc: '来电响铃时播放' },
+            { id: 'call', name: 'Call铃声', icon: '📱', desc: '通话呼叫时播放' },
+            { id: 'friend', name: '申请好友铃声', icon: '👋', desc: '收到好友申请时播放' },
+            { id: 'message', name: '消息通知铃声', icon: '💬', desc: '收到新消息时播放' }
+        ];
+
+        let config = {
+            storageType: 'local',
+            ringtones: {}
+        };
+
+        let logs = [];
+        let logPagination = {
+            page: 1,
+            pageSize: 20,
+            total: 0,
+            pages: 0
+        };
+        let users = [];
+        let communities = [];
+        let neighborhoods = [];
+        let registrationEnabled = true;
+        let ttsEnabled = true;
+        let asrEnabled = true;
+
+        function init() {
+            loadConfig();
+            initNavigation();
+            initUpload();
+            initRingtonesTable().then(() => {
+                loadServerRingtones().then(() => {
+                    renderRingtones();
+                });
+            });
+            loadLogs();
+            loadLogTypes();
+            loadUserStats();
+            loadUsers();
+            loadCommunities();
+            loadRegistrationStatus();
+            loadTtsStatus();
+            loadAsrStatus();
+            loadCrawlerStatus();
+            loadResumeConfig();
+            updateTime();
+            setInterval(updateTime, 1000);
+            setInterval(refreshCrawlerStatus, 5000);
+        }
+
+        async function loadUserStats() {
+            try {
+                const res = await fetch('/api/admin/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+                        document.getElementById('elderCount').textContent = data.elderCount || 0;
+                        document.getElementById('familyCount').textContent = data.familyCount || 0;
+                        document.getElementById('adminCount').textContent = data.adminCount || 0;
+                    }
+                }
+            } catch (err) {
+                console.error('加载统计失败:', err);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users/full');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        users = data.items || [];
+                        renderUsers();
+                    }
+                }
+            } catch (err) {
+                console.error('加载用户失败:', err);
+            }
+        }
+
+        async function loadCommunities() {
+            try {
+                const res = await fetch('/api/admin/communities');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        communities = data.communities || [];
+                        neighborhoods = data.neighborhoods || [];
+                        renderCommunitySelect();
+                    }
+                }
+            } catch (err) {
+                console.error('加载社区数据失败:', err);
+            }
+        }
+
+        function renderCommunitySelect() {
+            const select = document.getElementById('userCommunity');
+            select.innerHTML = '<option value="">请选择社区</option>' +
+                communities.map(c => `<option value="${c.id}">${c.communityName}</option>`).join('');
+        }
+
+        function onCommunityChange() {
+            const communityId = document.getElementById('userCommunity').value;
+            const neighborhoodSelect = document.getElementById('userNeighborhood');
+            const filteredNeighborhoods = neighborhoods.filter(n => n.community_id == communityId);
+            neighborhoodSelect.innerHTML = '<option value="">请选择小区</option>' +
+                filteredNeighborhoods.map(n => `<option value="${n.id}">${n.neighborhoodName}</option>`).join('');
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('userTableBody');
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 40px; color: var(--text-secondary);">暂无用户</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.id}</td>
+                    <td>${user.username || '-'}</td>
+                    <td style="font-family: monospace; font-size: 12px;">${user.password || '-'}</td>
+                    <td>${user.nickname || '-'}</td>
+                    <td><span class="role-badge ${user.role}">${getRoleName(user.role)}</span></td>
+                    <td>${user.real_name || '-'}</td>
+                    <td>${user.gender || '-'}</td>
+                    <td>${user.age || '-'}</td>
+                    <td>${user.user_phone || '-'}</td>
+                    <td>${user.community_name || '-'} ${user.neighborhood_name ? '/ ' + user.neighborhood_name : ''}</td>
+                    <td>
+                        <div class="file-actions">
+                            <button class="btn btn-outline btn-sm" onclick="editUser(${user.id})">✏️ 编辑</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">🗑️ 删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getRoleName(role) {
+            const roles = {
+                'older': 'older (长辈)',
+                'younger': 'younger (子女)',
+                'admin': 'admin (管理员)',
+                'USER': '普通用户'
+            };
+            return roles[role] || role;
+        }
+
+        let passwordVisible = true;
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('userPassword');
+            const toggleIcon = document.getElementById('passwordToggleIcon');
+            
+            passwordVisible = !passwordVisible;
+            
+            if (passwordVisible) {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fa fa-eye';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fa fa-eye-slash';
+            }
+        }
+
+        function showAddUserModal() {
+            document.getElementById('userModalTitle').textContent = '添加用户';
+            document.getElementById('editUserId').value = '';
+            document.getElementById('userUsername').value = '';
+            document.getElementById('userUsername').disabled = false;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userPassword').placeholder = '请输入密码（默认123456）';
+            document.getElementById('userNickname').value = '';
+            document.getElementById('userRole').value = 'older';
+            document.getElementById('userAvatar').value = '';
+            document.getElementById('userRealName').value = '';
+            document.getElementById('userGender').value = '男';
+            document.getElementById('userAge').value = '';
+            document.getElementById('userPhone').value = '';
+            document.getElementById('userAddress').value = '';
+            document.getElementById('userCommunity').value = '';
+            document.getElementById('userNeighborhood').innerHTML = '<option value="">请选择小区</option>';
+            document.getElementById('userHistory').value = '';
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        async function editUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+
+            document.getElementById('userModalTitle').textContent = '编辑用户';
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('userUsername').value = user.username;
+            document.getElementById('userUsername').disabled = true;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userPassword').placeholder = '留空则不修改密码';
+            document.getElementById('userNickname').value = user.nickname || '';
+            document.getElementById('userRole').value = user.role || 'older';
+            document.getElementById('userAvatar').value = user.avatar || '';
+            document.getElementById('userRealName').value = user.real_name || '';
+            document.getElementById('userGender').value = user.gender || '男';
+            document.getElementById('userAge').value = user.age || '';
+            document.getElementById('userPhone').value = user.user_phone || '';
+            document.getElementById('userAddress').value = user.address_detail || '';
+            
+            if (user.community_id) {
+                document.getElementById('userCommunity').value = user.community_id;
+                onCommunityChange();
+                if (user.neighborhood_id) {
+                    document.getElementById('userNeighborhood').value = user.neighborhood_id;
+                }
+            } else {
+                document.getElementById('userCommunity').value = '';
+                document.getElementById('userNeighborhood').innerHTML = '<option value="">请选择小区</option>';
+            }
+            
+            document.getElementById('userHistory').value = user.custom_history || '';
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('show');
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('editUserId').value;
+            const username = document.getElementById('userUsername').value.trim();
+            const nickname = document.getElementById('userNickname').value.trim();
+            const password = document.getElementById('userPassword').value.trim();
+            const role = document.getElementById('userRole').value;
+            const avatar = document.getElementById('userAvatar').value.trim();
+            const realName = document.getElementById('userRealName').value.trim();
+            const gender = document.getElementById('userGender').value;
+            const age = document.getElementById('userAge').value;
+            const userPhone = document.getElementById('userPhone').value.trim();
+            const userAddress = document.getElementById('userAddress').value.trim();
+            const neighborhoodId = document.getElementById('userNeighborhood').value;
+            const userHistory = document.getElementById('userHistory').value.trim();
+
+            if (!username) {
+                showToast('请输入用户名', 'error');
+                return;
+            }
+
+            try {
+                let res;
+                const userData = {
+                    username,
+                    nickname,
+                    password,
+                    role,
+                    avatar,
+                    real_name: realName,
+                    gender,
+                    age: age ? parseInt(age) : null,
+                    user_phone: userPhone,
+                    address_detail: userAddress,
+                    neighborhood_id: neighborhoodId ? parseInt(neighborhoodId) : null,
+                    custom_history: userHistory
+                };
+
+                if (id) {
+                    res = await fetch(`/api/admin/users/${id}/full`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(userData)
+                    });
+                } else {
+                    res = await fetch('/api/admin/users/full', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(userData)
+                    });
+                }
+
+                const data = await res.json();
+                if (data.success) {
+                    showToast(id ? '用户更新成功' : '用户创建成功', 'success');
+                    closeUserModal();
+                    loadUsers();
+                    loadUserStats();
+                    addLog('账号管理', id ? `更新用户: ${username}` : `创建用户: ${username}`);
+                } else {
+                    showToast(data.message || '操作失败', 'error');
+                }
+            } catch (err) {
+                showToast('操作失败: ' + err.message, 'error');
+            }
+        }
+
+        function deleteUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+
+            showConfirm('删除用户', `确定要删除用户 "${user.username}" 吗？此操作不可恢复。`, async () => {
+                try {
+                    const res = await fetch(`/api/admin/users/${id}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast('用户已删除', 'success');
+                        loadUsers();
+                        loadUserStats();
+                        addLog('账号管理', `删除用户: ${user.username}`);
+                    } else {
+                        showToast(data.message || '删除失败', 'error');
+                    }
+                } catch (err) {
+                    showToast('删除失败: ' + err.message, 'error');
+                }
+            });
+        }
+
+        async function loadRegistrationStatus() {
+            try {
+                const res = await fetch('/api/admin/config/registration');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        registrationEnabled = data.enabled;
+                        updateRegistrationUI();
+                    }
+                }
+            } catch (err) {
+                console.error('加载注册状态失败:', err);
+            }
+        }
+
+        function updateRegistrationUI() {
+            const toggle = document.getElementById('registrationToggle');
+            const status = document.getElementById('registrationStatus');
+
+            if (registrationEnabled) {
+                toggle.classList.add('active');
+                status.textContent = '已开放';
+                status.style.color = 'var(--success)';
+            } else {
+                toggle.classList.remove('active');
+                status.textContent = '已关闭';
+                status.style.color = 'var(--danger)';
+            }
+        }
+
+        async function toggleRegistration() {
+            const newStatus = !registrationEnabled;
+            try {
+                const res = await fetch('/api/admin/config/registration', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newStatus })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    registrationEnabled = newStatus;
+                    updateRegistrationUI();
+                    showToast(data.message, 'success');
+                    addLog('系统设置', newStatus ? '开放用户注册' : '关闭用户注册');
+                } else {
+                    showToast(data.message || '设置失败', 'error');
+                }
+            } catch (err) {
+                showToast('设置失败: ' + err.message, 'error');
+            }
+        }
+
+        async function loadTtsStatus() {
+            try {
+                const res = await fetch('/api/admin/config/tts');
+                if (res.ok) {
+                    const text = await res.text();
+                    if (text) {
+                        const data = JSON.parse(text);
+                        if (data.success) {
+                            ttsEnabled = data.enabled;
+                            updateTtsUI();
+                        }
+                    }
+                } else {
+                    console.error('加载TTS状态失败: HTTP', res.status);
+                }
+            } catch (err) {
+                console.error('加载TTS状态失败:', err);
+            }
+        }
+
+        function updateTtsUI() {
+            const toggle = document.getElementById('ttsToggle');
+            const status = document.getElementById('ttsStatus');
+
+            if (ttsEnabled) {
+                toggle.classList.add('active');
+                status.textContent = '已开启';
+                status.style.color = 'var(--success)';
+            } else {
+                toggle.classList.remove('active');
+                status.textContent = '已关闭';
+                status.style.color = 'var(--danger)';
+            }
+        }
+
+        async function toggleTts() {
+            const newStatus = !ttsEnabled;
+            try {
+                const res = await fetch('/api/admin/config/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newStatus })
+                });
+                const text = await res.text();
+                if (!text) {
+                    showToast('服务器返回空响应，请检查数据库表是否存在', 'error');
+                    return;
+                }
+                const data = JSON.parse(text);
+                if (data.success) {
+                    ttsEnabled = newStatus;
+                    updateTtsUI();
+                    showToast(data.message, 'success');
+                    addLog('系统设置', newStatus ? '开启语音合成(TTS)' : '关闭语音合成(TTS)');
+                } else {
+                    showToast(data.message || '设置失败', 'error');
+                }
+            } catch (err) {
+                showToast('设置失败: ' + err.message, 'error');
+            }
+        }
+
+        async function loadAsrStatus() {
+            try {
+                const res = await fetch('/api/admin/config/asr');
+                if (res.ok) {
+                    const text = await res.text();
+                    if (text) {
+                        const data = JSON.parse(text);
+                        if (data.success) {
+                            asrEnabled = data.enabled;
+                            updateAsrUI();
+                        }
+                    }
+                } else {
+                    console.error('加载ASR状态失败: HTTP', res.status);
+                }
+            } catch (err) {
+                console.error('加载ASR状态失败:', err);
+            }
+        }
+
+        function updateAsrUI() {
+            const toggle = document.getElementById('asrToggle');
+            const status = document.getElementById('asrStatus');
+
+            if (asrEnabled) {
+                toggle.classList.add('active');
+                status.textContent = '已开启';
+                status.style.color = 'var(--success)';
+            } else {
+                toggle.classList.remove('active');
+                status.textContent = '已关闭';
+                status.style.color = 'var(--danger)';
+            }
+        }
+
+        async function toggleAsr() {
+            const newStatus = !asrEnabled;
+            try {
+                const res = await fetch('/api/admin/config/asr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newStatus })
+                });
+                const text = await res.text();
+                if (!text) {
+                    showToast('服务器返回空响应，请检查数据库表是否存在', 'error');
+                    return;
+                }
+                const data = JSON.parse(text);
+                if (data.success) {
+                    asrEnabled = newStatus;
+                    updateAsrUI();
+                    showToast(data.message, 'success');
+                    addLog('系统设置', newStatus ? '开启语音识别(ASR)' : '关闭语音识别(ASR)');
+                } else {
+                    showToast(data.message || '设置失败', 'error');
+                }
+            } catch (err) {
+                showToast('设置失败: ' + err.message, 'error');
+            }
+        }
+
+        async function initRingtonesTable() {
+            try {
+                const res = await fetch('/api/qiniu/initRingtonesTable', {
+                    method: 'POST'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('铃声表初始化:', data.message);
+                }
+            } catch (err) {
+                console.error('初始化铃声表失败:', err);
+            }
+        }
+
+        function loadConfig() {
+            fetch('/api/qiniu/config')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.config) {
+                        config = data.config;
+                        document.getElementById('configAk').value = config.ak || '';
+                        document.getElementById('configSk').value = config.sk || '';
+                        document.getElementById('configBucket').value = config.bucket || 'chat2621';
+                        document.getElementById('configDomain').value = config.domain || '';
+                        console.log('[七牛云配置] 从后端加载成功:', config);
+                    }
+                })
+                .catch(err => {
+                    console.error('[七牛云配置] 加载失败:', err);
+                });
+
+            const savedLogs = localStorage.getItem('xiechenGodLogs');
+            if (savedLogs) {
+                logs = JSON.parse(savedLogs);
+            }
+        }
+
+        async function saveConfig() {
+            config.ak = document.getElementById('configAk').value;
+            config.sk = document.getElementById('configSk').value;
+            config.bucket = document.getElementById('configBucket').value;
+            config.domain = document.getElementById('configDomain').value;
+            
+            console.log('[七牛云配置] 准备保存:', config);
+            try {
+                const res = await fetch('/api/qiniu/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('配置保存成功', 'success');
+                    addLog('系统配置', '保存七牛云配置');
+                    console.log('[七牛云配置] 保存成功');
+                } else {
+                    showToast(data.message || '保存失败', 'error');
+                }
+            } catch (err) {
+                console.error('[七牛云配置] 保存失败:', err);
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        function saveRingConfig() {
+            config.ringtones = {
+                emergency: document.getElementById('configEmergency').value,
+                ring: document.getElementById('configRing').value,
+                call: document.getElementById('configCall').value,
+                friend: document.getElementById('configFriend').value,
+                message: document.getElementById('configMessage').value
+            };
+            localStorage.setItem('xiechenGodConfig', JSON.stringify(config));
+            showToast('铃声配置保存成功', 'success');
+            addLog('铃声管理', '保存铃声URL配置');
+        }
+
+        function initNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    item.classList.add('active');
+                    const pageId = 'page-' + item.dataset.page;
+                    document.getElementById(pageId).classList.add('active');
+                    
+                    const pageName = item.dataset.page;
+                    if (pageName === 'resume') {
+                        loadResumeConfig();
+                    } else if (pageName === 'logs') {
+                        loadLogs(1);
+                        loadLogTypes();
+                    }
+                });
+            });
+        }
+
+        function initUpload() {
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadZone.addEventListener('click', () => fileInput.click());
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+        }
+
+        async function handleFiles(files) {
+            const progress = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+            progress.style.display = 'block';
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const percent = Math.round(((i + 1) / files.length) * 100);
+                progressFill.style.width = percent + '%';
+
+                try {
+                    const url = await uploadToLocal(file);
+                    showToast(`${file.name} 上传成功`, 'success');
+                    addLog('文件上传', `上传文件: ${file.name} -> ${url}`);
+                } catch (err) {
+                    showToast(`${file.name} 上传失败: ${err.message}`, 'error');
+                    addLog('文件上传', `上传失败: ${file.name} - ${err.message}`);
+                }
+            }
+
+            setTimeout(() => {
+                progress.style.display = 'none';
+                progressFill.style.width = '0%';
+                refreshFileList();
+            }, 1000);
+        }
+
+        async function uploadToLocal(file, type = 'general') {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const extension = file.name.split('.').pop().toLowerCase();
+            let endpoint = '/api/upload/general';
+            
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) {
+                endpoint = '/api/upload/image';
+            } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'].includes(extension)) {
+                endpoint = '/api/upload/video';
+            } else if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'amr'].includes(extension)) {
+                endpoint = '/api/upload/audio';
+            }
+            
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`上传失败: ${res.status} ${errorText}`);
+            }
+            
+            const data = await res.json();
+            if (!data.success) {
+                throw new Error(data.message || '上传失败');
+            }
+            
+            return data.url;
+        }
+
+        let serverRingtones = {};
+
+        async function loadServerRingtones() {
+            try {
+                const res = await fetch('/api/qiniu/ringtones');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.items) {
+                        serverRingtones = {};
+                        data.items.forEach(item => {
+                            serverRingtones[item.type] = item.url;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('加载铃声配置失败:', err);
+            }
+        }
+
+        function renderRingtones() {
+            const grid = document.getElementById('ringGrid');
+            grid.innerHTML = RING_TYPES.map(ring => {
+                const url = serverRingtones[ring.id] || config.ringtones[ring.id] || '';
+                return `
+                <div class="ring-card" data-type="${ring.id}">
+                    <div class="ring-header">
+                        <div class="ring-name">
+                            <span>${ring.icon}</span>
+                            <span>${ring.name}</span>
+                        </div>
+                        <span class="ring-status ${url ? 'enabled' : 'disabled'}">
+                            ${url ? '已配置' : '未配置'}
+                        </span>
+                    </div>
+                    <div class="ring-player">
+                        <button class="play-btn" onclick="playRingtone('${ring.id}')">▶</button>
+                        <div class="ring-info">
+                            <div style="font-weight: 500;">${ring.desc}</div>
+                            <div class="ring-current" id="ring-url-${ring.id}" style="word-break: break-all; font-size: 12px;">
+                                ${url || '未设置'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ring-actions">
+                        <button class="btn btn-primary btn-sm" onclick="uploadRingtone('${ring.id}')">
+                            📤 上传替换
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="testRingtone('${ring.id}')">
+                            🔊 试听
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteRingtone('${ring.id}')">
+                            🗑️ 恢复默认
+                        </button>
+                    </div>
+                    <input type="file" id="ring-input-${ring.id}" accept="audio/*" style="display: none;">
+                </div>
+            `}).join('');
+
+            RING_TYPES.forEach(ring => {
+                const input = document.getElementById(`ring-input-${ring.id}`);
+                input.addEventListener('change', (e) => handleRingUpload(ring.id, e.target.files[0]));
+            });
+        }
+
+        function uploadRingtone(type) {
+            document.getElementById(`ring-input-${type}`).click();
+        }
+
+        async function handleRingUpload(type, file) {
+            if (!file) return;
+
+            try {
+                showToast('正在上传...', 'warning');
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', type);
+                
+                const res = await fetch('/api/upload/ringtone', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`上传失败: ${res.status} ${errorText}`);
+                }
+                
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.message || '上传失败');
+                }
+                
+                const url = data.url;
+
+                const saveRes = await fetch('/api/qiniu/ringtone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: type,
+                        name: RING_TYPES.find(r => r.id === type).name,
+                        url: url,
+                        enabled: true
+                    })
+                });
+
+                const saveData = await saveRes.json();
+                if (saveData.success) {
+                    serverRingtones[type] = url;
+                    renderRingtones();
+                    showToast('铃声上传并同步成功', 'success');
+                    addLog('铃声管理', `上传铃声: ${RING_TYPES.find(r => r.id === type).name}`);
+                } else {
+                    throw new Error(saveData.message || '同步到服务器失败');
+                }
+            } catch (err) {
+                showToast('上传失败: ' + err.message, 'error');
+            }
+        }
+
+        function playRingtone(type) {
+            const url = serverRingtones[type] || config.ringtones[type];
+            if (url) {
+                const audio = new Audio(url);
+                audio.play();
+            } else {
+                showToast('该铃声未配置', 'warning');
+            }
+        }
+
+        function testRingtone(type) {
+            playRingtone(type);
+        }
+
+        async function deleteRingtone(type) {
+            showConfirm('恢复默认', `确定要将${RING_TYPES.find(r => r.id === type).name}恢复为默认铃声吗？`, async () => {
+                try {
+                    const res = await fetch(`/api/qiniu/ringtone/${type}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        delete serverRingtones[type];
+                        renderRingtones();
+                        showToast('已恢复默认铃声', 'success');
+                        addLog('铃声管理', `恢复默认铃声: ${RING_TYPES.find(r => r.id === type).name}`);
+                    } else {
+                        showToast('操作失败', 'error');
+                    }
+                } catch (err) {
+                    showToast('操作失败: ' + err.message, 'error');
+                }
+            });
+        }
+
+        async function refreshFileList() {
+            const list = document.getElementById('fileList');
+            list.innerHTML = '<div style="text-align: center; padding: 40px;"><span class="loading"></span> 加载中...</div>';
+
+            try {
+                const search = document.getElementById('searchInput').value;
+                let url = '/api/storage/files';
+                if (search) {
+                    url += '?search=' + encodeURIComponent(search);
+                }
+                
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        renderFileList(data.items || []);
+                        document.getElementById('totalFiles').textContent = data.total || 0;
+                        
+                        const statsRes = await fetch('/api/storage/stats');
+                        if (statsRes.ok) {
+                            const stats = await statsRes.json();
+                            if (stats.success) {
+                                document.getElementById('totalSize').textContent = stats.totalSizeFormatted || '0 B';
+                                document.getElementById('todayUpload').textContent = stats.todayUpload || 0;
+                            }
+                        }
+                        
+                        if (data.storagePath) {
+                            addLog('存储管理', `查看文件列表，共 ${data.total} 个文件，存储路径: ${data.storagePath}`);
+                        }
+                    } else {
+                        list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--danger);">' + (data.message || '加载失败') + '</div>';
+                    }
+                } else {
+                    list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--danger);">加载失败</div>';
+                }
+            } catch (err) {
+                list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">加载失败: ' + err.message + '</div>';
+            }
+        }
+
+        function renderFileList(files) {
+            const list = document.getElementById('fileList');
+            if (files.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">暂无文件</div>';
+                return;
+            }
+
+            list.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <div class="file-icon">${getFileIcon(file.name || file.extension || '')}</div>
+                        <div>
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">
+                                ${formatSize(file.size)} | ${file.type || '文件'} | ${file.category || ''} | ${formatDate(file.lastModified)}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-outline btn-sm" onclick="copyUrl('${file.url}')" title="复制链接">📋</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.open('${file.url}', '_blank')" title="预览">👁️</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.path}')" title="删除">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getFileIcon(filename) {
+            if (!filename) return '📄';
+            const ext = filename.split('.').pop().toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) return '🖼️';
+            if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'].includes(ext)) return '🎬';
+            if (['mp3', 'wav', 'aac', 'ogg', 'flac', 'm4a', 'amr'].includes(ext)) return '🎵';
+            return '📄';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url);
+            showToast('URL已复制', 'success');
+        }
+
+        function deleteFile(path) {
+            showConfirm('确认删除', `确定要删除文件 ${path} 吗？`, async () => {
+                try {
+                    const res = await fetch('/api/storage/file', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast('文件已删除', 'success');
+                        addLog('文件管理', `删除文件: ${path}`);
+                        refreshFileList();
+                    } else {
+                        showToast(data.message || '删除失败', 'error');
+                    }
+                } catch (err) {
+                    showToast('删除失败: ' + err.message, 'error');
+                }
+            });
+        }
+
+        async function testStorage() {
+            showToast('正在检查存储状态...', 'warning');
+            try {
+                const res = await fetch('/api/storage/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast(`存储正常，共 ${data.totalFiles} 个文件`, 'success');
+                        addLog('存储管理', '检查存储状态成功');
+                    } else {
+                        showToast('存储异常', 'error');
+                    }
+                } else {
+                    showToast('连接失败', 'error');
+                }
+            } catch (err) {
+                showToast('连接失败: ' + err.message, 'error');
+            }
+        }
+
+        async function addLog(type, action, detail = '') {
+            try {
+                const res = await fetch('/api/admin/logs/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        logType: type,
+                        operation: action,
+                        detail: detail
+                    })
+                });
+                if (res.ok) {
+                    loadLogs(1);
+                }
+            } catch (err) {
+                console.error('记录日志失败:', err);
+            }
+        }
+
+        async function loadLogs(page = 1) {
+            const logType = document.getElementById('logTypeFilter').value;
+            const startDate = document.getElementById('logStartDate').value;
+            const endDate = document.getElementById('logEndDate').value;
+            const keyword = document.getElementById('logKeyword').value;
+
+            const params = new URLSearchParams();
+            params.append('page', page);
+            params.append('pageSize', logPagination.pageSize);
+            if (logType) params.append('logType', logType);
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            if (keyword) params.append('keyword', keyword);
+
+            try {
+                const res = await fetch(`/api/admin/logs?${params.toString()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.code === 200 && data.data) {
+                        logs = data.data.list || [];
+                        logPagination = {
+                            page: data.data.page,
+                            pageSize: data.data.pageSize,
+                            total: data.data.total,
+                            pages: data.data.pages
+                        };
+                        renderLogs();
+                        renderLogPagination();
+                    }
+                }
+            } catch (err) {
+                console.error('加载日志失败:', err);
+            }
+        }
+
+        async function loadLogTypes() {
+            try {
+                const res = await fetch('/api/admin/logs/types');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.code === 200 && data.data) {
+                        const select = document.getElementById('logTypeFilter');
+                        select.innerHTML = '<option value="">全部</option>';
+                        data.data.forEach(type => {
+                            select.innerHTML += `<option value="${type}">${type}</option>`;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('加载日志类型失败:', err);
+            }
+        }
+
+        function renderLogs() {
+            const list = document.getElementById('logList');
+            const countEl = document.getElementById('logTotalCount');
+            
+            countEl.textContent = `共 ${logPagination.total} 条`;
+            
+            if (logs.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">暂无日志记录</div>';
+                return;
+            }
+
+            list.innerHTML = logs.map(log => {
+                const createTime = log.createTime ? new Date(log.createTime).toLocaleString() : '';
+                const typeClass = getLogTypeClass(log.logType);
+                return `
+                    <div class="file-item" style="padding: 12px 16px;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                            <span class="log-type-badge ${typeClass}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">${log.logType || '系统'}</span>
+                            <div class="file-info">
+                                <div style="font-weight: 500;">${log.operation || ''}</div>
+                                ${log.detail ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${log.detail}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 12px; color: var(--text-secondary);">${createTime}</div>
+                            ${log.operatorName ? `<div style="font-size: 11px; color: var(--text-light);">操作人: ${log.operatorName}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getLogTypeClass(type) {
+            const typeColors = {
+                '用户管理': 'background: #DBEAFE; color: #1E40AF;',
+                '存储管理': 'background: #D1FAE5; color: #065F46;',
+                '铃声管理': 'background: #FEF3C7; color: #92400E;',
+                '资源配置': 'background: #EDE9FE; color: #5B21B6;',
+                '系统设置': 'background: #FEE2E2; color: #991B1B;',
+                '简历配置': 'background: #FCE7F3; color: #9D174D;'
+            };
+            return `style="${typeColors[type] || 'background: #F1F5F9; color: #475569;'}"`;
+        }
+
+        function renderLogPagination() {
+            const pagination = document.getElementById('logPagination');
+            if (logPagination.pages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            html += `<button class="btn btn-outline" style="padding: 6px 12px;" onclick="loadLogs(1)" ${logPagination.page === 1 ? 'disabled' : ''}>首页</button>`;
+            html += `<button class="btn btn-outline" style="padding: 6px 12px;" onclick="loadLogs(${logPagination.page - 1})" ${logPagination.page === 1 ? 'disabled' : ''}>上一页</button>`;
+            
+            const startPage = Math.max(1, logPagination.page - 2);
+            const endPage = Math.min(logPagination.pages, logPagination.page + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="btn ${i === logPagination.page ? 'btn-primary' : 'btn-outline'}" style="padding: 6px 12px;" onclick="loadLogs(${i})">${i}</button>`;
+            }
+            
+            html += `<button class="btn btn-outline" style="padding: 6px 12px;" onclick="loadLogs(${logPagination.page + 1})" ${logPagination.page === logPagination.pages ? 'disabled' : ''}>下一页</button>`;
+            html += `<button class="btn btn-outline" style="padding: 6px 12px;" onclick="loadLogs(${logPagination.pages})" ${logPagination.page === logPagination.pages ? 'disabled' : ''}>末页</button>`;
+            
+            html += `<span style="font-size: 14px; color: var(--text-secondary); margin-left: 12px;">第 ${logPagination.page}/${logPagination.pages} 页</span>`;
+            
+            pagination.innerHTML = html;
+        }
+
+        function resetLogFilters() {
+            document.getElementById('logTypeFilter').value = '';
+            document.getElementById('logStartDate').value = '';
+            document.getElementById('logEndDate').value = '';
+            document.getElementById('logKeyword').value = '';
+            loadLogs(1);
+        }
+
+        async function clearLogs() {
+            showConfirm('清空日志', '确定要清空所有操作日志吗？', async () => {
+                try {
+                    const res = await fetch('/api/admin/logs/clear', {
+                        method: 'POST'
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.code === 200) {
+                            showToast('日志已清空', 'success');
+                            loadLogs(1);
+                        } else {
+                            showToast(data.msg || '清空失败', 'error');
+                        }
+                    }
+                } catch (err) {
+                    showToast('清空失败: ' + err.message, 'error');
+                }
+            });
+        }
+
+        function showConfirm(title, body, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+            document.getElementById('confirmModal').classList.add('show');
+            document.getElementById('modalConfirm').onclick = () => {
+                closeModal();
+                onConfirm();
+            };
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type + ' show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            document.querySelectorAll('.file-item').forEach(item => {
+                const name = item.querySelector('.file-name')?.textContent.toLowerCase() || '';
+                item.style.display = name.includes(keyword) ? 'flex' : 'none';
+            });
+        });
+
+        document.getElementById('userSearchInput').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filtered = users.filter(u => 
+                (u.username || '').toLowerCase().includes(keyword) ||
+                (u.nickname || '').toLowerCase().includes(keyword)
+            );
+            const tbody = document.getElementById('userTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">未找到匹配用户</td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(user => `
+                <tr>
+                    <td>${user.id}</td>
+                    <td>${user.username || '-'}</td>
+                    <td>${user.nickname || '-'}</td>
+                    <td><span class="role-badge ${user.role}">${getRoleName(user.role)}</span></td>
+                    <td>
+                        <div class="file-actions">
+                            <button class="btn btn-outline btn-sm" onclick="editUser(${user.id})">✏️ 编辑</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">🗑️ 删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        });
+
+        let resourcesConfig = {};
+        let crawlerStatus = {
+            enabled: true,
+            running: false,
+            manualTrigger: false
+        };
+        let crawlerLogs = [];
+
+        async function loadResourcesConfig() {
+            try {
+                const res = await fetch('/api/admin/resources');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.config) {
+                        resourcesConfig = data.config;
+                        document.getElementById('configHeroVideo').value = resourcesConfig.heroVideo || '';
+                        document.getElementById('configHeroImage').value = resourcesConfig.heroImage || '';
+                        document.getElementById('configLogoNav').value = resourcesConfig.logoNav || '';
+                        document.getElementById('configLogoFooter').value = resourcesConfig.logoFooter || '';
+                        document.getElementById('configAvatarElder').value = resourcesConfig.avatarElder || '';
+                        document.getElementById('configAvatarFamily').value = resourcesConfig.avatarFamily || '';
+                        document.getElementById('configAvatarAdmin').value = resourcesConfig.avatarAdmin || '';
+                        document.getElementById('configIconHealth').value = resourcesConfig.iconHealth || '';
+                        document.getElementById('configIconMedicine').value = resourcesConfig.iconMedicine || '';
+                        document.getElementById('configIconEmergency').value = resourcesConfig.iconEmergency || '';
+                        document.getElementById('configIconVideo').value = resourcesConfig.iconVideo || '';
+                        document.getElementById('configIconNews').value = resourcesConfig.iconNews || '';
+                        document.getElementById('configIconAi').value = resourcesConfig.iconAi || '';
+                        document.getElementById('configIconSocial').value = resourcesConfig.iconSocial || '';
+                        document.getElementById('configIconSystem').value = resourcesConfig.iconSystem || '';
+                        document.getElementById('configIconNotification').value = resourcesConfig.iconNotification || '';
+                        document.getElementById('configTimelineV1').value = resourcesConfig.timelineV1 || '';
+                        document.getElementById('configTimelineV2').value = resourcesConfig.timelineV2 || '';
+                        document.getElementById('configTimelineV3').value = resourcesConfig.timelineV3 || '';
+                        document.getElementById('configTimelineV4').value = resourcesConfig.timelineV4 || '';
+                        document.getElementById('configTimelineFuture').value = resourcesConfig.timelineFuture || '';
+                    }
+                }
+            } catch (err) {
+                console.error('加载资源配置失败:', err);
+            }
+        }
+
+        async function saveResourcesConfig() {
+            const config = {
+                heroVideo: document.getElementById('configHeroVideo').value,
+                heroImage: document.getElementById('configHeroImage').value,
+                logoNav: document.getElementById('configLogoNav').value,
+                logoFooter: document.getElementById('configLogoFooter').value,
+                avatarElder: document.getElementById('configAvatarElder').value,
+                avatarFamily: document.getElementById('configAvatarFamily').value,
+                avatarAdmin: document.getElementById('configAvatarAdmin').value,
+                iconHealth: document.getElementById('configIconHealth').value,
+                iconMedicine: document.getElementById('configIconMedicine').value,
+                iconEmergency: document.getElementById('configIconEmergency').value,
+                iconVideo: document.getElementById('configIconVideo').value,
+                iconNews: document.getElementById('configIconNews').value,
+                iconAi: document.getElementById('configIconAi').value,
+                iconSocial: document.getElementById('configIconSocial').value,
+                iconSystem: document.getElementById('configIconSystem').value,
+                iconNotification: document.getElementById('configIconNotification').value,
+                timelineV1: document.getElementById('configTimelineV1').value,
+                timelineV2: document.getElementById('configTimelineV2').value,
+                timelineV3: document.getElementById('configTimelineV3').value,
+                timelineV4: document.getElementById('configTimelineV4').value,
+                timelineFuture: document.getElementById('configTimelineFuture').value
+            };
+
+            console.log('[资源配置] 准备保存:', config);
+            try {
+                const res = await fetch('/api/admin/resources', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                console.log('[资源配置] 保存响应:', data);
+                if (data.success) {
+                    resourcesConfig = config;
+                    showToast('资源配置保存成功', 'success');
+                    addLog('资源配置', '保存页面资源配置');
+                } else {
+                    showToast(data.message || '保存失败', 'error');
+                }
+            } catch (err) {
+                console.error('[资源配置] 保存失败:', err);
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        let currentUploadType = '';
+
+        function uploadHeroVideo() {
+            document.getElementById('heroVideoInput').click();
+        }
+
+        function uploadHeroImage() {
+            document.getElementById('heroImageInput').click();
+        }
+
+        function uploadLogoNav() {
+            document.getElementById('logoNavInput').click();
+        }
+
+        function uploadAvatar(type) {
+            currentUploadType = type;
+            document.getElementById('avatarInput').click();
+        }
+
+        function uploadIcon(type) {
+            currentUploadType = type;
+            document.getElementById('iconInput').click();
+        }
+
+        function uploadTimeline(type) {
+            currentUploadType = type;
+            document.getElementById('timelineInput').click();
+        }
+
+        async function handleResourceUpload(input, configKey) {
+            const file = input.files[0];
+            if (!file) return;
+
+            try {
+                showToast('正在上传...', 'warning');
+                
+                const url = await uploadToLocal(file);
+                
+                document.getElementById(configKey).value = url;
+                showToast('上传成功', 'success');
+                addLog('资源上传', `上传资源: ${configKey}`);
+            } catch (err) {
+                showToast('上传失败: ' + err.message, 'error');
+            }
+            input.value = '';
+        }
+
+        document.getElementById('heroVideoInput').addEventListener('change', (e) => handleResourceUpload(e.target, 'configHeroVideo'));
+        document.getElementById('heroImageInput').addEventListener('change', (e) => handleResourceUpload(e.target, 'configHeroImage'));
+        document.getElementById('logoNavInput').addEventListener('change', (e) => handleResourceUpload(e.target, 'configLogoNav'));
+        document.getElementById('avatarInput').addEventListener('change', function(e) {
+            const keyMap = { 'elder': 'configAvatarElder', 'family': 'configAvatarFamily', 'admin': 'configAvatarAdmin' };
+            handleResourceUpload(e.target, keyMap[currentUploadType]);
+        });
+        document.getElementById('iconInput').addEventListener('change', function(e) {
+            const keyMap = { 
+                'health': 'configIconHealth', 'medicine': 'configIconMedicine', 'emergency': 'configIconEmergency',
+                'video': 'configIconVideo', 'news': 'configIconNews', 'ai': 'configIconAi',
+                'social': 'configIconSocial', 'system': 'configIconSystem', 'notification': 'configIconNotification'
+            };
+            handleResourceUpload(e.target, keyMap[currentUploadType]);
+        });
+        document.getElementById('timelineInput').addEventListener('change', function(e) {
+            const keyMap = { 'v1': 'configTimelineV1', 'v2': 'configTimelineV2', 'v3': 'configTimelineV3', 'v4': 'configTimelineV4', 'future': 'configTimelineFuture' };
+            handleResourceUpload(e.target, keyMap[currentUploadType]);
+        });
+
+        init();
+        loadResourcesConfig();
+
+        async function loadCrawlerStatus() {
+            try {
+                const res = await fetch('/api/news/crawler/status');
+                if (res.ok) {
+                    const data = await res.json();
+                    crawlerStatus = data;
+                    updateCrawlerUI();
+                }
+            } catch (err) {
+                console.error('加载爬虫状态失败:', err);
+            }
+        }
+
+        function updateCrawlerUI() {
+            const toggle = document.getElementById('crawlerToggle');
+            const enabledEl = document.getElementById('crawlerEnabled');
+            const runningEl = document.getElementById('crawlerRunning');
+            const delayEl = document.getElementById('crawlerDelay');
+            const maxReqEl = document.getElementById('crawlerMaxRequests');
+            const triggerBtn = document.getElementById('triggerCrawlBtn');
+
+            const isEnabled = crawlerStatus.dbEnabled && crawlerStatus.configEnabled;
+            
+            if (isEnabled) {
+                toggle.classList.add('active');
+                enabledEl.textContent = '已启用';
+                enabledEl.style.color = 'var(--success)';
+            } else {
+                toggle.classList.remove('active');
+                enabledEl.textContent = '已禁用';
+                enabledEl.style.color = 'var(--danger)';
+            }
+
+            if (crawlerStatus.running) {
+                runningEl.textContent = '运行中';
+                runningEl.style.color = 'var(--warning)';
+                triggerBtn.disabled = true;
+                triggerBtn.style.opacity = '0.5';
+            } else {
+                runningEl.textContent = '空闲';
+                runningEl.style.color = 'var(--success)';
+                triggerBtn.disabled = false;
+                triggerBtn.style.opacity = '1';
+            }
+
+            delayEl.textContent = Math.round((crawlerStatus.requestDelay || 20000) / 1000);
+            maxReqEl.textContent = crawlerStatus.maxRequests || 30;
+
+            document.getElementById('configCrawlerDelay').value = crawlerStatus.requestDelay || 20000;
+            document.getElementById('configCrawlerMaxRequests').value = crawlerStatus.maxRequests || 30;
+            document.getElementById('configCrawlerMaxThreads').value = crawlerStatus.maxThreads || 1;
+        }
+
+        async function toggleCrawler() {
+            const newStatus = !crawlerStatus.enabled;
+            try {
+                const res = await fetch('/api/admin/config/crawler', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: newStatus })
+                });
+                const text = await res.text();
+                if (!text) {
+                    crawlerStatus.enabled = newStatus;
+                    updateCrawlerUI();
+                    showToast(newStatus ? '爬虫已启用' : '爬虫已禁用', 'success');
+                    addLog('爬虫管理', newStatus ? '启用爬虫功能' : '禁用爬虫功能');
+                    addCrawlerLog(newStatus ? '爬虫功能已启用' : '爬虫功能已禁用');
+                } else {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        crawlerStatus.enabled = newStatus;
+                        updateCrawlerUI();
+                        showToast(data.message, 'success');
+                        addLog('爬虫管理', newStatus ? '启用爬虫功能' : '禁用爬虫功能');
+                        addCrawlerLog(newStatus ? '爬虫功能已启用' : '爬虫功能已禁用');
+                    } else {
+                        showToast(data.message || '设置失败', 'error');
+                    }
+                }
+            } catch (err) {
+                crawlerStatus.enabled = newStatus;
+                updateCrawlerUI();
+                showToast(newStatus ? '爬虫已启用（本地）' : '爬虫已禁用（本地）', 'warning');
+                addCrawlerLog(newStatus ? '爬虫功能已启用（本地）' : '爬虫功能已禁用（本地）');
+            }
+        }
+
+        async function triggerCrawl() {
+            if (crawlerStatus.running) {
+                showToast('爬虫任务正在运行中', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/news/forceCrawl');
+                const message = await res.text();
+                
+                if (message.includes('已启动') || message.includes('后台启动')) {
+                    showToast('爬虫任务已启动', 'success');
+                    addLog('爬虫管理', '手动触发爬虫任务');
+                    addCrawlerLog('手动触发爬虫任务');
+                    crawlerStatus.running = true;
+                    updateCrawlerUI();
+                } else {
+                    showToast(message, 'warning');
+                    addCrawlerLog('触发失败: ' + message);
+                }
+            } catch (err) {
+                showToast('触发失败: ' + err.message, 'error');
+                addCrawlerLog('触发失败: ' + err.message);
+            }
+        }
+
+        async function refreshCrawlerStatus() {
+            await loadCrawlerStatus();
+        }
+
+        function addCrawlerLog(message) {
+            const log = {
+                time: new Date().toLocaleString(),
+                message: message
+            };
+            crawlerLogs.unshift(log);
+            if (crawlerLogs.length > 50) crawlerLogs.pop();
+            renderCrawlerLogs();
+        }
+
+        function renderCrawlerLogs() {
+            const list = document.getElementById('crawlerLogList');
+            if (crawlerLogs.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">暂无爬虫日志</div>';
+                return;
+            }
+
+            list.innerHTML = crawlerLogs.map(log => `
+                <div class="file-item" style="padding: 10px 12px;">
+                    <div style="flex: 1;">${log.message}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">${log.time}</div>
+                </div>
+            `).join('');
+        }
+
+        let resumeConfig = {
+            nickname: '望山遥', email: 'yeechen177@163.com',
+            avatarUrl: ''
+        };
+
+        async function loadResumeConfig() {
+            try {
+                const res = await fetch('/api/admin/resume-config');
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('[简历配置] 加载响应:', data);
+                    if (data.code === 200 && data.data) {
+                        resumeConfig = data.data;
+                        document.getElementById('resumeNickname').value = resumeConfig.nickname || '望山遥';
+                        document.getElementById('resumeAvatarUrl').value = resumeConfig.avatarUrl || '';
+                        updateResumePreview();
+                    } else {
+                        console.error('[简历配置] 加载失败:', data.msg);
+                    }
+                }
+            } catch (err) {
+                console.error('加载简历配置失败:', err);
+            }
+        }
+
+        function updateResumePreview() {
+            const nickname = document.getElementById('resumeNickname').value || '望山遥';
+            const avatarUrl = document.getElementById('resumeAvatarUrl').value;
+
+            document.getElementById('previewNickname').textContent = nickname;
+
+            const previewImg = document.getElementById('previewAvatarImg');
+            const previewIcon = document.getElementById('previewAvatarIcon');
+            const avatarPreview = document.getElementById('resumeAvatarPreview');
+            const avatarPlaceholder = document.getElementById('resumeAvatarPlaceholder');
+
+            if (avatarUrl) {
+                previewImg.src = avatarUrl;
+                previewImg.style.display = 'block';
+                previewIcon.style.display = 'none';
+                avatarPreview.src = avatarUrl;
+                avatarPreview.style.display = 'block';
+                avatarPlaceholder.style.display = 'none';
+            } else {
+                previewImg.style.display = 'none';
+                previewIcon.style.display = 'block';
+                avatarPreview.style.display = 'none';
+                avatarPlaceholder.style.display = 'flex';
+            }
+        }
+
+        async function saveResumeConfig() {
+            const nickname = document.getElementById('resumeNickname').value.trim();
+            const avatarUrl = document.getElementById('resumeAvatarUrl').value.trim();
+
+            if (!nickname) {
+                showToast('请输入昵称', 'error');
+                return;
+            }
+
+            const config = {
+                nickname: nickname,
+                avatarUrl: avatarUrl
+            };
+
+            try {
+                const res = await fetch('/api/admin/resume-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    resumeConfig = config;
+                    updateResumePreview();
+                    showToast('简历配置保存成功', 'success');
+                    addLog('简历配置', `更新简历: 昵称=${nickname}`);
+                } else {
+                    showToast(data.msg || '保存失败', 'error');
+                }
+            } catch (err) {
+                showToast('保存失败: ' + err.message, 'error');
+            }
+        }
+
+        function uploadResumeAvatar() {
+            document.getElementById('resumeAvatarInput').click();
+        }
+
+        document.getElementById('resumeAvatarInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('请选择图片文件', 'error');
+                return;
+            }
+
+            try {
+                showToast('正在处理图片...', 'warning');
+                
+                let processedFile = file;
+                if (typeof compressImage === 'function' && file.size > 100 * 1024) {
+                    try {
+                        processedFile = await compressImage(file, {
+                            targetSize: 800 * 1024,
+                            showProgress: true,
+                            onProgress: (percent, msg) => {
+                                if (percent < 100) {
+                                    showToast(msg + ` (${percent}%)`, 'warning');
+                                }
+                            }
+                        });
+                        console.log(`[头像上传] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                    } catch (compressErr) {
+                        console.warn('[头像上传] 压缩失败，使用原图:', compressErr);
+                    }
+                }
+
+                if (processedFile.size > 5 * 1024 * 1024) {
+                    showToast('图片大小不能超过5MB', 'error');
+                    return;
+                }
+
+                showToast('正在上传...', 'warning');
+                const formData = new FormData();
+                formData.append('file', processedFile);
+
+                const res = await fetch('/api/upload/image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                console.log('[头像上传] 响应:', data);
+                if (data.success && data.url) {
+                    const avatarUrl = data.url;
+                    document.getElementById('resumeAvatarUrl').value = avatarUrl;
+                    updateResumePreview();
+                    
+                    const nickname = document.getElementById('resumeNickname').value.trim() || '望山遥';
+                    const saveRes = await fetch('/api/admin/resume-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nickname, avatarUrl })
+                    });
+                    const saveData = await saveRes.json();
+                    if (saveData.code === 200) {
+                        showToast('头像上传并保存成功', 'success');
+                        addLog('简历配置', '上传头像', avatarUrl);
+                    } else {
+                        showToast('头像已上传，但保存失败: ' + (saveData.msg || '未知错误'), 'error');
+                    }
+                } else {
+                    showToast(data.message || '上传失败', 'error');
+                }
+            } catch (err) {
+                showToast('上传失败: ' + err.message, 'error');
+            }
+            e.target.value = '';
+        });
+
+        document.getElementById('resumeNickname').addEventListener('input', updateResumePreview);
+        document.getElementById('resumeAvatarUrl').addEventListener('input', updateResumePreview);
+    </script>
+</body>
+</html>
+
+
+

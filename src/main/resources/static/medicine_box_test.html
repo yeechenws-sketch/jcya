@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能药盒测试 - 协晨</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/mqtt.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #4361EE;
+            --primary-dark: #3a56d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #E0EAFC 0%, #CFDEF3 50%, #E0EAFC 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 100px 20px 40px; }
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; padding: 16px 40px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .logo-text {
+            font-size: 22px; font-weight: 800;
+            background: linear-gradient(135deg, #1e3a8a, var(--primary));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .nav-links a { color: #1e3a8a; text-decoration: none; margin-left: 30px; font-weight: 500; }
+        .page-title { text-align: center; margin-bottom: 30px; }
+        .page-title h1 {
+            font-size: 32px; font-weight: 800;
+            background: linear-gradient(135deg, #1e3a8a, var(--primary));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .page-title p { color: var(--text-light); margin-top: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 1200px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px);
+            border-radius: 16px; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+        .card-title {
+            font-size: 16px; font-weight: 700; color: #1e3a8a;
+            margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+            padding-bottom: 12px; border-bottom: 2px solid rgba(67, 97, 238, 0.1);
+        }
+        .card-title i { color: var(--primary); }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-light); margin-bottom: 6px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+            font-size: 14px; transition: all 0.3s; background: rgba(255, 255, 255, 0.8);
+        }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+        .form-group input:read-only { background: #f1f5f9; }
+        .btn {
+            padding: 10px 20px; border-radius: 10px; border: none; font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex;
+            align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), #3a56d4); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(67, 97, 238, 0.3); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-group .btn { flex: 1; min-width: 100px; }
+        .status-bar {
+            display: flex; align-items: center; gap: 10px; padding: 12px;
+            background: rgba(100, 116, 139, 0.1); border-radius: 10px; margin-bottom: 16px;
+        }
+        .status-bar.connected { background: rgba(16, 185, 129, 0.15); }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #64748b; }
+        .status-bar.connected .status-dot { background: var(--success); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-text { font-weight: 600; font-size: 14px; }
+        .weight-display {
+            text-align: center; padding: 20px;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(99, 102, 241, 0.05));
+            border-radius: 12px; margin-bottom: 16px;
+        }
+        .weight-value { font-size: 42px; font-weight: 800; color: #1e3a8a; }
+        .weight-unit { font-size: 18px; color: var(--primary); margin-left: 6px; font-weight: 600; }
+        .weight-change { margin-top: 8px; font-size: 14px; font-weight: 600; }
+        .weight-change.positive { color: var(--success); }
+        .weight-change.negative { color: var(--danger); }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+        .stat-item { text-align: center; padding: 12px; background: rgba(255, 255, 255, 0.5); border-radius: 10px; }
+        .stat-value { font-size: 24px; font-weight: 800; color: var(--primary); }
+        .stat-label { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+        .log-container {
+            background: #1e293b; border-radius: 10px; padding: 12px; height: 180px;
+            overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px;
+        }
+        .log-entry { margin-bottom: 3px; line-height: 1.5; }
+        .log-time { color: #64748b; }
+        .log-info { color: #60a5fa; }
+        .log-success { color: #34d399; }
+        .log-error { color: #f87171; }
+        .log-warn { color: #fbbf24; }
+        .bottle-status {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px; border-radius: 10px; margin-bottom: 12px; font-weight: 600; font-size: 14px;
+        }
+        .bottle-present { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .bottle-removed { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .full-width { grid-column: span 3; }
+        @media (max-width: 1200px) { .full-width { grid-column: span 2; } }
+        @media (max-width: 768px) { .full-width { grid-column: span 1; } }
+        .half-width { grid-column: span 2; }
+        @media (max-width: 768px) { .half-width { grid-column: span 1; } }
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 14px 28px; border-radius: 12px; color: white; font-weight: 600;
+            display: flex; align-items: center; gap: 10px; z-index: 2000;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .toast-success { background: linear-gradient(135deg, #10b981, #059669); }
+        .toast-error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .toast-info { background: linear-gradient(135deg, var(--primary), #3a56d4); }
+        .toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 3000;
+        }
+        .modal {
+            background: white; border-radius: 20px; padding: 30px; max-width: 500px;
+            width: 90%; text-align: center; animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-icon { font-size: 60px; margin-bottom: 20px; }
+        .modal-icon.warning { color: var(--warning); }
+        .modal-icon.danger { color: var(--danger); }
+        .modal-icon.success { color: var(--success); }
+        .modal-title { font-size: 24px; font-weight: 800; color: #1e3a8a; margin-bottom: 12px; }
+        .modal-message { color: var(--text-light); margin-bottom: 24px; line-height: 1.6; white-space: pre-line; }
+        .schedule-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px; background: rgba(255, 255, 255, 0.5); border-radius: 10px;
+            margin-bottom: 8px; border: 2px solid transparent;
+        }
+        .schedule-item.pending { border-color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+        .schedule-item.completed { border-color: var(--success); background: rgba(16, 185, 129, 0.1); }
+        .schedule-item.missed { border-color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+        .schedule-time { font-weight: 700; font-size: 18px; color: #1e3a8a; }
+        .time-display {
+            text-align: center; padding: 16px;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.15), rgba(99, 102, 241, 0.1));
+            border-radius: 12px; margin-bottom: 16px;
+        }
+        .time-value { font-size: 32px; font-weight: 800; color: #1e3a8a; }
+        .time-label { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+        .alert-box {
+            padding: 12px 16px; border-radius: 10px; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 10px; font-size: 13px;
+        }
+        .alert-warning { background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .alert-danger { background: rgba(239, 68, 68, 0.15); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .alert-success { background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .alert-info { background: rgba(67, 97, 238, 0.15); color: var(--primary); border: 1px solid rgba(67, 97, 238, 0.3); }
+        .init-step {
+            display: flex; align-items: center; gap: 12px; padding: 16px;
+            background: rgba(255, 255, 255, 0.5); border-radius: 12px; margin-bottom: 12px;
+            border: 2px solid transparent; transition: all 0.3s;
+        }
+        .init-step.active { border-color: var(--primary); background: rgba(67, 97, 238, 0.1); }
+        .init-step.completed { border-color: var(--success); background: rgba(16, 185, 129, 0.1); }
+        .step-number {
+            width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+        }
+        .init-step.active .step-number { background: var(--primary); color: white; }
+        .init-step.completed .step-number { background: var(--success); color: white; }
+        .step-content { flex: 1; }
+        .step-title { font-weight: 700; color: #1e3a8a; margin-bottom: 4px; }
+        .step-desc { font-size: 12px; color: var(--text-light); }
+        .step-weight { font-size: 18px; font-weight: 700; color: var(--primary); }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+        .info-item { padding: 10px; background: rgba(255, 255, 255, 0.5); border-radius: 8px; }
+        .info-label { font-size: 11px; color: var(--text-light); }
+        .info-value { font-size: 16px; font-weight: 700; color: #1e3a8a; }
+        .dose-monitor {
+            grid-column: span 3;
+        }
+        @media (max-width: 1200px) { .dose-monitor { grid-column: span 2; } }
+        @media (max-width: 768px) { .dose-monitor { grid-column: span 1; } }
+        .dose-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(99, 102, 241, 0.05));
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+        .dose-item {
+            text-align: center;
+            flex: 1;
+        }
+        .dose-label {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+        .dose-value {
+            font-size: 36px;
+            font-weight: 800;
+            color: #1e3a8a;
+        }
+        .dose-value.warning {
+            color: var(--warning);
+        }
+        .dose-value.danger {
+            color: var(--danger);
+        }
+        .dose-value.success {
+            color: var(--success);
+        }
+        .dose-progress {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .dose-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #3a56d4);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+        .dose-progress-bar.warning {
+            background: linear-gradient(90deg, var(--warning), #d97706);
+        }
+        .dose-progress-bar.danger {
+            background: linear-gradient(90deg, var(--danger), #dc2626);
+        }
+        .dose-progress-bar.success {
+            background: linear-gradient(90deg, var(--success), #059669);
+        }
+        .dose-hint {
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .dose-hint.normal {
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+        }
+        .dose-hint.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #b45309;
+        }
+        .dose-hint.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+    <nav class="navbar">
+        <div class="logo-text">协晨智能药盒</div>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/health.html">健康</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-title">
+            <h1>智能药盒测试</h1>
+            <p>完整服药逻辑测试（含误差容忍）</p>
+        </div>
+
+        <div class="grid">
+            <!-- MQTT连接 -->
+            <div class="card">
+                <div class="card-title"><i class="fa fa-plug"></i> MQTT连接</div>
+                <div :class="['status-bar', mqttConnected ? 'connected' : '']">
+                    <div class="status-dot"></div>
+                    <span class="status-text">{{ mqttConnected ? '已连接' : '未连接' }}</span>
+                </div>
+                <div class="form-group">
+                    <label>服务器</label>
+                    <input v-model="mqttConfig.server" placeholder="wss://xiechen.xyz/mqtt">
+                </div>
+                <div class="form-group">
+                    <label>设备ID</label>
+                    <input v-model="mqttConfig.deviceId" placeholder="BOX001">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-success" @click="connectMqtt" :disabled="mqttConnected">
+                        <i class="fa fa-link"></i> 连接
+                    </button>
+                    <button class="btn btn-danger" @click="disconnectMqtt" :disabled="!mqttConnected">
+                        <i class="fa fa-chain-broken"></i> 断开
+                    </button>
+                </div>
+            </div>
+
+            <!-- 设备实时重量 -->
+            <div class="card">
+                <div class="card-title"><i class="fa fa-balance-scale"></i> 设备重量（实物）</div>
+                <div :class="['bottle-status', bottlePresent ? 'bottle-present' : 'bottle-removed']">
+                    <i :class="['fa', bottlePresent ? 'fa-check-circle' : 'fa-exclamation-circle']"></i>
+                    {{ bottlePresent ? '瓶子在位' : '瓶子已移除' }}
+                </div>
+                <div class="weight-display">
+                    <span class="weight-value">{{ deviceWeight.toFixed(2) }}</span>
+                    <span class="weight-unit">克</span>
+                    <div v-if="lastDeviceWeight !== null" :class="['weight-change', deviceWeightChangeClass]">
+                        <i :class="['fa', deviceWeightChange > 0 ? 'fa-arrow-up' : 'fa-arrow-down']"></i>
+                        {{ deviceWeightChange > 0 ? '+' : '' }}{{ deviceWeightChange.toFixed(2) }} g
+                    </div>
+                </div>
+                <div class="alert-box alert-info">
+                    <i class="fa fa-info-circle"></i>
+                    <span>通过 MQTT 从 ESP32 设备获取的重量</span>
+                </div>
+            </div>
+
+            <!-- 模拟时间 -->
+            <div class="card">
+                <div class="card-title"><i class="fa fa-clock-o"></i> 模拟时间</div>
+                <div class="time-display">
+                    <div class="time-value">{{ simulatedTime }}</div>
+                    <div class="time-label">当前时间（模拟）</div>
+                </div>
+                <div class="form-group">
+                    <label>设定时间</label>
+                    <input type="time" v-model="simulatedTimeInput">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" @click="setSimulatedTime">
+                        <i class="fa fa-clock-o"></i> 设定
+                    </button>
+                    <button class="btn btn-outline" @click="resetTime">
+                        <i class="fa fa-refresh"></i> 重置
+                    </button>
+                </div>
+            </div>
+
+            <!-- 设备初始化 -->
+            <div class="card half-width">
+                <div class="card-title"><i class="fa fa-cogs"></i> 设备初始化</div>
+                
+                <div class="init-step" :class="{ active: initStep === 1, completed: initStep > 1 }">
+                    <div class="step-number">{{ initStep > 1 ? '✓' : '1' }}</div>
+                    <div class="step-content">
+                        <div class="step-title">放置满瓶</div>
+                        <div class="step-desc">把一整瓶/一盒药放在设备上</div>
+                    </div>
+                    <div class="step-weight" v-if="initData.fullBottleWeight">
+                        {{ initData.fullBottleWeight.toFixed(2) }}克
+                    </div>
+                </div>
+                
+                <div class="init-step" :class="{ active: initStep === 2, completed: initStep > 2 }">
+                    <div class="step-number">{{ initStep > 2 ? '✓' : '2' }}</div>
+                    <div class="step-content">
+                        <div class="step-title">服用一剂</div>
+                        <div class="step-desc">去除一剂以测量单剂量重量</div>
+                    </div>
+                    <div class="step-weight" v-if="initData.singleDoseWeight">
+                        {{ initData.singleDoseWeight.toFixed(2) }}克
+                    </div>
+                </div>
+                
+                <div class="init-step" :class="{ active: initStep === 3, completed: initStep >= 3 }">
+                    <div class="step-number">{{ initStep >= 3 ? '✓' : '3' }}</div>
+                    <div class="step-content">
+                        <div class="step-title">完成</div>
+                        <div class="step-desc">设备初始化完成，可以使用</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>每瓶药丸数</label>
+                    <input type="number" v-model.number="initData.pillsPerBottle" placeholder="100">
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" @click="startInitStep1" :disabled="initStep !== 1">
+                        <i class="fa fa-play"></i> 步骤1：记录满瓶重量
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn btn-warning" @click="startInitStep2" :disabled="initStep !== 2">
+                        <i class="fa fa-play"></i> 步骤2：记录剂量重量
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-top: 8px;">
+                    <button class="btn btn-success" @click="completeInit" :disabled="initStep !== 3">
+                        <i class="fa fa-check"></i> 完成初始化
+                    </button>
+                </div>
+            </div>
+
+            <!-- 测试场景 -->
+            <div class="card">
+                <div class="card-title"><i class="fa fa-flask"></i> 测试场景</div>
+                <div class="alert-box alert-warning">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <span>误差容忍度：剂量重量的±15%</span>
+                </div>
+                <div class="btn-group" style="margin-bottom: 10px;">
+                    <button class="btn btn-success" @click="simulateNormalTake">
+                        <i class="fa fa-check"></i> 正常服药
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-bottom: 10px;">
+                    <button class="btn btn-danger" @click="simulateOverdose">
+                        <i class="fa fa-exclamation"></i> 多服
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-bottom: 10px;">
+                    <button class="btn btn-warning" @click="simulateUnderdose">
+                        <i class="fa fa-minus"></i> 少服
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-bottom: 10px;">
+                    <button class="btn btn-outline" @click="simulateMissed">
+                        <i class="fa fa-times"></i> 漏服
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-bottom: 10px;">
+                    <button class="btn btn-primary" @click="simulateSupplement">
+                        <i class="fa fa-plus"></i> 补服
+                    </button>
+                </div>
+                <div class="btn-group" style="margin-bottom: 10px;">
+                    <button class="btn btn-success" @click="simulateRefill">
+                        <i class="fa fa-plus-square"></i> 补充药品
+                    </button>
+                </div>
+            </div>
+
+            <!-- 当前状态 -->
+            <div class="card half-width">
+                <div class="card-title"><i class="fa fa-info-circle"></i> 当前状态</div>
+                <div v-if="currentAlert" :class="['alert-box', 'alert-' + currentAlert.type]">
+                    <i :class="['fa', currentAlert.icon]"></i>
+                    <div>
+                        <strong>{{ currentAlert.title }}</strong><br>
+                        {{ currentAlert.message }}
+                    </div>
+                </div>
+                <div v-else class="alert-box alert-success">
+                    <i class="fa fa-check-circle"></i>
+                    <span>状态正常 - 无警报</span>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">单次剂量</div>
+                        <div class="info-value">{{ initData.singleDoseWeight ? initData.singleDoseWeight.toFixed(2) + 'g' : '未设置' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">容忍范围（±15%）</div>
+                        <div class="info-value">{{ toleranceRange }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">今日服药</div>
+                        <div class="info-value">{{ todayDoses }} / {{ scheduleConfig.times.length }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">剩余药量</div>
+                        <div class="info-value">{{ remainingPills }}</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>服药时间</label>
+                    <div class="btn-group" style="margin-bottom: 8px;">
+                        <input type="time" v-model="newScheduleTime" style="flex: 1;">
+                        <button class="btn btn-primary" @click="addScheduleTime">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                    <div v-for="(time, index) in scheduleConfig.times" :key="index" class="schedule-item">
+                        <span class="schedule-time">{{ time }}</span>
+                        <button class="btn btn-danger" style="padding: 4px 10px;" @click="removeScheduleTime(index)">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 剂量监测系统 -->
+            <div class="card dose-monitor">
+                <div class="card-title">
+                    <i class="fa fa-medkit"></i> 剂量监测系统
+                    <button class="btn btn-danger" style="margin-left: auto; padding: 6px 12px;" @click="resetDoseMonitor">
+                        <i class="fa fa-refresh"></i> 重置剂量
+                    </button>
+                </div>
+                
+                <div v-if="!doseMonitorActive" class="alert-box alert-info">
+                    <i class="fa fa-info-circle"></i>
+                    <span>点击下方按钮开始剂量监测，系统将实时追踪您的取药量</span>
+                </div>
+                
+                <div v-if="doseMonitorActive">
+                    <div class="dose-display">
+                        <div class="dose-item">
+                            <div class="dose-label">标准剂量</div>
+                            <div class="dose-value">{{ standardDose }}g</div>
+                        </div>
+                        <div class="dose-item">
+                            <div class="dose-label">当前已取</div>
+                            <div :class="['dose-value', currentDoseStatus]">{{ currentTakenDose.toFixed(1) }}g</div>
+                        </div>
+                        <div class="dose-item">
+                            <div class="dose-label">差额</div>
+                            <div :class="['dose-value', doseDifferenceStatus]">{{ doseDifference >= 0 ? '-' : '+' }}{{ Math.abs(doseDifference).toFixed(1) }}g</div>
+                        </div>
+                    </div>
+                    
+                    <div class="dose-progress">
+                        <div :class="['dose-progress-bar', currentDoseStatus]" :style="{ width: doseProgress + '%' }"></div>
+                    </div>
+                    
+                    <div v-if="doseHint" :class="['dose-hint', doseHint.type]">
+                        <i :class="['fa', doseHint.icon]"></i>
+                        {{ doseHint.message }}
+                    </div>
+                </div>
+                
+                <div class="btn-group" style="margin-top: 16px;">
+                    <button class="btn btn-primary" @click="startDoseMonitor" :disabled="doseMonitorActive">
+                        <i class="fa fa-play"></i> 开始监测
+                    </button>
+                    <button class="btn btn-success" @click="completeDoseMonitoring" :disabled="!doseMonitorActive || !canCompleteDose">
+                        <i class="fa fa-check"></i> 完成服药
+                    </button>
+                </div>
+                
+                <div style="margin-top: 16px;">
+                    <div class="card-title" style="margin-bottom: 8px; padding-bottom: 8px; font-size: 14px;">
+                        <i class="fa fa-flask"></i> 剂量测试场景
+                    </div>
+                    <div class="btn-group" style="margin-bottom: 8px;">
+                        <button class="btn btn-warning" @click="simulateTakeDose(5)">
+                            <i class="fa fa-minus"></i> 取出5克（不足）
+                        </button>
+                        <button class="btn btn-warning" @click="simulateTakeDose(2)">
+                            <i class="fa fa-plus"></i> 再取2克（累计7克）
+                        </button>
+                    </div>
+                    <div class="btn-group" style="margin-bottom: 8px;">
+                        <button class="btn btn-danger" @click="simulateTakeDose(15)">
+                            <i class="fa fa-exclamation"></i> 取出15克（超额）
+                        </button>
+                        <button class="btn btn-success" @click="simulatePutBackDose(5)">
+                            <i class="fa fa-arrow-up"></i> 放回5克
+                        </button>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-success" @click="simulateTakeDose(10)">
+                            <i class="fa fa-check"></i> 取出10克（准确）
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 事件日志 -->
+            <div class="card full-width">
+                <div class="card-title">
+                    <i class="fa fa-list-alt"></i> 事件日志
+                    <button class="btn btn-danger" style="margin-left: auto; padding: 6px 12px;" @click="clearLogs">
+                        <i class="fa fa-trash"></i> 清空
+                    </button>
+                </div>
+                <div class="log-container" ref="logContainer">
+                    <div v-for="(log, index) in logs" :key="index" class="log-entry">
+                        <span class="log-time">[{{ log.time }}]</span>
+                        <span :class="'log-' + log.type">{{ log.message }}</span>
+                    </div>
+                    <div v-if="logs.length === 0" style="color: #64748b; text-align: center; padding: 20px;">
+                        暂无日志
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示弹窗 -->
+    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+        <div class="modal">
+            <div :class="['modal-icon', modalType]">
+                <i :class="['fa', modalIcon]"></i>
+            </div>
+            <div class="modal-title">{{ modalTitle }}</div>
+            <div class="modal-message">{{ modalMessage }}</div>
+            <button class="btn btn-primary" @click="showModal = false">
+                <i class="fa fa-check"></i> 确定
+            </button>
+        </div>
+    </div>
+
+    <div v-if="toast.show" :class="['toast', 'toast-' + toast.type]">
+        <i :class="['fa', toast.type === 'success' ? 'fa-check-circle' : toast.type === 'error' ? 'fa-times-circle' : 'fa-info-circle']"></i>
+        {{ toast.message }}
+    </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, nextTick, watch } = Vue;
+
+        createApp({
+            setup() {
+                const mqttConnected = ref(false);
+                const deviceWeight = ref(0);
+                const lastDeviceWeight = ref(null);
+                const bottlePresent = ref(true);
+                const logs = ref([]);
+                const logContainer = ref(null);
+                const simulatedTime = ref('08:00');
+                const simulatedTimeInput = ref('08:00');
+                const showModal = ref(false);
+                const modalType = ref('warning');
+                const modalTitle = ref('');
+                const modalMessage = ref('');
+                const modalIcon = ref('fa-exclamation-triangle');
+                const currentAlert = ref(null);
+                const todayDoses = ref(0);
+                const remainingPills = ref(100);
+                const initStep = ref(1);
+                const newScheduleTime = ref('');
+
+                const mqttConfig = ref({
+                    server: 'wss://xiechen.xyz/mqtt',
+                    deviceId: 'BOX001'
+                });
+
+                const initData = ref({
+                    fullBottleWeight: null,
+                    singleDoseWeight: null,
+                    pillsPerBottle: 100
+                });
+
+                const scheduleConfig = ref({
+                    times: ['08:00', '12:00', '18:00']
+                });
+
+                const toast = ref({ show: false, type: 'info', message: '' });
+
+                let mqttClient = null;
+
+                const deviceWeightChange = computed(() => {
+                    if (lastDeviceWeight.value === null) return 0;
+                    return deviceWeight.value - lastDeviceWeight.value;
+                });
+
+                const deviceWeightChangeClass = computed(() => {
+                    if (deviceWeightChange.value > 0) return 'positive';
+                    if (deviceWeightChange.value < 0) return 'negative';
+                    return '';
+                });
+
+                const toleranceRange = computed(() => {
+                    if (!initData.value.singleDoseWeight) return '未设置';
+                    const dose = initData.value.singleDoseWeight;
+                    const tol = dose * 0.15;
+                    return `${(dose - tol).toFixed(2)}g ~ ${(dose + tol).toFixed(2)}g`;
+                });
+                
+                const weightBeforeRemove = ref(null);
+
+                const doseMonitorActive = ref(false);
+                const standardDose = ref(10);
+                const currentTakenDose = ref(0);
+                const initialWeightForDose = ref(0);
+                const doseHint = ref(null);
+                let lastDoseCheckTime = 0;
+
+                const doseDifference = computed(() => {
+                    return standardDose.value - currentTakenDose.value;
+                });
+
+                const doseProgress = computed(() => {
+                    return Math.min(100, Math.max(0, (currentTakenDose.value / standardDose.value) * 100));
+                });
+
+                const currentDoseStatus = computed(() => {
+                    if (currentTakenDose.value < standardDose.value) {
+                        return 'warning';
+                    } else if (currentTakenDose.value > standardDose.value) {
+                        return 'danger';
+                    }
+                    return 'success';
+                });
+
+                const doseDifferenceStatus = computed(() => {
+                    if (doseDifference.value > 0) {
+                        return 'warning';
+                    } else if (doseDifference.value < 0) {
+                        return 'danger';
+                    }
+                    return 'success';
+                });
+
+                const canCompleteDose = computed(() => {
+                    return Math.abs(doseDifference.value) < 0.1;
+                });
+
+                const startDoseMonitor = () => {
+                    doseMonitorActive.value = true;
+                    initialWeightForDose.value = deviceWeight.value;
+                    currentTakenDose.value = 0;
+                    doseHint.value = {
+                        type: 'normal',
+                        icon: 'fa-info-circle',
+                        message: '请开始取药，系统将实时监测剂量'
+                    };
+                    addLog('剂量监测已启动，标准剂量：' + standardDose.value + 'g', 'info');
+                };
+
+                const resetDoseMonitor = () => {
+                    doseMonitorActive.value = false;
+                    currentTakenDose.value = 0;
+                    initialWeightForDose.value = 0;
+                    doseHint.value = null;
+                    addLog('剂量监测已重置', 'info');
+                };
+
+                const updateDoseMonitoring = () => {
+                    if (!doseMonitorActive.value) return;
+                    
+                    const weightChange = initialWeightForDose.value - deviceWeight.value;
+                    currentTakenDose.value = Math.max(0, weightChange);
+                    
+                    checkDoseStatus();
+                };
+
+                const checkDoseStatus = () => {
+                    const now = Date.now();
+                    if (now - lastDoseCheckTime < 500) return;
+                    lastDoseCheckTime = now;
+                    
+                    const diff = doseDifference.value;
+                    
+                    if (diff > 0.1) {
+                        if (currentTakenDose.value > 0) {
+                            if (currentTakenDose.value === 5 && diff === 5) {
+                                doseHint.value = {
+                                    type: 'warning',
+                                    icon: 'fa-exclamation-triangle',
+                                    message: '当前累计剂量为5克，仍差5克未达到标准剂量'
+                                };
+                                showAlert('warning', '剂量不足', '当前服药剂量不足，还差5克');
+                            } else if (currentTakenDose.value === 7 && diff === 3) {
+                                doseHint.value = {
+                                    type: 'warning',
+                                    icon: 'fa-exclamation-triangle',
+                                    message: '当前累计剂量为7克，仍差3克未达到标准剂量'
+                                };
+                                showAlert('warning', '剂量不足', '当前累计剂量为7克，仍差3克未达到标准剂量');
+                            } else {
+                                doseHint.value = {
+                                    type: 'warning',
+                                    icon: 'fa-exclamation-triangle',
+                                    message: `当前累计剂量为${currentTakenDose.value.toFixed(1)}克，仍差${diff.toFixed(1)}克未达到标准剂量`
+                                };
+                                showAlert('warning', '剂量不足', `当前服药剂量不足，还差${diff.toFixed(1)}克`);
+                            }
+                        }
+                    } else if (diff < -0.1) {
+                        const excess = Math.abs(diff);
+                        if (currentTakenDose.value === 15 && excess === 5) {
+                            doseHint.value = {
+                                type: 'danger',
+                                icon: 'fa-exclamation-circle',
+                                message: '当前剂量超出5克，请放回多余剂量'
+                            };
+                            showAlert('danger', '剂量超额', '请放回5克多余剂量');
+                        } else {
+                            doseHint.value = {
+                                type: 'danger',
+                                icon: 'fa-exclamation-circle',
+                                message: `当前剂量超出${excess.toFixed(1)}克，请放回多余剂量`
+                            };
+                            showAlert('danger', '剂量超额', `需要放回${excess.toFixed(1)}克多余剂量`);
+                        }
+                    } else {
+                        doseHint.value = {
+                            type: 'normal',
+                            icon: 'fa-check-circle',
+                            message: '剂量准确，点击完成服药结束本次流程'
+                        };
+                    }
+                };
+
+                const completeDoseMonitoring = () => {
+                    if (!canCompleteDose.value) return;
+                    
+                    addLog('剂量监测完成，已准确服用' + standardDose.value + 'g', 'success');
+                    showAlert('success', '服药完成', '剂量准确，本次服药流程已完成！');
+                    
+                    todayDoses.value++;
+                    remainingPills.value--;
+                    
+                    resetDoseMonitor();
+                };
+
+                const simulateTakeDose = (grams) => {
+                    if (!doseMonitorActive.value) {
+                        showToast('请先开始剂量监测', 'warning');
+                        return;
+                    }
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = Math.max(0, deviceWeight.value - grams);
+                    
+                    updateDoseMonitoring();
+                    addLog('模拟取出' + grams + 'g，当前累计：' + currentTakenDose.value.toFixed(1) + 'g', 'info');
+                };
+
+                const simulatePutBackDose = (grams) => {
+                    if (!doseMonitorActive.value) {
+                        showToast('请先开始剂量监测', 'warning');
+                        return;
+                    }
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = deviceWeight.value + grams;
+                    
+                    updateDoseMonitoring();
+                    addLog('模拟放回' + grams + 'g，当前累计：' + currentTakenDose.value.toFixed(1) + 'g', 'info');
+                };
+
+                const addLog = (message, type = 'info') => {
+                    const now = new Date();
+                    const time = now.toLocaleTimeString();
+                    logs.value.push({ time, message, type });
+                    if (logs.value.length > 100) logs.value.shift();
+                    nextTick(() => {
+                        if (logContainer.value) {
+                            logContainer.value.scrollTop = logContainer.value.scrollHeight;
+                        }
+                    });
+                };
+
+                const showToast = (message, type = 'info') => {
+                    toast.value = { show: true, message, type };
+                    setTimeout(() => { toast.value.show = false; }, 3000);
+                };
+
+                const showAlert = (type, title, message) => {
+                    modalType.value = type;
+                    modalTitle.value = title;
+                    modalMessage.value = message;
+                    if (type === 'danger') modalIcon.value = 'fa-times-circle';
+                    else if (type === 'warning') modalIcon.value = 'fa-exclamation-triangle';
+                    else if (type === 'success') modalIcon.value = 'fa-check-circle';
+                    showModal.value = true;
+                    currentAlert.value = { type, title, message, icon: modalIcon.value };
+                };
+
+                const connectMqtt = () => {
+                    try {
+                        const options = {
+                            clientId: 'test-client-' + Date.now(),
+                            clean: true,
+                            connectTimeout: 5000,
+                            reconnectPeriod: 0
+                        };
+                        
+                        addLog(`正在连接MQTT: ${mqttConfig.value.server}`, 'info');
+                        
+                        mqttClient = mqtt.connect(mqttConfig.value.server, options);
+                        
+                        mqttClient.on('connect', () => {
+                            mqttConnected.value = true;
+                            addLog('MQTT连接成功！', 'success');
+                            showToast('MQTT已连接', 'success');
+                            
+                            const subscribeTopic = `medicine/box/${mqttConfig.value.deviceId}/data`;
+                            mqttClient.subscribe(subscribeTopic, (err) => {
+                                if (err) {
+                                    addLog(`订阅失败: ${err.message}`, 'error');
+                                } else {
+                                    addLog(`已订阅: ${subscribeTopic}`, 'success');
+                                }
+                            });
+                        });
+
+                        mqttClient.on('message', (topic, message) => {
+                            try {
+                                const data = JSON.parse(message.toString());
+                                handleMqttMessage(data);
+                            } catch (e) {
+                                addLog(`解析错误: ${message.toString()}`, 'error');
+                            }
+                        });
+
+                        mqttClient.on('error', (err) => {
+                            mqttConnected.value = false;
+                            addLog(`MQTT错误: ${err.message}`, 'error');
+                            showToast('MQTT错误: ' + err.message, 'error');
+                        });
+
+                        mqttClient.on('close', () => {
+                            mqttConnected.value = false;
+                            addLog('MQTT已断开', 'warn');
+                        });
+                    } catch (e) {
+                        addLog(`连接失败: ${e.message}`, 'error');
+                        showToast('连接失败: ' + e.message, 'error');
+                    }
+                };
+
+                const disconnectMqtt = () => {
+                    if (mqttClient) {
+                        mqttClient.end();
+                        mqttClient = null;
+                    }
+                    mqttConnected.value = false;
+                    addLog('MQTT已断开', 'info');
+                };
+
+                const handleMqttMessage = (data) => {
+                    addLog(`[${data.eventType}] ${JSON.stringify(data)}`, 'info');
+                    
+                    if (data.eventType === 'weight_change' || data.eventType === 'heartbeat') {
+                        const currentWeight = data.weightAfter || data.weight || 0;
+                        
+                        if (data.bottlePresent !== undefined) {
+                            bottlePresent.value = data.bottlePresent;
+                        } else {
+                            bottlePresent.value = currentWeight > 5;
+                        }
+                        
+                        if (initStep.value >= 3 && initData.value.singleDoseWeight && lastDeviceWeight.value !== null) {
+                            const dose = initData.value.singleDoseWeight;
+                            const minDetectThreshold = dose * 0.3;
+                            const weightDiff = lastDeviceWeight.value - currentWeight;
+                            
+                            if (Math.abs(weightDiff) > minDetectThreshold) {
+                                if (weightDiff > 0) {
+                                    checkDoseChange(weightDiff, lastDeviceWeight.value, currentWeight);
+                                } else {
+                                    checkRefill(-weightDiff, lastDeviceWeight.value, currentWeight);
+                                }
+                            }
+                        }
+                        
+                        lastDeviceWeight.value = currentWeight;
+                        deviceWeight.value = currentWeight;
+                    } else if (data.eventType === 'bottle_removed') {
+                        bottlePresent.value = false;
+                        weightBeforeRemove.value = deviceWeight.value;
+                        lastDeviceWeight.value = deviceWeight.value;
+                        const removedWeight = deviceWeight.value;
+                        deviceWeight.value = 0;
+                        if (initStep.value >= 3) {
+                            showAlert('warning', '瓶子已移除', 
+                                `瓶子已从设备上移除。\n` +
+                                `移除前重量: ${removedWeight.toFixed(2)}g\n` +
+                                `请服药后放回瓶子。`);
+                        }
+                    } else if (data.eventType === 'bottle_returned') {
+                        bottlePresent.value = true;
+                        const returnedWeight = data.weightAfter || 0;
+                        const previousWeight = weightBeforeRemove.value || 0;
+                        deviceWeight.value = returnedWeight;
+                        
+                        if (initStep.value >= 3 && previousWeight > 0 && initData.value.singleDoseWeight) {
+                            const dose = initData.value.singleDoseWeight;
+                            const minDetectThreshold = dose * 0.3;
+                            const weightDiff = previousWeight - returnedWeight;
+                            
+                            if (Math.abs(weightDiff) > minDetectThreshold) {
+                                if (weightDiff > 0) {
+                                    checkDoseChange(weightDiff, previousWeight, returnedWeight);
+                                } else {
+                                    checkRefill(-weightDiff, previousWeight, returnedWeight);
+                                }
+                            } else {
+                                showAlert('success', '瓶子已放回', 
+                                    `瓶子已放回设备。\n` +
+                                    `重量变化: ${weightDiff.toFixed(2)}g\n` +
+                                    `当前重量: ${returnedWeight.toFixed(2)}g`);
+                            }
+                        } else {
+                            showAlert('success', '瓶子已放回', 
+                                `瓶子已放回设备。\n` +
+                                `当前重量: ${returnedWeight.toFixed(2)}g`);
+                        }
+                        
+                        lastDeviceWeight.value = returnedWeight;
+                        weightBeforeRemove.value = null;
+                    }
+                };
+                
+                const checkDoseChange = (weightDiff, weightBefore, weightAfter) => {
+                    const dose = initData.value.singleDoseWeight;
+                    const tolerance = dose * 0.15;
+                    const minThreshold = dose - tolerance;
+                    const maxThreshold = dose + tolerance;
+                    
+                    addLog(`检测到重量变化: ${weightDiff.toFixed(2)}g (剂量: ${dose.toFixed(2)}g, 范围: ${minThreshold.toFixed(2)}-${maxThreshold.toFixed(2)}g)`, 'info');
+                    
+                    if (weightDiff < minThreshold) {
+                        const dosesTaken = Math.round(weightDiff / dose * 10) / 10;
+                        showAlert('warning', '检测到少服', 
+                            `重量变化: ${weightDiff.toFixed(2)}g\n` +
+                            `预期剂量: ${dose.toFixed(2)}g\n` +
+                            `容忍范围: ±${tolerance.toFixed(2)}g\n` +
+                            `您可能服用的剂量少于处方量。`);
+                        todayDoses.value++;
+                        remainingPills.value -= Math.ceil(dosesTaken);
+                    } else if (weightDiff > maxThreshold) {
+                        const dosesTaken = Math.round(weightDiff / dose);
+                        showAlert('danger', '检测到多服！', 
+                            `重量变化: ${weightDiff.toFixed(2)}g\n` +
+                            `预期剂量: ${dose.toFixed(2)}g\n` +
+                            `容忍范围: ±${tolerance.toFixed(2)}g\n` +
+                            `估计服用了 ${dosesTaken} 剂！\n` +
+                            `如有必要请咨询医生。`);
+                        todayDoses.value++;
+                        remainingPills.value -= dosesTaken;
+                    } else {
+                        showAlert('success', '服药成功', 
+                            `重量变化: ${weightDiff.toFixed(2)}g\n` +
+                            `在容忍范围内: ${minThreshold.toFixed(2)}g ~ ${maxThreshold.toFixed(2)}g`);
+                        todayDoses.value++;
+                        remainingPills.value--;
+                    }
+                    
+                    sendMqttMessage({
+                        eventType: 'takeout',
+                        slotId: 1,
+                        weightBefore: weightBefore,
+                        weightAfter: weightAfter,
+                        weightChange: weightDiff,
+                        timestamp: Date.now()
+                    });
+                };
+                
+                const checkRefill = (weightAdded, weightBefore, weightAfter) => {
+                    const dose = initData.value.singleDoseWeight;
+                    const pillsAdded = Math.round(weightAdded / dose);
+                    
+                    addLog(`检测到补充药品: +${weightAdded.toFixed(2)}g (估计 ${pillsAdded} 剂)`, 'success');
+                    
+                    showAlert('success', '药品补充成功', 
+                        `添加重量: ${weightAdded.toFixed(2)}g\n` +
+                        `估计添加剂量: ${pillsAdded} 剂\n` +
+                        `补充前重量: ${weightBefore.toFixed(2)}g\n` +
+                        `当前重量: ${weightAfter.toFixed(2)}g`);
+                    
+                    remainingPills.value += pillsAdded;
+                    
+                    sendMqttMessage({
+                        eventType: 'refill',
+                        slotId: 1,
+                        weightBefore: weightBefore,
+                        weightAfter: weightAfter,
+                        weightChange: weightAdded,
+                        pillsAdded: pillsAdded,
+                        timestamp: Date.now()
+                    });
+                };
+
+                const sendMqttMessage = (data) => {
+                    if (mqttClient && mqttConnected.value) {
+                        const topic = `medicine/box/${mqttConfig.value.deviceId}/data`;
+                        const message = JSON.stringify(data);
+                        mqttClient.publish(topic, message, (err) => {
+                            if (err) {
+                                addLog(`发送失败: ${err.message}`, 'error');
+                            } else {
+                                addLog(`已发送: ${message}`, 'info');
+                            }
+                        });
+                    } else {
+                        addLog('MQTT未连接', 'warn');
+                    }
+                };
+
+                const setSimulatedTime = () => {
+                    simulatedTime.value = simulatedTimeInput.value;
+                    addLog(`时间设定为 ${simulatedTime.value}`, 'info');
+                };
+
+                const resetTime = () => {
+                    const now = new Date();
+                    simulatedTime.value = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                    simulatedTimeInput.value = simulatedTime.value;
+                };
+
+                const addScheduleTime = () => {
+                    if (newScheduleTime.value && !scheduleConfig.value.times.includes(newScheduleTime.value)) {
+                        scheduleConfig.value.times.push(newScheduleTime.value);
+                        scheduleConfig.value.times.sort();
+                        newScheduleTime.value = '';
+                    }
+                };
+
+                const removeScheduleTime = (index) => {
+                    scheduleConfig.value.times.splice(index, 1);
+                };
+
+                const startInitStep1 = () => {
+                    if (deviceWeight.value <= 0) {
+                        showToast('请先将满瓶药放在设备上', 'warning');
+                        return;
+                    }
+                    initData.value.fullBottleWeight = deviceWeight.value;
+                    initStep.value = 2;
+                    addLog(`步骤1: 满瓶重量 = ${deviceWeight.value.toFixed(2)}g`, 'success');
+                    showToast('满瓶重量已记录！', 'success');
+                };
+
+                const startInitStep2 = () => {
+                    if (!initData.value.fullBottleWeight) {
+                        showToast('请先完成步骤1', 'warning');
+                        return;
+                    }
+                    
+                    const doseWeight = initData.value.fullBottleWeight - deviceWeight.value;
+                    if (doseWeight <= 0) {
+                        showToast('请先从瓶中取出一剂药', 'warning');
+                        addLog(`当前: ${deviceWeight.value.toFixed(2)}g, 满瓶: ${initData.value.fullBottleWeight.toFixed(2)}g`, 'warning');
+                        return;
+                    }
+                    
+                    initData.value.singleDoseWeight = doseWeight;
+                    initStep.value = 3;
+                    addLog(`步骤2: 单剂量重量 = ${doseWeight.toFixed(2)}g (满瓶: ${initData.value.fullBottleWeight.toFixed(2)}g - 当前: ${deviceWeight.value.toFixed(2)}g)`, 'success');
+                    showToast('单剂量重量已记录！', 'success');
+                };
+
+                const completeInit = async () => {
+                    try {
+                        const res = await axios.post('/api/medicine-box/initialize', {
+                            deviceId: mqttConfig.value.deviceId,
+                            fullBottleWeight: initData.value.fullBottleWeight,
+                            singleDoseWeight: initData.value.singleDoseWeight,
+                            pillsPerBottle: initData.value.pillsPerBottle
+                        });
+                        
+                        if (res.data.code === 200) {
+                            lastDeviceWeight.value = deviceWeight.value;
+                            addLog('设备初始化完成！', 'success');
+                            addLog(`基准重量已设置: ${deviceWeight.value.toFixed(2)}g`, 'info');
+                            showToast('设备初始化成功！', 'success');
+                            showAlert('success', '初始化完成', 
+                                `满瓶重量: ${initData.value.fullBottleWeight.toFixed(2)}g\n` +
+                                `单次剂量: ${initData.value.singleDoseWeight.toFixed(2)}g\n` +
+                                `当前重量: ${deviceWeight.value.toFixed(2)}g\n` +
+                                `容忍范围: ±${(initData.value.singleDoseWeight * 0.3).toFixed(2)}g`);
+                        } else {
+                            addLog(`初始化失败: ${res.data.msg}`, 'error');
+                        }
+                    } catch (e) {
+                        addLog(`API错误: ${e.message}`, 'error');
+                    }
+                };
+
+                const calculateTakeResult = (actualTaken) => {
+                    const expected = initData.value.singleDoseWeight || 0.5;
+                    const tolerance = expected * 0.3;
+                    const minThreshold = expected - tolerance;
+                    const maxThreshold = expected + tolerance;
+                    
+                    if (actualTaken < minThreshold) return 'underdose';
+                    if (actualTaken > maxThreshold) return 'overdose';
+                    return 'normal';
+                };
+
+                const simulateNormalTake = () => {
+                    const expected = initData.value.singleDoseWeight || 0.5;
+                    const variation = (Math.random() - 0.5) * 0.1 * expected;
+                    const actualTaken = expected + variation;
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = Math.max(0, deviceWeight.value - actualTaken);
+                    
+                    const result = calculateTakeResult(actualTaken);
+                    todayDoses.value++;
+                    remainingPills.value--;
+
+                    sendMqttMessage({
+                        deviceId: mqttConfig.value.deviceId,
+                        eventType: 'takeout',
+                        slotId: 1,
+                        weightBefore: lastDeviceWeight.value,
+                        weightAfter: deviceWeight.value,
+                        weightChange: actualTaken,
+                        timestamp: Date.now()
+                    });
+
+                    addLog(`正常服药: ${actualTaken.toFixed(2)}g (预期: ${expected.toFixed(2)}g)`, 'success');
+                    showAlert('success', '服药成功', 
+                        `服用量: ${actualTaken.toFixed(2)}g\n预期剂量: ${expected.toFixed(2)}g\n结果: 正常服药`);
+                    currentAlert.value = null;
+                };
+
+                const simulateOverdose = () => {
+                    const expected = initData.value.singleDoseWeight || 0.5;
+                    const actualTaken = expected * 1.8;
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = Math.max(0, deviceWeight.value - actualTaken);
+                    
+                    todayDoses.value++;
+                    remainingPills.value -= 2;
+
+                    sendMqttMessage({
+                        deviceId: mqttConfig.value.deviceId,
+                        eventType: 'takeout',
+                        slotId: 1,
+                        weightBefore: lastDeviceWeight.value,
+                        weightAfter: deviceWeight.value,
+                        weightChange: actualTaken,
+                        timestamp: Date.now()
+                    });
+
+                    addLog(`多服: ${actualTaken.toFixed(2)}g (预期: ${expected.toFixed(2)}g)`, 'error');
+                    showAlert('danger', '多服警告！', 
+                        `服用量: ${actualTaken.toFixed(2)}g\n预期剂量: ${expected.toFixed(2)}g\n` +
+                        `超出容忍范围！请立即联系家人！`);
+                };
+
+                const simulateUnderdose = () => {
+                    const expected = initData.value.singleDoseWeight || 0.5;
+                    const actualTaken = expected * 0.4;
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = Math.max(0, deviceWeight.value - actualTaken);
+                    
+                    todayDoses.value++;
+                    remainingPills.value--;
+
+                    sendMqttMessage({
+                        deviceId: mqttConfig.value.deviceId,
+                        eventType: 'takeout',
+                        slotId: 1,
+                        weightBefore: lastDeviceWeight.value,
+                        weightAfter: deviceWeight.value,
+                        weightChange: actualTaken,
+                        timestamp: Date.now()
+                    });
+
+                    addLog(`少服: ${actualTaken.toFixed(2)}g (预期: ${expected.toFixed(2)}g)`, 'warn');
+                    showAlert('warning', '少服警告', 
+                        `服用量: ${actualTaken.toFixed(2)}g\n预期剂量: ${expected.toFixed(2)}g\n` +
+                        `低于容忍范围！请补服剩余剂量。`);
+                };
+
+                const simulateMissed = () => {
+                    addLog(`漏服 @ ${simulatedTime.value}`, 'error');
+                    showAlert('danger', '漏服警告！', 
+                        `在预定时间 ${simulatedTime.value} 未服药。\n已通知家属。`);
+                };
+
+                const simulateSupplement = () => {
+                    const expected = initData.value.singleDoseWeight || 0.5;
+                    const actualTaken = expected;
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = Math.max(0, deviceWeight.value - actualTaken);
+                    
+                    todayDoses.value++;
+                    remainingPills.value--;
+
+                    sendMqttMessage({
+                        deviceId: mqttConfig.value.deviceId,
+                        eventType: 'takeout',
+                        slotId: 1,
+                        weightBefore: lastDeviceWeight.value,
+                        weightAfter: deviceWeight.value,
+                        weightChange: actualTaken,
+                        timestamp: Date.now()
+                    });
+
+                    addLog(`补服 @ ${simulatedTime.value} (非计划时间)`, 'warn');
+                    showAlert('warning', '补服提醒', 
+                        `在非计划时间 ${simulatedTime.value} 服药。\n已通知家属。`);
+                };
+
+                const simulateRefill = () => {
+                    const addWeight = (initData.value.fullBottleWeight || 150) * 0.3;
+                    
+                    lastDeviceWeight.value = deviceWeight.value;
+                    deviceWeight.value = deviceWeight.value + addWeight;
+                    
+                    const pillsAdded = Math.round(addWeight / (initData.value.singleDoseWeight || 0.5));
+                    remainingPills.value += pillsAdded;
+
+                    sendMqttMessage({
+                        deviceId: mqttConfig.value.deviceId,
+                        eventType: 'putback',
+                        slotId: 1,
+                        weightBefore: lastDeviceWeight.value,
+                        weightAfter: deviceWeight.value,
+                        weightChange: addWeight,
+                        timestamp: Date.now()
+                    });
+
+                    addLog(`补充药品: +${addWeight.toFixed(2)}g (~${pillsAdded} 剂)`, 'success');
+                    showToast(`已补充约 ${pillsAdded} 剂`, 'success');
+                };
+
+                const clearLogs = () => {
+                    logs.value = [];
+                };
+
+                addLog('智能药盒测试页面已加载', 'success');
+                addLog('请先连接MQTT并初始化设备', 'info');
+
+                watch(deviceWeight, () => {
+                    updateDoseMonitoring();
+                });
+
+                return {
+                    mqttConnected, deviceWeight, lastDeviceWeight, deviceWeightChange, deviceWeightChangeClass,
+                    bottlePresent, logs, logContainer, simulatedTime, simulatedTimeInput,
+                    showModal, modalType, modalTitle, modalMessage, modalIcon,
+                    currentAlert, todayDoses, remainingPills, initStep, newScheduleTime,
+                    mqttConfig, initData, scheduleConfig, toast, toleranceRange,
+                    doseMonitorActive, standardDose, currentTakenDose, doseHint,
+                    doseDifference, doseProgress, currentDoseStatus, doseDifferenceStatus, canCompleteDose,
+                    startDoseMonitor, resetDoseMonitor, completeDoseMonitoring,
+                    simulateTakeDose, simulatePutBackDose,
+                    connectMqtt, disconnectMqtt, setSimulatedTime, resetTime,
+                    addScheduleTime, removeScheduleTime,
+                    startInitStep1, startInitStep2, completeInit,
+                    simulateNormalTake, simulateOverdose, simulateUnderdose,
+                    simulateMissed, simulateSupplement, simulateRefill, clearLogs
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+
+

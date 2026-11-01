@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>住户沟通 · 解尘颐安智慧社区管理平台</title>
+    <script src="js/image-compressor.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f9ff;
+            color: #1f2a3f;
+            padding: 24px 32px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        .app-container { max-width: 1600px; margin: 0 auto; height: calc(100vh - 48px); }
+        .navbar {
+            background: rgba(11, 42, 65, 0.95);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            box-shadow: 0 15px 30px -10px rgba(0, 30, 60, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .navbar-left h1 {
+            font-weight: 500;
+            font-size: 1.6rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            letter-spacing: -0.3px;
+        }
+        .back-link {
+            color: #a8ceff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .back-link:hover { color: white; }
+        .time-panel {
+            background: #153e5a;
+            padding: 8px 28px;
+            border-radius: 40px;
+            color: #cbd5e1;
+            text-align: right;
+            border: 1px solid #2f5575;
+        }
+        .time-panel .date { font-size: 0.9rem; color: #b0c9e0; }
+        .time-panel .clock { font-size: 1.7rem; font-weight: 350; color: white; line-height: 1.2; }
+        .profile-badge {
+            display: flex;
+            align-items: center;
+            background: #153e5a;
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: #cbd5e1;
+            gap: 12px;
+            border: 1px solid #2f5575;
+        }
+        .profile-badge i { font-size: 1.5rem; color: #a8ceff; }
+        .profile-badge .name { font-weight: 600; font-size: 1rem; color: white; }
+        
+        .main-layout {
+            display: flex;
+            gap: 28px;
+            height: calc(100% - 100px);
+        }
+        .sidebar {
+            width: 400px;
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e0ebf7;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 35px -12px rgba(0, 45, 80, 0.15);
+        }
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0d4e7c;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .contact-list { flex: 1; overflow-y: auto; }
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            background: #f8fcff;
+        }
+        .contact-card:hover { background: #e8f4ff; transform: translateX(-5px); }
+        .contact-card.active {
+            background: white;
+            border-color: #1d5a8b;
+            box-shadow: 0 8px 20px rgba(29, 90, 139, 0.15);
+        }
+        .contact-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .online-indicator {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: #94a3b8;
+        }
+        .online-indicator.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+        .contact-info { flex: 1; min-width: 0; }
+        .contact-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0d4e7c;
+            margin-bottom: 4px;
+        }
+        .contact-last-msg {
+            font-size: 0.9rem;
+            color: #64748b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .unread-badge {
+            background: #ef4444;
+            color: white;
+            min-width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .chat-area {
+            flex: 1;
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e0ebf7;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -12px rgba(0, 45, 80, 0.2);
+        }
+        .chat-header {
+            background: #f8fcff;
+            padding: 20px 28px;
+            border-bottom: 1px solid #e0e9f2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chat-header-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0d4e7c;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px;
+            background: linear-gradient(180deg, #f5faff 0%, #ffffff 100%);
+        }
+        .chat-msg {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            clear: both;
+        }
+        .chat-msg.self { align-items: flex-end; }
+        .chat-msg.other { align-items: flex-start; }
+        .chat-bubble-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+        }
+        .chat-msg.self .chat-bubble-wrapper { align-items: flex-end; }
+        .chat-bubble {
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 1rem;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            display: inline-block;
+            max-width: 100%;
+        }
+        .chat-msg.self .chat-bubble {
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 3px 10px rgba(29, 90, 139, 0.25);
+        }
+        .chat-msg.other .chat-bubble {
+            background: white;
+            color: #1f3249;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e8f0fa;
+        }
+        .chat-msg-time {
+            font-size: 0.8rem;
+            color: #8aa0b8;
+            margin-top: 6px;
+            padding: 0 4px;
+        }
+        .chat-msg.self .chat-msg-time { text-align: right; }
+        .chat-msg.other .chat-msg-time { text-align: left; }
+        .chat-media {
+            max-width: 260px;
+            max-height: 200px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: block;
+        }
+        .chat-media:hover { transform: scale(1.02); }
+        .chat-input-area {
+            background: #f8fcff;
+            padding: 20px 28px;
+            border-top: 1px solid #e0e9f2;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .tool-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #e8f4ff;
+            border: none;
+            color: #1d5a8b;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tool-btn:hover { background: #d2e8ff; transform: scale(1.1); }
+        .input-box {
+            flex: 1;
+            background: white;
+            border-radius: 24px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            border: 2px solid #e0e9f2;
+        }
+        .input-box input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            outline: none;
+            color: #1f2a3f;
+        }
+        .send-btn {
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .send-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+        .send-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #8aa0b8;
+        }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; opacity: 0.4; }
+        .empty-state div { font-size: 1.1rem; }
+        [v-cloak] { display: none; }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,20,40,0.4);
+        }
+        .modal-content img, .modal-content video {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #1f3249;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .modal-close:hover { background: white; }
+        .tool-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            border: 1px solid #e0e9f2;
+        }
+        .tool-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 16px;
+            transition: all 0.2s;
+        }
+        .tool-item:hover { background: #f0f7fe; transform: translateY(-3px); }
+        .tool-item.disabled { opacity: 0.5; cursor: not-allowed; }
+        .tool-item-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #e8f4ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 8px;
+        }
+        .tool-item-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #0d4e7c;
+        }
+        .hidden-input { display: none; }
+        .voice-bubble {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; min-width: 100px;
+        }
+        .voice-bubble i { font-size: 1.1rem; }
+        .health-config-bubble {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+            color: #991B1B;
+            text-align: left;
+            font-size: 14px;
+            padding: 10px 14px;
+            border-left: 3px solid #EF4444;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            border-radius: 8px;
+        }
+        .mode-toggle-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(29, 90, 139, 0.1);
+            border: none;
+            color: #1d5a8b;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .mode-toggle-btn:hover { background: rgba(29, 90, 139, 0.2); transform: scale(1.1); }
+        .voice-input-btn {
+            flex: 1; height: 48px; border-radius: 24px; border: none;
+            background: white; color: #64748b; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; display: flex;
+            align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 2px solid #e0e9f2;
+        }
+        .voice-input-btn.recording {
+            background: #ef4444; color: white;
+        }
+        .modal-box {
+            background: white; width: 500px; padding: 30px; border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0,20,40,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-box h2 {
+            margin: 0 0 20px 0; color: #0d4e7c; font-size: 1.4rem;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .modal-box input {
+            width: 100%; padding: 14px 18px; margin: 20px 0;
+            border-radius: 16px; border: 2px solid #e0e9f2;
+            font-size: 1rem; transition: border-color 0.3s;
+        }
+        .modal-box input:focus {
+            border-color: #1d5a8b;
+            outline: none;
+        }
+        .modal-btns { display: flex; gap: 16px; }
+        .modal-btns button {
+            flex: 1; padding: 14px; border-radius: 16px;
+            border: none; font-size: 1rem; cursor: pointer;
+            font-weight: 600; transition: all 0.3s;
+        }
+        .modal-btns button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .modal-btns button:first-child { background: #f1f5f9; color: #64748b; }
+        .modal-btns button:last-child { background: linear-gradient(135deg, #1d5a8b, #0a3b62); color: white; }
+
+        .ws-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #a8ceff;
+            margin-left: 12px;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ws-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            animation: wsPulse 1.5s infinite;
+        }
+
+        .ws-dot.connected { 
+            background: #22c55e; 
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+        
+        .ws-dot.disconnected { 
+            background: #ef4444; 
+            animation: none; 
+        }
+        
+        .ws-dot.connecting { 
+            background: #f59e0b; 
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        }
+
+        @keyframes wsPulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak class="app-container">
+    <header class="navbar">
+        <div class="navbar-left">
+            <h1>
+                <a href="admin_index.html" class="back-link"><i class="fa fa-angle-left"></i></a>
+                <i class="fa fa-comments"></i> 住户沟通
+                <span id="wsStatus" class="ws-status">
+                    <span class="ws-dot disconnected"></span>
+                    <span class="ws-text">已断开</span>
+                </span>
+            </h1>
+        </div>
+        <div class="profile-badge">
+            <i class="fa fa-user-circle"></i>
+            <span class="name">{{ currentUser?.nickname || '管理员' }}</span>
+        </div>
+        <div class="time-panel">
+            <div class="date">{{ currentDate }}</div>
+            <div class="clock">{{ currentTime }}</div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <aside class="sidebar">
+            <div class="sidebar-title">
+                <i class="fa fa-users"></i> 住户列表
+            </div>
+            <div class="contact-list">
+                <div v-for="user in contacts" :key="user.id" @click="selectContact(user)"
+                     :class="['contact-card', { 'active': currentTargetId === user.id }]">
+                    <div class="contact-avatar">
+                        {{ (user.remark || user.nickname || '住户').charAt(0) }}
+                        <div :class="['online-indicator', { 'online': onlineUsers[user.id] }]"></div>
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-name">{{ user.remark || user.nickname }}</div>
+                        <div class="contact-last-msg">{{ getLastMessagePreview(user) }}</div>
+                    </div>
+                    <div v-if="user.unreadCount > 0" class="unread-badge">
+                        {{ user.unreadCount > 9 ? '9+' : user.unreadCount }}
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="chat-area">
+            <div class="chat-header">
+                <div class="chat-header-title">
+                    <i class="fa fa-user-circle" style="color:#1d5a8b;"></i>
+                    {{ currentTargetName }}
+                </div>
+            </div>
+            <div class="chat-messages" ref="chatBox" id="chat-box">
+                <div v-if="!currentTargetId" class="empty-state">
+                    <i class="fa fa-comments-o"></i>
+                    <div>选择左侧住户开始沟通</div>
+                </div>
+                <template v-else>
+                    <div v-if="messageList.length === 0" class="empty-state">
+                        <i class="fa fa-comments-o"></i>
+                        <div>暂无消息记录</div>
+                    </div>
+                    <div v-for="msg in messageList" :key="msg.id || (msg.createTime + '_' + msg.fromId + '_' + msg.content?.substring(0,20))" 
+                         :class="['chat-msg', { 'self': msg.fromId === currentUser?.id, 'other': msg.fromId !== currentUser?.id }]">
+                        <div class="chat-bubble-wrapper">
+                            <div class="chat-bubble">
+                                <template v-if="!msg.msgType || msg.msgType === 'text'">{{ msg.content }}</template>
+                                <template v-else-if="msg.msgType === 'health_config'">
+                                    <div class="health-config-bubble">
+                                        <i class="fa fa-heartbeat" style="margin-right: 6px; color: #EF4444;"></i>
+                                        {{ msg.content }}
+                                    </div>
+                                </template>
+                                <template v-else-if="msg.msgType === 'image'">
+                                    <img :src="msg.content" class="chat-media" @click="openMedia(msg.content, 'image')">
+                                </template>
+                                <template v-else-if="msg.msgType === 'video'">
+                                    <video :src="msg.content" controls class="chat-media"></video>
+                                </template>
+                                <template v-else-if="msg.msgType === 'voice'">
+                                    <div class="voice-bubble" @click="playVoice(msg.content)">
+                                        <i class="fa fa-volume-up"></i>
+                                        <span>{{ msg.duration || '0' }}''</span>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="chat-msg-time">{{ formatTime(msg.createTime) }}</div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="chat-input-area" v-if="currentTargetId">
+                <transition name="fade">
+                    <div class="tool-panel" v-if="showTools">
+                        <div class="tool-item" @click="triggerFile('image')">
+                            <div class="tool-item-icon" style="color:#f59e0b;"><i class="fa fa-image"></i></div>
+                            <div class="tool-item-label">发照片</div>
+                        </div>
+                        <div class="tool-item" @click="triggerFile('video')">
+                            <div class="tool-item-icon" style="color:#10b981;"><i class="fa fa-video-camera"></i></div>
+                            <div class="tool-item-label">发视频</div>
+                        </div>
+                        <div class="tool-item" @click="openRemark">
+                            <div class="tool-item-icon" style="color:#8b5cf6;"><i class="fa fa-edit"></i></div>
+                            <div class="tool-item-label">改备注</div>
+                        </div>
+                    </div>
+                </transition>
+                <div class="input-wrapper">
+                    <button class="tool-btn" @click="showTools = !showTools">
+                        <i :class="['fa', showTools ? 'fa-times' : 'fa-plus']"></i>
+                    </button>
+                    <button class="mode-toggle-btn" @click="toggleVoiceMode">
+                        <i :class="['fa', isVoiceMode ? 'fa-keyboard-o' : 'fa-microphone']"></i>
+                    </button>
+                    <template v-if="!isVoiceMode">
+                        <div class="input-box">
+                            <input v-model="inputMsg" @keyup.enter="sendMsg" placeholder="输入消息...">
+                        </div>
+                        <button class="send-btn" @click="sendMsg" :disabled="!inputMsg.trim()">
+                            <i class="fa fa-paper-plane"></i>
+                        </button>
+                    </template>
+                    <template v-else>
+                        <button class="voice-input-btn"
+                                :class="{recording: isRecording}"
+                                @mousedown="startRecord"
+                                @mouseup="stopRecord"
+                                @touchstart.prevent="startRecord"
+                                @touchend.prevent="stopRecord">
+                            {{ isRecording ? '松开 结束' : '按住 说话' }}
+                        </button>
+                        <button class="send-btn" disabled>
+                            <i class="fa fa-paper-plane"></i>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <input type="file" accept="image/*" class="hidden-input" ref="imgInp" @change="e => uploadFile(e, 'image')">
+    <input type="file" accept="video/*" class="hidden-input" ref="vidInp" @change="e => uploadFile(e, 'video')">
+
+    <div v-if="showMediaModal" class="modal-overlay" @click.self="closeMedia">
+        <button class="modal-close" @click="closeMedia">&times;</button>
+        <div class="modal-content">
+            <img v-if="mediaType === 'image'" :src="mediaUrl">
+            <video v-if="mediaType === 'video'" :src="mediaUrl" controls autoplay></video>
+        </div>
+    </div>
+
+    <div v-if="showRemarkModal" class="modal-overlay" @click.self="showRemarkModal = false">
+        <div class="modal-box">
+            <h2><i class="fa fa-edit"></i>修改备注</h2>
+            <input v-model="newRemark" placeholder="怎么称呼对方？">
+            <div class="modal-btns">
+                <button @click="showRemarkModal = false">取消</button>
+                <button @click="saveRemark">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted, nextTick, computed } = Vue;
+
+    createApp({
+        setup() {
+            const currentTime = ref('');
+            const currentDate = ref('');
+            const currentUser = ref(null);
+            const currentTargetId = ref(null);
+            const contacts = ref([]);
+            const messageList = ref([]);
+            const inputMsg = ref('');
+            const showTools = ref(false);
+            const showMediaModal = ref(false);
+            const mediaUrl = ref('');
+            const mediaType = ref('');
+            const chatBox = ref(null);
+            const onlineUsers = ref({});
+            const imgInp = ref(null);
+            const vidInp = ref(null);
+            const showRemarkModal = ref(false);
+            const newRemark = ref('');
+            const isRecording = ref(false);
+            const mediaRecorder = ref(null);
+            const audioChunks = ref([]);
+            const recStart = ref(0);
+            const isVoiceMode = ref(false);
+
+            const updateTime = () => {
+                const d = new Date();
+                currentTime.value = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+                const w = ['周日','周一','周二','周三','周四','周五','周六'];
+                currentDate.value = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+w[d.getDay()];
+            };
+
+            const checkLogin = async () => {
+                try {
+                    const res = await fetch('/api/user/info');
+                    const data = await res.json();
+                    if (data.code === 200 && data.data) {
+                        currentUser.value = data.data;
+                        setupMessageCallbacks();
+                        loadContacts();
+                        return true;
+                    } else {
+                        window.location.href = 'login.html';
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('检查登录失败', e);
+                    return false;
+                }
+            };
+
+            let messageCallbackBound = false;
+
+            const setupMessageCallbacks = () => {
+                if (!window.AdminMessageCenter) {
+                    console.warn('[admin_msg] AdminMessageCenter 未初始化，1秒后重试');
+                    setTimeout(setupMessageCallbacks, 1000);
+                    return;
+                }
+
+                if (messageCallbackBound) {
+                    return;
+                }
+
+                AdminMessageCenter.suppressInAppNotification = true;
+
+                AdminMessageCenter.onOnlineStatus((userId, online) => {
+                    onlineUsers.value[userId] = online;
+                });
+
+                AdminMessageCenter.onMessage((m, contact) => {
+                    const isMyMessage = String(m.fromId) === String(currentUser.value?.id);
+                    const otherId = isMyMessage ? m.toId : m.fromId;
+
+                    if (String(otherId) === String(currentTargetId.value)) {
+                        const exists = messageList.value.some(existingMsg => {
+                            if (existingMsg.id && m.id) {
+                                return String(existingMsg.id) === String(m.id);
+                            }
+                            return existingMsg.createTime && m.createTime && 
+                                   String(existingMsg.createTime) === String(m.createTime) &&
+                                   String(existingMsg.fromId) === String(m.fromId);
+                        });
+                        if (!exists) {
+                            messageList.value.push(m);
+                            nextTick(() => {
+                                scrollToBottom();
+                            });
+                        }
+                        if (!isMyMessage) {
+                            axios.post(`/api/msg/read?fromId=${m.fromId}`);
+                        }
+                    } else if (!isMyMessage) {
+                        const contactIndex = contacts.value.findIndex(c => String(c.id) === String(otherId));
+                        if (contactIndex !== -1) {
+                            const updatedContact = {
+                                ...contacts.value[contactIndex],
+                                unreadCount: (contacts.value[contactIndex].unreadCount || 0) + 1,
+                                lastMessage: m.content,
+                                lastMsgType: m.msgType,
+                                lastMsgTime: new Date().toISOString()
+                            };
+                            contacts.value.splice(contactIndex, 1, updatedContact);
+                        } else {
+                            loadContacts();
+                        }
+                    }
+                });
+
+                messageCallbackBound = true;
+            };
+
+            const loadContacts = async () => {
+                try {
+                    const res = await axios.get('/api/friend/list/ordered');
+                    if (res.data.code === 200) {
+                        const list = res.data.data;
+                        const detailRes = await axios.get('/api/msg/unread/detail');
+                        const detail = detailRes.data.data || [];
+                        contacts.value = list.map(c => {
+                            const d = detail.find(x => x.senderId === c.id || x.from_id === c.id);
+                            c.unreadCount = d ? (d.count || d['count(*)']) : 0;
+                            return c;
+                        });
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const targetUserId = urlParams.get('targetUserId');
+                        if (targetUserId) {
+                            const targetContact = contacts.value.find(c => String(c.id) === targetUserId);
+                            if (targetContact) {
+                                selectContact(targetContact);
+                            }
+                        }
+                        loadOnlineStatus();
+                    }
+                } catch (err) {
+                    console.error('加载联系人失败', err);
+                }
+            };
+
+            const loadOnlineStatus = () => {
+                axios.get('/api/friend/online-status').then(res => {
+                    if (res.data.code === 200) {
+                        onlineUsers.value = res.data.data || {};
+                    }
+                });
+            };
+
+            const currentTargetName = computed(() => {
+                if (!currentTargetId.value) return '请选择住户';
+                const contact = contacts.value.find(c => c.id === currentTargetId.value);
+                return contact ? (contact.remark || contact.nickname) : '请选择住户';
+            });
+
+            const selectContact = async (contact) => {
+                currentTargetId.value = contact.id;
+                try {
+                    const res = await axios.get(`/api/msg/history?otherId=${contact.id}`);
+                    if (res.data.code === 200) {
+                        messageList.value = res.data.data || [];
+                        scrollToBottom();
+                    }
+                } catch (err) {
+                    console.error('加载消息失败', err);
+                }
+                axios.post(`/api/msg/read?fromId=${contact.id}`).then(() => {
+                    contact.unreadCount = 0;
+                });
+            };
+
+            const scrollToBottom = () => {
+                setTimeout(() => {
+                    const el = document.getElementById('chat-box');
+                    if (el) el.scrollTop = el.scrollHeight;
+                }, 100);
+            };
+
+            const getLastMessagePreview = (user) => {
+                if (!user.lastMessage) return '点击开始聊天';
+                if (user.lastMsgType === 'voice') {
+                    return '[语音消息]';
+                } else if (user.lastMsgType === 'image') {
+                    return '[图片]';
+                } else if (user.lastMsgType === 'video') {
+                    return '[视频]';
+                }
+                return user.lastMessage.length > 15 ? user.lastMessage.substring(0, 15) + '...' : user.lastMessage;
+            };
+
+            const sendMsg = () => {
+                if (!inputMsg.value.trim() || !currentTargetId.value) return;
+                emitMessage(inputMsg.value, 'text');
+                inputMsg.value = '';
+            };
+
+            const emitMessage = (content, type, dur = 0) => {
+                const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const msg = { 
+                    id: tempId,
+                    fromId: Number(currentUser.value.id), 
+                    toId: Number(currentTargetId.value), 
+                    content, 
+                    msgType: type, 
+                    duration: dur,
+                    createTime: new Date().toISOString()
+                };
+                if (window.AdminMessageCenter && AdminMessageCenter.isConnected) {
+                    const sendMsg = { ...msg };
+                    delete sendMsg.id;
+                    AdminMessageCenter.sendMessage(sendMsg);
+                    messageList.value.push(msg);
+                    scrollToBottom();
+                    
+                    const contact = contacts.value.find(c => String(c.id) === String(currentTargetId.value));
+                    if (contact) {
+                        contact.lastMessage = content;
+                        contact.lastMsgType = type;
+                        contact.lastMsgTime = new Date().toISOString();
+                    }
+                } else {
+                    alert('连接已断开，正在重连...');
+                }
+            };
+
+            const triggerFile = (type) => {
+                if (type === 'image') {
+                    imgInp.value.click();
+                } else if (type === 'video') {
+                    vidInp.value.click();
+                }
+                showTools.value = false;
+            };
+
+            const uploadFile = async (e, type) => {
+                const file = e.target.files[0]; 
+                if (!file) return;
+                
+                let processedFile = file;
+                if (type === 'image' && typeof compressImage === 'function' && file.size > 100 * 1024) {
+                    try {
+                        processedFile = await compressImage(file, { targetSize: 800 * 1024 });
+                        console.log(`[图片上传] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                    } catch (err) {
+                        console.warn('[图片上传] 压缩失败，使用原图:', err);
+                    }
+                }
+                
+                const fd = new FormData(); 
+                fd.append('file', processedFile);
+                const res = await axios.post('/api/common/upload', fd);
+                if (res.data.code === 200) {
+                    emitMessage(res.data.url, type);
+                }
+                e.target.value = '';
+                showTools.value = false;
+            };
+
+            const toggleVoiceMode = () => {
+                isVoiceMode.value = !isVoiceMode.value;
+                if (!isVoiceMode.value && isRecording.value) {
+                    stopRecord();
+                }
+            };
+
+            const startRecord = async () => {
+                if (!currentTargetId.value) {
+                    alert("请先选择联系人");
+                    return;
+                }
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+                    mediaRecorder.value = new MediaRecorder(stream);
+                    audioChunks.value = []; 
+                    isRecording.value = true; 
+                    recStart.value = Date.now();
+                    mediaRecorder.value.ondataavailable = (e) => audioChunks.value.push(e.data);
+                    mediaRecorder.value.onstop = async () => {
+                        const dur = Math.round((Date.now() - recStart.value) / 1000);
+                        if (dur < 1) {
+                            alert("录音时间太短");
+                            return;
+                        }
+                        const blob = new Blob(audioChunks.value, {type: 'audio/webm'});
+                        const fd = new FormData(); 
+                        fd.append('file', blob, 'voice.webm');
+                        const res = await axios.post('/api/common/upload', fd);
+                        if (res.data.code === 200) {
+                            emitMessage(res.data.url, 'voice', dur);
+                            isVoiceMode.value = false;
+                        }
+                        stream.getTracks().forEach(t => t.stop());
+                    };
+                    mediaRecorder.value.start();
+                } catch(e) {
+                    alert("麦克风异常，请检查麦克风权限");
+                    console.error(e);
+                }
+            };
+
+            const stopRecord = () => {
+                if (mediaRecorder.value && isRecording.value) {
+                    mediaRecorder.value.stop();
+                    isRecording.value = false;
+                }
+            };
+
+            const playVoice = (url) => {
+                const audio = new Audio(url);
+                audio.play();
+            };
+
+            const openRemark = () => {
+                if (!currentTargetId.value) {
+                    alert("请先选择联系人");
+                    return;
+                }
+                const u = contacts.value.find(x => x.id == currentTargetId.value);
+                newRemark.value = u.remark || '';
+                showRemarkModal.value = true;
+                showTools.value = false;
+            };
+
+            const saveRemark = () => {
+                axios.post('/api/friend/updateRemark', { friendId: currentTargetId.value, remark: newRemark.value }).then(() => {
+                    showRemarkModal.value = false;
+                    loadContacts();
+                });
+            };
+
+            const formatTime = (timeStr) => {
+                if (!timeStr) return '';
+                let date;
+                if (Array.isArray(timeStr)) {
+                    date = new Date(timeStr[0], timeStr[1]-1, timeStr[2], timeStr[3], timeStr[4], timeStr[5]);
+                } else {
+                    date = new Date(timeStr);
+                }
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const hour = date.getHours().toString().padStart(2, '0');
+                const minute = date.getMinutes().toString().padStart(2, '0');
+                return `${month}-${day} ${hour}:${minute}`;
+            };
+
+            const setupWebSocketStatusMonitor = () => {
+                const wsStatusEl = document.getElementById('wsStatus');
+                const wsDot = wsStatusEl ? wsStatusEl.querySelector('.ws-dot') : null;
+                const wsText = wsStatusEl ? wsStatusEl.querySelector('.ws-text') : null;
+
+                const updateStatus = () => {
+                    if (!window.AdminMessageCenter) {
+                        return;
+                    }
+
+                    const status = window.AdminMessageCenter.getConnectionStatus();
+                    if (wsDot && wsText) {
+                        wsDot.className = 'ws-dot ' + status;
+                        const statusMap = {
+                            'connected': '已连接',
+                            'disconnected': '已断开',
+                            'connecting': '连接中'
+                        };
+                        wsText.textContent = statusMap[status] || '未知';
+                    }
+                };
+
+                // 立即执行一次
+                updateStatus();
+                
+                // 等待 AdminMessageCenter 初始化
+                let initAttempts = 0;
+                const initCheck = setInterval(() => {
+                    initAttempts++;
+                    if (window.AdminMessageCenter && window.AdminMessageCenter.isConnected !== undefined) {
+                        updateStatus();
+                        clearInterval(initCheck);
+                    } else if (initAttempts > 20) {
+                        clearInterval(initCheck);
+                    }
+                }, 500);
+
+                // 持续监控状态
+                setInterval(updateStatus, 2000);
+            };
+
+            const openMedia = (url, type) => {
+                mediaUrl.value = url;
+                mediaType.value = type;
+                showMediaModal.value = true;
+            };
+
+            const closeMedia = () => {
+                showMediaModal.value = false;
+                mediaUrl.value = '';
+                mediaType.value = '';
+            };
+
+            onMounted(async () => {
+                updateTime();
+                setInterval(updateTime, 1000);
+                await checkLogin();
+                setupWebSocketStatusMonitor();
+
+                window.addEventListener('selectContact', (e) => {
+                    const contactId = e.detail?.contactId;
+                    if (contactId) {
+                        const contact = contacts.value.find(c => String(c.id) === String(contactId));
+                        if (contact) {
+                            selectContact(contact);
+                        } else {
+                            loadContacts();
+                        }
+                    }
+                });
+
+                window.addEventListener('admin-friend-delete', (e) => {
+                    if (String(e.detail.fromId) === String(currentUser.value?.id)) {
+                        currentTargetId.value = null;
+                        messageList.value = [];
+                    }
+                    loadContacts();
+                });
+
+                window.addEventListener('admin-friend-update', () => {
+                    loadContacts();
+                });
+            });
+
+            return {
+                currentTime, currentDate, currentUser, currentTargetId, contacts, messageList,
+                inputMsg, showTools, showMediaModal, mediaUrl, mediaType,
+                chatBox, onlineUsers, imgInp, vidInp,
+                currentTargetName, selectContact, getLastMessagePreview,
+                sendMsg, triggerFile, uploadFile, formatTime,
+                openMedia, closeMedia, openRemark, saveRemark, showRemarkModal, newRemark,
+                toggleVoiceMode, startRecord, stopRecord, isRecording, isVoiceMode,
+                playVoice
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+
+

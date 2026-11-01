@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻发布 · 解尘颐安智慧社区管理平台</title>
+    <script src="js/image-compressor.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #1d5a8b;
+            --bg-color: #f5f9ff;
+            --card-shadow: 0 10px 30px rgba(0, 45, 80, 0.08);
+            --navy-dark: #0b2a41;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: #1f2a3f;
+            padding: 0 0 50px 0;
+        }
+
+        .header-nav {
+            background: var(--navy-dark);
+            color: white;
+            padding: 1rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-title { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .action-btns { display: flex; gap: 12px; }
+
+        .main-content {
+            max-width: 1440px;
+            margin: 30px auto;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 30px;
+            padding: 0 30px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+
+        .editor-side { display: flex; flex-direction: column; gap: 24px; }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid #e1e9f2;
+        }
+
+        .card-header {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #f0f4f8;
+            padding-bottom: 12px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .full-width { grid-column: span 2; }
+
+        .field-group { display: flex; flex-direction: column; gap: 8px; }
+        .label { font-size: 0.9rem; font-weight: 600; color: #576f88; }
+        .label .required { color: var(--danger); margin-left: 2px; }
+        
+        .input-control {
+            padding: 12px;
+            border: 1px solid #cedeeF;
+            border-radius: 10px;
+            background: #fcfdfe;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .input-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(29,90,139,0.1); }
+        .input-control:disabled { background: #f1f5f9; cursor: not-allowed; }
+
+        .cover-uploader {
+            border: 2px dashed #cedeeF;
+            border-radius: 12px;
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            background: #f8fbff;
+            position: relative;
+        }
+        .cover-uploader:hover { background: #f0f6ff; border-color: var(--primary-color); }
+        .cover-uploader.uploading { pointer-events: none; opacity: 0.7; }
+        .cover-img { width: 100%; height: 100%; object-fit: cover; }
+        .upload-progress {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .upload-progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            transition: width 0.3s;
+        }
+
+        #editor-wrapper { height: 500px; border-radius: 0 0 12px 12px; }
+        .ql-toolbar.ql-snow { 
+            border-radius: 12px 12px 0 0; 
+            background: linear-gradient(135deg, #f8fbff 0%, #f0f6ff 100%); 
+            border: 1px solid #e1e9f2;
+            padding: 12px;
+        }
+        .ql-toolbar.ql-snow .ql-formats { margin-right: 15px; }
+        .ql-toolbar.ql-snow button { 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .ql-toolbar.ql-snow button:hover { 
+            background: #e0eaff; 
+            color: var(--primary-color);
+        }
+        .ql-toolbar.ql-snow button.ql-active { 
+            background: var(--primary-color); 
+            color: white;
+        }
+        .ql-toolbar.ql-snow .ql-picker { 
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .ql-toolbar.ql-snow .ql-picker:hover { 
+            background: #e0eaff; 
+        }
+        .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid #e1e9f2;
+        }
+        .ql-container.ql-snow { 
+            border: 1px solid #e1e9f2; 
+            border-top: none;
+            font-size: 15px;
+        }
+        .ql-editor { 
+            padding: 20px; 
+            line-height: 1.8;
+        }
+        .ql-editor.ql-blank::before {
+            color: #94a3b8;
+            font-style: normal;
+        }
+        .ql-editor img {
+            max-width: 600px;
+            max-height: 500px;
+            width: auto;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px auto;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            object-fit: contain;
+        }
+        .ql-editor h1 { font-size: 2em; color: var(--navy-dark); margin: 0.8em 0 0.4em; }
+        .ql-editor h2 { font-size: 1.6em; color: var(--navy-dark); margin: 0.7em 0 0.3em; }
+        .ql-editor h3 { font-size: 1.3em; color: var(--navy-dark); margin: 0.6em 0 0.3em; }
+        .ql-editor blockquote {
+            border-left: 4px solid var(--primary-color);
+            background: #f8fbff;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+            color: #576f88;
+        }
+        .ql-editor pre.ql-syntax {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+        }
+        .ql-editor ul, .ql-editor ol {
+            padding-left: 1.5em;
+            margin: 10px 0;
+        }
+        .ql-editor li { margin: 5px 0; }
+        
+        .editor-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: #f8fbff;
+            border: 1px solid #e1e9f2;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            font-size: 13px;
+            color: #64748b;
+        }
+        .word-count { display: flex; gap: 15px; }
+        .word-count span { display: flex; align-items: center; gap: 5px; }
+
+        .preview-side { position: sticky; top: 100px; height: fit-content; }
+        .phone-shell {
+            width: 100%;
+            height: 720px;
+            background: white;
+            border: 10px solid #1a2e3b;
+            border-radius: 36px;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        }
+        .phone-shell::-webkit-scrollbar { width: 4px; }
+        .phone-shell::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+
+        .phone-screen img.cover { width: 100%; height: 200px; object-fit: cover; background: #eee; }
+        .phone-content { padding: 20px; }
+        .p-title { font-size: 1.3rem; font-weight: 800; line-height: 1.4; margin-bottom: 12px; word-break: break-word; }
+        .p-meta { font-size: 0.8rem; color: #94a3b8; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+        .p-richtext { 
+            font-size: 0.95rem; 
+            color: #334155; 
+            line-height: 1.6; 
+            word-break: break-word; 
+        }
+        .p-richtext img { max-width: 100%; max-height: 300px; width: auto; height: auto; border-radius: 8px; margin: 10px auto; display: block; object-fit: contain; }
+        .p-richtext h1 { font-size: 1.5em; font-weight: 700; margin: 0.8em 0 0.4em; color: #1e293b; }
+        .p-richtext h2 { font-size: 1.3em; font-weight: 600; margin: 0.7em 0 0.3em; color: #1e293b; }
+        .p-richtext h3 { font-size: 1.1em; font-weight: 600; margin: 0.6em 0 0.3em; color: #334155; }
+        .p-richtext ul, .p-richtext ol { padding-left: 1.5em; margin: 10px 0; }
+        .p-richtext li { margin: 5px 0; }
+        .p-richtext blockquote {
+            border-left: 3px solid var(--primary-color);
+            background: #f8fafc;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 0 6px 6px 0;
+            color: #64748b;
+            font-size: 0.9em;
+        }
+        .p-richtext pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85em;
+        }
+        .p-richtext a { color: var(--primary-color); text-decoration: underline; }
+        .p-richtext .ql-align-center { text-align: center; }
+        .p-richtext .ql-align-right { text-align: right; }
+        .p-richtext .ql-size-small { font-size: 0.85em; }
+        .p-richtext .ql-size-large { font-size: 1.25em; }
+        .p-richtext .ql-size-huge { font-size: 1.5em; }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        .btn-ghost { background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-primary:hover { background: #164570; transform: translateY(-1px); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-purple { background: #7c3aed; color: white; }
+        .btn-purple:hover { background: #6d28d9; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .status-badge {
+            background: #eef2ff; color: #4338ca;
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+        }
+        .status-badge.draft { background: #fef3c7; color: #d97706; }
+        .status-badge.scheduled { background: #ede9fe; color: #7c3aed; }
+        .status-badge.published { background: #dcfce7; color: #16a34a; }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e2e8f0;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="loading-overlay" v-if="loading">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 16px; color: #64748b;">加载中...</p>
+    </div>
+
+    <nav class="header-nav">
+        <div class="nav-left">
+            <div class="nav-title">
+                <i class="fa fa-edit"></i> {{ isEdit ? '编辑新闻' : '发布新闻' }}
+            </div>
+            <span class="status-badge" :class="statusClass" v-if="form.status !== undefined">
+                {{ statusText }}
+            </span>
+        </div>
+        <div class="action-btns">
+            <button class="btn btn-ghost" @click="goBackToList"><i class="fa fa-arrow-left"></i> 返回列表</button>
+            <button class="btn" :class="publishBtnClass" @click="handlePublish" :disabled="saving">
+                <i :class="publishBtnIcon"></i> {{ publishBtnText }}
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="editor-side">
+            <section class="card">
+                <div class="card-header"><i class="fa fa-info-circle"></i> 基本信息</div>
+                <div class="form-grid">
+                    <div class="field-group full-width">
+                        <label class="label">新闻标题 <span class="required">*</span></label>
+                        <input type="text" class="input-control" v-model="form.title" 
+                               placeholder="请输入新闻标题..." maxlength="100">
+                        <span style="font-size: 12px; color: #94a3b8; text-align: right;">
+                            {{ (form.title || '').length }}/100
+                        </span>
+                    </div>
+                    <div class="field-group">
+                        <label class="label">文章分类 <span class="required">*</span></label>
+                        <select class="input-control" v-model="form.category">
+                            <option value="">请选择分类</option>
+                            <option>社区公告</option>
+                            <option>党建动态</option>
+                            <option>健康科普</option>
+                            <option>活动通知</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label class="label">发布模式</label>
+                        <select class="input-control" v-model="form.pubType">
+                            <option value="now">立即发布</option>
+                            <option value="scheduled">定时发布</option>
+                            <option value="draft">保存草稿</option>
+                        </select>
+                    </div>
+                    <div class="field-group full-width" v-if="form.pubType === 'scheduled'">
+                        <label class="label">选择发布时间 <span class="required">*</span></label>
+                        <input type="datetime-local" class="input-control" v-model="form.scheduledTime">
+                    </div>
+                    <div class="field-group full-width">
+                        <label class="label">封面图片</label>
+                        <div class="cover-uploader" :class="{ uploading: uploadingCover }" 
+                             @click="!uploadingCover && $refs.coverFileInput.click()">
+                            <img v-if="form.coverUrl" :src="form.coverUrl" class="cover-img" alt="封面">
+                            <div v-else style="color: #94a3b8; text-align: center;">
+                                <i class="fa fa-camera" style="font-size: 24px;"></i>
+                                <p style="font-size: 12px; margin-top: 5px;">
+                                    {{ uploadingCover ? '上传中...' : '点击上传封面图' }}
+                                </p>
+                            </div>
+                            <div class="upload-progress" v-if="uploadingCover">
+                                <div class="upload-progress-bar" :style="{ width: uploadProgress + '%' }"></div>
+                            </div>
+                            <input type="file" ref="coverFileInput" hidden @change="uploadCover" accept="image/*">
+                        </div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
+                            建议尺寸: 800x450px，支持 jpg/png 格式
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card" style="padding: 0; overflow: hidden;">
+                <div class="card-header" style="margin: 24px 24px 0 24px; border: none;">
+                    <i class="fa fa-file-text"></i> 正文内容 <span class="required">*</span>
+                </div>
+                <div id="editor-wrapper"></div>
+                <div class="editor-footer">
+                    <div class="word-count">
+                        <span><i class="fa fa-font"></i> 字数: {{ wordCount }}</span>
+                        <span><i class="fa fa-image"></i> 图片: {{ imageCount }}</span>
+                    </div>
+                    <span>支持拖拽图片到编辑器</span>
+                </div>
+            </section>
+        </div>
+
+        <aside class="preview-side">
+            <div class="card-header" style="padding-left: 10px; border: none;">
+                <i class="fa fa-mobile-alt"></i> 实时预览效果
+            </div>
+            <div class="phone-shell">
+                <div class="phone-screen">
+                    <img :src="form.coverUrl || 'https://via.placeholder.com/400x220?text=News+Cover'" class="cover">
+                    <div class="phone-content">
+                        <h2 class="p-title">{{ form.title || '这里展示新闻标题' }}</h2>
+                        <div class="p-meta">
+                            <span><i class="fa fa-clock"></i> {{ displayTime }}</span> &nbsp;
+                            <span><i class="fa fa-tag"></i> {{ form.category || '未分类' }}</span>
+                        </div>
+                        <div class="p-richtext" v-html="form.content || '<p style=\'color:#aaa;\'>请输入正文内容...</p>'"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <div class="toast" :class="toast.type" v-if="toast.show">{{ toast.message }}</div>
+</div>
+
+<script>
+    const { createApp, ref, reactive, onMounted, computed, watch } = Vue;
+
+    createApp({
+        setup() {
+            const form = reactive({
+                title: '',
+                category: '',
+                pubType: 'now',
+                scheduledTime: '',
+                coverUrl: '',
+                content: '',
+                status: undefined
+            });
+
+            const coverFileInput = ref(null);
+            let quill = null;
+            const isEdit = ref(false);
+            const editId = ref(null);
+            const loading = ref(false);
+            const saving = ref(false);
+            const uploadingCover = ref(false);
+            const uploadProgress = ref(0);
+            const wordCount = ref(0);
+            const imageCount = ref(0);
+
+            const toast = reactive({ show: false, message: '', type: 'success' });
+
+            const showToast = (message, type = 'success') => {
+                toast.message = message;
+                toast.type = type;
+                toast.show = true;
+                setTimeout(() => { toast.show = false; }, 3000);
+            };
+
+            const displayTime = computed(() => {
+                if (form.pubType === 'now') return '刚刚发布';
+                if (form.pubType === 'scheduled' && form.scheduledTime) {
+                    return form.scheduledTime.replace('T', ' ');
+                }
+                if (form.pubType === 'draft') return '草稿';
+                return '未设置时间';
+            });
+
+            const statusClass = computed(() => {
+                if (form.status === 0) return 'draft';
+                if (form.status === 1) return 'published';
+                if (form.status === 2) return 'scheduled';
+                return '';
+            });
+
+            const statusText = computed(() => {
+                if (form.status === 0) return '草稿';
+                if (form.status === 1) return '已发布';
+                if (form.status === 2) return '定时发布';
+                return '';
+            });
+
+            const publishBtnClass = computed(() => {
+                if (form.pubType === 'scheduled') return 'btn-purple';
+                if (form.pubType === 'draft') return 'btn-warning';
+                return 'btn-success';
+            });
+
+            const publishBtnIcon = computed(() => {
+                if (form.pubType === 'scheduled') return 'fa fa-clock';
+                if (form.pubType === 'draft') return 'fa fa-save';
+                return 'fa fa-paper-plane';
+            });
+
+            const publishBtnText = computed(() => {
+                if (form.pubType === 'scheduled') return '设置定时';
+                if (form.pubType === 'draft') return '保存草稿';
+                return '确认发布';
+            });
+
+            const goBackToList = () => {
+                window.location.href = 'admin_newsList.html?t=' + Date.now();
+            };
+
+            const loadNewsDetail = async (id) => {
+                loading.value = true;
+                try {
+                    const res = await fetch(`/api/admin/news/detail/${id}`);
+                    const data = await res.json();
+                    if (data.code === 200 && data.data) {
+                        const news = data.data;
+                        form.title = news.title;
+                        form.category = news.category;
+                        form.coverUrl = news.coverImage || '';
+                        form.content = news.content;
+                        form.status = news.status;
+                        
+                        if (news.status === 0) {
+                            form.pubType = 'draft';
+                        } else if (news.status === 2 && news.scheduledTime) {
+                            form.pubType = 'scheduled';
+                            const dt = new Date(news.scheduledTime);
+                            form.scheduledTime = dt.toISOString().slice(0, 16);
+                        } else {
+                            form.pubType = 'now';
+                        }
+                        
+                        if (quill && news.content) {
+                            quill.root.innerHTML = news.content;
+                        }
+                    } else {
+                        showToast(data.msg || '加载失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('加载新闻详情失败', e);
+                    showToast('加载失败', 'error');
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            onMounted(() => {
+                const params = new URLSearchParams(window.location.search);
+                const id = params.get('id');
+                if (id) {
+                    isEdit.value = true;
+                    editId.value = id;
+                }
+
+                quill = new Quill('#editor-wrapper', {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: {
+                            container: [
+                                [{ 'header': [1, 2, 3, 4, 5, false] }],
+                                [{ 'size': ['small', false, 'large', 'huge'] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ 'color': [] }, { 'background': [] }],
+                                [{ 'script': 'sub' }, { 'script': 'super' }],
+                                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                                [{ 'align': [] }],
+                                ['blockquote', 'code-block'],
+                                ['link', 'image', 'video'],
+                                ['clean']
+                            ],
+                            handlers: {
+                                image: function() {
+                                    const range = quill.getSelection(true);
+                                    const index = range ? range.index : quill.getLength();
+
+                                    const input = document.createElement('input');
+                                    input.setAttribute('type', 'file');
+                                    input.setAttribute('accept', 'image/*');
+                                    input.click();
+
+                                    input.onchange = async () => {
+                                        const file = input.files[0];
+                                        if (!file) return;
+
+                                        try {
+                                            const formData = new FormData();
+                                            formData.append('file', file);
+                                            
+                                            const res = await fetch('/api/upload', {
+                                                method: 'POST',
+                                                body: formData
+                                            });
+                                            const data = await res.json();
+                                            
+                                            if (data.url) {
+                                                quill.insertEmbed(index, 'image', data.url);
+                                                quill.setSelection(index + 1);
+                                            } else {
+                                                showToast('图片上传失败', 'error');
+                                            }
+                                        } catch (e) {
+                                            const reader = new FileReader();
+                                            reader.onload = (e) => {
+                                                quill.insertEmbed(index, 'image', e.target.result);
+                                                quill.setSelection(index + 1);
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }
+                                        input.value = '';
+                                    };
+                                    return false;
+                                },
+                                video: function() {
+                                    const range = quill.getSelection(true);
+                                    const index = range ? range.index : quill.getLength();
+                                    const url = prompt('请输入视频链接 (支持 YouTube, Vimeo 等):');
+                                    if (url) {
+                                        quill.insertEmbed(index, 'video', url);
+                                        quill.setSelection(index + 1);
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    placeholder: '写下社区的新动态...'
+                });
+
+                const updateStats = () => {
+                    const text = quill.getText().trim();
+                    wordCount.value = text.length;
+                    const imgs = quill.root.querySelectorAll('img');
+                    imageCount.value = imgs.length;
+                };
+
+                quill.on('text-change', () => {
+                    form.content = quill.root.innerHTML;
+                    updateStats();
+                });
+
+                const editorEl = document.querySelector('#editor-wrapper .ql-editor');
+                if (editorEl) {
+                    editorEl.addEventListener('drop', async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0 && files[0].type.startsWith('image/')) {
+                            const file = files[0];
+                            const range = quill.getSelection(true);
+                            const index = range ? range.index : quill.getLength();
+                            
+                            try {
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                
+                                const res = await fetch('/api/upload', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                const data = await res.json();
+                                
+                                if (data.url) {
+                                    quill.insertEmbed(index, 'image', data.url);
+                                    quill.setSelection(index + 1);
+                                    showToast('图片上传成功');
+                                }
+                            } catch (err) {
+                                showToast('图片上传失败', 'error');
+                            }
+                        }
+                    });
+                    
+                    editorEl.addEventListener('paste', (e) => {
+                        const items = e.clipboardData.items;
+                        for (let item of items) {
+                            if (item.type.startsWith('image/')) {
+                                e.preventDefault();
+                                const file = item.getAsFile();
+                                const range = quill.getSelection(true);
+                                const index = range ? range.index : quill.getLength();
+                                
+                                const reader = new FileReader();
+                                reader.onload = async (ev) => {
+                                    try {
+                                        let blob = await (await fetch(ev.target.result)).blob();
+                                        
+                                        if (typeof compressImage === 'function' && blob.size > 100 * 1024) {
+                                            try {
+                                                const compressedFile = await compressImage(blob, { targetSize: 800 * 1024 });
+                                                blob = compressedFile;
+                                                console.log(`[编辑器图片] 压缩后: ${(blob.size / 1024).toFixed(1)}KB`);
+                                            } catch (compressErr) {
+                                                console.warn('[编辑器图片] 压缩失败:', compressErr);
+                                            }
+                                        }
+                                        
+                                        const formData = new FormData();
+                                        formData.append('file', blob, 'pasted-image.png');
+                                        
+                                        const res = await fetch('/api/upload', {
+                                            method: 'POST',
+                                            body: formData
+                                        });
+                                        const data = await res.json();
+                                        
+                                        if (data.url) {
+                                            quill.insertEmbed(index, 'image', data.url);
+                                            quill.setSelection(index + 1);
+                                        }
+                                    } catch (err) {
+                                        quill.insertEmbed(index, 'image', ev.target.result);
+                                        quill.setSelection(index + 1);
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                                break;
+                            }
+                        }
+                    });
+                }
+
+                if (isEdit.value) {
+                    loadNewsDetail(editId.value);
+                }
+            });
+
+            const uploadCover = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast('图片大小不能超过5MB', 'error');
+                    return;
+                }
+
+                uploadingCover.value = true;
+                uploadProgress.value = 0;
+
+                try {
+                    let processedFile = file;
+                    if (typeof compressImage === 'function' && file.size > 100 * 1024) {
+                        try {
+                            processedFile = await compressImage(file, { 
+                                targetSize: 800 * 1024,
+                                onProgress: (percent) => { uploadProgress.value = percent * 0.5; }
+                            });
+                            console.log(`[封面上传] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                        } catch (err) {
+                            console.warn('[封面上传] 压缩失败，使用原图:', err);
+                        }
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('file', processedFile);
+                    
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    
+                    if (data.url) {
+                        form.coverUrl = data.url;
+                        showToast('封面上传成功');
+                    } else {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            form.coverUrl = ev.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                        showToast('已使用本地预览');
+                    }
+                } catch (err) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        form.coverUrl = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                    showToast('已使用本地预览');
+                } finally {
+                    uploadingCover.value = false;
+                    uploadProgress.value = 100;
+                    e.target.value = '';
+                }
+            };
+
+            const validateForm = () => {
+                if (!form.title || !form.title.trim()) {
+                    showToast('请输入新闻标题', 'error');
+                    return false;
+                }
+                if (!form.category) {
+                    showToast('请选择文章分类', 'error');
+                    return false;
+                }
+                if (!form.content || quill.getText().trim().length === 0) {
+                    showToast('请输入正文内容', 'error');
+                    return false;
+                }
+                if (form.pubType === 'scheduled' && !form.scheduledTime) {
+                    showToast('请选择定时发布时间', 'error');
+                    return false;
+                }
+                return true;
+            };
+
+            const handlePublish = async () => {
+                const isDraft = form.pubType === 'draft';
+                
+                if (!isDraft && !validateForm()) return;
+                if (isDraft && (!form.title || !form.title.trim())) {
+                    showToast('请至少输入标题', 'error');
+                    return;
+                }
+
+                saving.value = true;
+                try {
+                    const payload = {
+                        title: form.title,
+                        content: form.content,
+                        category: form.category || '社区公告',
+                        coverImage: form.coverUrl,
+                        pubType: form.pubType,
+                        scheduledTime: form.scheduledTime
+                    };
+
+                    let res;
+                    if (isEdit.value) {
+                        res = await fetch(`/api/admin/news/update/${editId.value}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                    } else {
+                        res = await fetch('/api/admin/news/create', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                    }
+
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        const msgMap = {
+                            'scheduled': '定时发布设置成功',
+                            'draft': '草稿保存成功',
+                            'now': '发布成功'
+                        };
+                        showToast(msgMap[form.pubType] || '操作成功');
+                        
+                        setTimeout(() => {
+                            window.location.href = 'admin_newsList.html?t=' + Date.now();
+                        }, 1500);
+                    } else {
+                        showToast(data.msg || '操作失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('操作失败', e);
+                    showToast('操作失败，请检查网络', 'error');
+                } finally {
+                    saving.value = false;
+                }
+            };
+
+            return {
+                form,
+                coverFileInput,
+                displayTime,
+                isEdit,
+                loading,
+                saving,
+                uploadingCover,
+                uploadProgress,
+                toast,
+                statusClass,
+                statusText,
+                publishBtnClass,
+                publishBtnIcon,
+                publishBtnText,
+                wordCount,
+                imageCount,
+                goBackToList,
+                uploadCover,
+                handlePublish
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+
+

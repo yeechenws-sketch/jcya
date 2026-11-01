@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.UserHealthConfigMapper">
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.UserHealthConfig">
+        INSERT INTO user_health_config (
+            user_id, hr_min, hr_max, bo_min, bo_warning, 
+            bp_sys_min, bp_sys_max, bp_sys_emergency, bp_dia_min, bp_dia_max, bp_dia_emergency, 
+            bg_fasting_min, bg_fasting_max, bg_after_meal_min, bg_after_meal_max, 
+            step_target, sleep_target, enable_notifications, notification_time, update_time
+        ) VALUES (
+            #{userId}, #{hrMin}, #{hrMax}, #{boMin}, #{boWarning}, 
+            #{bpSysMin}, #{bpSysMax}, #{bpSysEmergency}, #{bpDiaMin}, #{bpDiaMax}, #{bpDiaEmergency}, 
+            #{bgFastingMin}, #{bgFastingMax}, #{bgAfterMealMin}, #{bgAfterMealMax}, 
+            #{stepTarget}, #{sleepTarget}, #{enableNotifications}, #{notificationTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.chat.older.xiechen.model.UserHealthConfig">
+        UPDATE user_health_config SET
+            hr_min = #{hrMin}, hr_max = #{hrMax}, bo_min = #{boMin}, bo_warning = #{boWarning}, 
+            bp_sys_min = #{bpSysMin}, bp_sys_max = #{bpSysMax}, bp_sys_emergency = #{bpSysEmergency}, 
+            bp_dia_min = #{bpDiaMin}, bp_dia_max = #{bpDiaMax}, bp_dia_emergency = #{bpDiaEmergency}, 
+            bg_fasting_min = #{bgFastingMin}, bg_fasting_max = #{bgFastingMax}, 
+            bg_after_meal_min = #{bgAfterMealMin}, bg_after_meal_max = #{bgAfterMealMax}, 
+            step_target = #{stepTarget}, sleep_target = #{sleepTarget}, 
+            enable_notifications = #{enableNotifications}, notification_time = #{notificationTime}, 
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultType="com.chat.older.xiechen.model.UserHealthConfig">
+        SELECT * FROM user_health_config WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" parameterType="java.lang.Long" resultType="com.chat.older.xiechen.model.UserHealthConfig">
+        SELECT * FROM user_health_config WHERE user_id = #{userId}
+    </select>
+
+    <insert id="upsert" parameterType="com.chat.older.xiechen.model.UserHealthConfig">
+        INSERT INTO user_health_config (
+            user_id, hr_min, hr_max, bo_min, bo_warning, 
+            bp_sys_min, bp_sys_max, bp_sys_emergency, bp_dia_min, bp_dia_max, bp_dia_emergency, 
+            bg_fasting_min, bg_fasting_max, bg_after_meal_min, bg_after_meal_max, 
+            step_target, sleep_target, enable_notifications, notification_time, update_time
+        ) VALUES (
+            #{userId}, #{hrMin}, #{hrMax}, #{boMin}, #{boWarning}, 
+            #{bpSysMin}, #{bpSysMax}, #{bpSysEmergency}, #{bpDiaMin}, #{bpDiaMax}, #{bpDiaEmergency}, 
+            #{bgFastingMin}, #{bgFastingMax}, #{bgAfterMealMin}, #{bgAfterMealMax}, 
+            #{stepTarget}, #{sleepTarget}, #{enableNotifications}, #{notificationTime}, #{updateTime}
+        ) ON DUPLICATE KEY UPDATE
+            hr_min = VALUES(hr_min), hr_max = VALUES(hr_max), bo_min = VALUES(bo_min), bo_warning = VALUES(bo_warning), 
+            bp_sys_min = VALUES(bp_sys_min), bp_sys_max = VALUES(bp_sys_max), bp_sys_emergency = VALUES(bp_sys_emergency), 
+            bp_dia_min = VALUES(bp_dia_min), bp_dia_max = VALUES(bp_dia_max), bp_dia_emergency = VALUES(bp_dia_emergency), 
+            bg_fasting_min = VALUES(bg_fasting_min), bg_fasting_max = VALUES(bg_fasting_max), 
+            bg_after_meal_min = VALUES(bg_after_meal_min), bg_after_meal_max = VALUES(bg_after_meal_max), 
+            step_target = VALUES(step_target), sleep_target = VALUES(sleep_target), 
+            enable_notifications = VALUES(enable_notifications), notification_time = VALUES(notification_time), 
+            update_time = VALUES(update_time)
+    </insert>
+</mapper>

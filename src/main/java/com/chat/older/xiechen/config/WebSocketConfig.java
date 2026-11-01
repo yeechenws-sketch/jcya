@@ -1,0 +1,21 @@
+package com.chat.older.xiechen.config;
+
+import com.chat.older.xiechen.handler.ChatHandler;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.config.annotation.*;
+
+@Configuration
+@EnableWebSocket
+public class WebSocketConfig implements WebSocketConfigurer {
+
+    @Autowired
+    private ChatHandler chatHandler;
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(chatHandler, "/chat/{userId}")
+                .setAllowedOrigins("*");
+    }
+
+}

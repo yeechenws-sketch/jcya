@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智慧养老 - 子女端 - 解尘颐安</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --primary-light: #3B82F6;
+            --primary-lighter: #60A5FA;
+            --danger: #EF4444;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --bg-light: #EFF6FF;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .greeting h1 {
+            font-size: 17px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .greeting p {
+            font-size: 12px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .icon-btn i {
+            font-size: 18px;
+            color: white;
+        }
+
+        .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 18px;
+            height: 18px;
+            background: var(--danger);
+            color: white;
+            border-radius: 9px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid var(--primary-dark);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        .alert-card {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--danger);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .alert-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .alert-header i {
+            font-size: 20px;
+            color: var(--danger);
+        }
+
+        .alert-header span {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--danger);
+        }
+
+        .alert-content {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .anomaly-banner {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--warning);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .anomaly-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .anomaly-banner:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+        }
+
+        .anomaly-banner .alert-header {
+            margin-bottom: 6px;
+        }
+
+        .anomaly-banner .alert-header i {
+            color: var(--warning);
+            animation: pulse-icon 1.5s infinite;
+        }
+
+        @keyframes pulse-icon {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .anomaly-banner .alert-header span {
+            color: #B45309;
+        }
+
+        .anomaly-banner .alert-content {
+            color: #92400E;
+        }
+
+        .anomaly-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            background: var(--danger);
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+            padding: 0 8px;
+        }
+
+        .anomaly-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .anomaly-type-badge.missed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #DC2626;
+        }
+
+        .anomaly-type-badge.overdose {
+            background: rgba(245, 158, 11, 0.2);
+            color: #D97706;
+        }
+
+        .anomaly-type-badge.lowstock {
+            background: rgba(59, 130, 246, 0.2);
+            color: #2563EB;
+        }
+
+        .anomaly-hint {
+            font-size: 11px;
+            color: #92400E;
+            opacity: 0.8;
+        }
+
+        .anomaly-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .anomaly-modal-content {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 450px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlide 0.3s ease;
+        }
+
+        .anomaly-modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .anomaly-modal-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .anomaly-modal-header h2 i {
+            color: var(--warning);
+        }
+
+        .anomaly-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .anomaly-modal-close:hover {
+            background: #E2E8F0;
+        }
+
+        .anomaly-modal-body {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .anomaly-item {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+
+        .anomaly-item:hover {
+            transform: translateX(4px);
+        }
+
+        .anomaly-item.overdose {
+            border-left-color: var(--warning);
+            background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%);
+        }
+
+        .anomaly-item.missed {
+            border-left-color: var(--danger);
+            background: linear-gradient(135deg, #FEE2E2 0%, #FEF2F2 100%);
+        }
+
+        .anomaly-item.low_stock {
+            border-left-color: #3B82F6;
+            background: linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%);
+        }
+
+        .anomaly-item-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .anomaly-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .anomaly-type-badge.overdose {
+            background: #FDE68A;
+            color: #92400E;
+        }
+
+        .anomaly-type-badge.missed {
+            background: #FECACA;
+            color: #991B1B;
+        }
+
+        .anomaly-type-badge.low_stock {
+            background: #BFDBFE;
+            color: #1E40AF;
+        }
+
+        .anomaly-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        .anomaly-item-content {
+            font-size: 14px;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .anomaly-item-content strong {
+            color: var(--primary);
+        }
+
+        .anomaly-modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .anomaly-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .anomaly-btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .anomaly-btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .anomaly-btn-secondary {
+            background: var(--bg-light);
+            color: var(--text);
+        }
+
+        .anomaly-btn-secondary:hover {
+            background: #E2E8F0;
+        }
+
+        .elder-list {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .elder-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid #E2E8F0;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: var(--shadow);
+        }
+
+        .elder-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.2);
+        }
+
+        .elder-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .elder-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-light);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .elder-info {
+            flex: 1;
+        }
+
+        .elder-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .elder-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.offline { background: var(--text-secondary); }
+
+        .elder-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px 8px;
+            background: var(--bg-light);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .action-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #E2E8F0;
+            box-shadow: var(--shadow);
+        }
+
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.2);
+        }
+
+        .action-card.highlight {
+            background: white;
+            border: 2px solid var(--primary);
+        }
+
+        .action-card.highlight .action-icon {
+            background: var(--primary);
+        }
+
+        .action-card.highlight .action-icon i {
+            color: white;
+        }
+
+        .action-card.highlight .action-title {
+            color: var(--primary);
+        }
+
+        .action-card.highlight .action-desc {
+            color: var(--text-secondary);
+        }
+
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .action-card.highlight .action-icon {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .action-icon i {
+            font-size: 22px;
+            color: var(--primary);
+        }
+
+        .action-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .action-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .action-card.highlight .action-desc {
+            opacity: 0.9;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 16px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active i,
+        .nav-item.active span {
+            color: var(--primary);
+        }
+
+        .nav-item:hover i,
+        .nav-item:hover span {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--danger);
+            color: white;
+            border-radius: 8px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            opacity: 0.5;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .conn-dot.connected { background: var(--success); }
+        .conn-dot.disconnected { background: var(--danger); animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .medicine-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .medicine-modal-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .medicine-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .medicine-modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .medicine-modal-header h3 i {
+            color: var(--primary);
+        }
+
+        .medicine-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .medicine-modal-close:hover {
+            background: #E0E7FF;
+        }
+
+        .medicine-modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .medicine-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .medicine-option:hover {
+            background: #E0E7FF;
+            border-color: var(--primary-light);
+        }
+
+        .medicine-option:active {
+            transform: scale(0.98);
+        }
+
+        .medicine-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .medicine-option-icon.review {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        .medicine-option-icon.monitor {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        }
+
+        .medicine-option-icon.box {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .medicine-option-icon i {
+            font-size: 22px;
+            color: white;
+        }
+
+        .medicine-option-info {
+            flex: 1;
+        }
+
+        .medicine-option-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .medicine-option-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-option-arrow {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 100%;
+            }
+            
+            .main-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 24px;
+            }
+
+            .elder-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .elder-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .header {
+                padding: 20px 40px;
+            }
+
+            .greeting h1 {
+                font-size: 20px;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 12px 24px;
+            }
+
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 20px 32px;
+                padding-bottom: 100px;
+            }
+
+            .elder-list {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .elder-card {
+                padding: 24px;
+            }
+
+            .elder-avatar {
+                width: 64px;
+                height: 64px;
+            }
+
+            .elder-name {
+                font-size: 18px;
+            }
+
+            .elder-status {
+                font-size: 13px;
+            }
+
+            .elder-stats {
+                gap: 12px;
+            }
+
+            .stat-item {
+                padding: 14px 8px;
+            }
+
+            .stat-value {
+                font-size: 22px;
+            }
+
+            .stat-label {
+                font-size: 12px;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 20px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .action-card {
+                padding: 28px 20px;
+            }
+
+            .action-icon {
+                width: 64px;
+                height: 64px;
+                margin-bottom: 16px;
+            }
+
+            .action-icon i {
+                font-size: 28px;
+            }
+
+            .action-title {
+                font-size: 16px;
+                margin-bottom: 6px;
+            }
+
+            .action-desc {
+                font-size: 12px;
+            }
+
+            .bottom-nav {
+                display: flex;
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+
+            .section-title {
+                font-size: 18px;
+                margin-bottom: 16px;
+                max-width: 1400px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .alert-card,
+            .anomaly-banner,
+            .empty-state {
+                padding: 24px;
+                margin-bottom: 24px;
+                max-width: 1400px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .alert-header i {
+                font-size: 24px;
+            }
+
+            .alert-header span {
+                font-size: 16px;
+            }
+
+            .alert-content {
+                font-size: 14px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .header {
+                padding: 10px 20px;
+            }
+
+            .main-content {
+                padding: 16px 24px;
+                padding-bottom: 100px;
+            }
+
+            .elder-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .elder-card,
+            .action-card {
+                padding: 16px;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+
+            .greeting h1 {
+                font-size: 14px;
+            }
+
+            .greeting p {
+                font-size: 11px;
+            }
+
+            .main-content {
+                padding: 12px 16px;
+                padding-bottom: 80px;
+            }
+
+            .alert-card,
+            .anomaly-banner {
+                padding: 14px;
+                margin-bottom: 12px;
+            }
+
+            .alert-header i {
+                font-size: 18px;
+            }
+
+            .alert-header span {
+                font-size: 13px;
+            }
+
+            .alert-content {
+                font-size: 12px;
+            }
+
+            .elder-list {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .elder-card {
+                padding: 14px;
+            }
+
+            .elder-avatar {
+                width: 50px;
+                height: 50px;
+            }
+
+            .elder-name {
+                font-size: 15px;
+            }
+
+            .elder-stats {
+                gap: 8px;
+            }
+
+            .stat-item {
+                padding: 10px 6px;
+            }
+
+            .stat-value {
+                font-size: 18px;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+
+            .action-card {
+                padding: 14px 12px;
+            }
+
+            .action-icon {
+                width: 44px;
+                height: 44px;
+                margin-bottom: 10px;
+            }
+
+            .action-icon i {
+                font-size: 20px;
+            }
+
+            .action-title {
+                font-size: 13px;
+                margin-bottom: 4px;
+            }
+
+            .action-desc {
+                font-size: 10px;
+            }
+
+            .section-title {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+
+            .bottom-nav {
+                padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item i {
+                font-size: 16px;
+            }
+
+            .nav-item span {
+                font-size: 8px;
+            }
+        }
+
+        @media (orientation: landscape) and (min-width: 1024px) and (max-height: 500px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+                max-width: none;
+                padding: 16px 24px;
+            }
+
+            .elder-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <img :src="currentUser?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'" class="avatar">
+                    <div class="greeting">
+                        <h1>{{ greetingText }}，{{ currentUser?.nickname || '用户' }}</h1>
+                        <div class="connection-status">
+                            <span :class="['conn-dot', wsConnected ? 'connected' : 'disconnected']"></span>
+                            {{ wsConnected ? '已连接' : '未连接' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="icon-btn" @click="goToMsg">
+                        <i class="fa fa-commenting-o"></i>
+                        <span v-if="totalUnread > 0" class="badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                    </button>
+                    <button class="icon-btn" @click="goToSettings">
+                        <i class="fa fa-cog"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div v-if="pendingDraftCount > 0" class="alert-card" @click="goToDraftReview">
+                    <div class="alert-header">
+                        <i class="fa fa-clipboard-check"></i>
+                        <span>用药草稿待审核</span>
+                    </div>
+                    <div class="alert-content">
+                        您有 <strong>{{ pendingDraftCount }}</strong> 条长辈用药信息待审核确认，请及时处理以确保长辈用药安全。
+                    </div>
+                </div>
+
+                <div v-if="unreadAnomalyCount > 0" class="anomaly-banner" @click="showAnomalyModal = true">
+                    <div class="alert-header">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>服药异常提醒</span>
+                        <span class="anomaly-count">{{ unreadAnomalyCount > 99 ? '99+' : unreadAnomalyCount }}</span>
+                    </div>
+                    <div class="alert-content">
+                        <span v-if="anomalySummary.missed > 0" class="anomaly-type-badge missed">
+                            <i class="fa fa-times-circle"></i> 漏服 {{ anomalySummary.missed }}
+                        </span>
+                        <span v-if="anomalySummary.overdose > 0" class="anomaly-type-badge overdose">
+                            <i class="fa fa-plus-circle"></i> 多服 {{ anomalySummary.overdose }}
+                        </span>
+                        <span v-if="anomalySummary.lowStock > 0" class="anomaly-type-badge lowstock">
+                            <i class="fa fa-cube"></i> 库存不足 {{ anomalySummary.lowStock }}
+                        </span>
+                        <span class="anomaly-hint">点击查看详情</span>
+                    </div>
+                </div>
+
+                <div class="elder-section">
+                    <div class="section-title">
+                        <i class="fa fa-users"></i>
+                        我的家人
+                    </div>
+
+                    <div v-if="elders.length === 0" class="empty-state">
+                        <i class="fa fa-user-plus"></i>
+                        <p>暂无关联的长辈<br>请先添加亲友关系</p>
+                    </div>
+
+                    <div v-else class="elder-list">
+                        <div v-for="elder in elders" :key="elder.id" class="elder-card" @click="goToElderDetail(elder)">
+                            <div class="elder-header">
+                                <img :src="elder.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + elder.id" class="elder-avatar">
+                                <div class="elder-info">
+                                    <div class="elder-name">{{ elder.remark || elder.nickname }}</div>
+                                    <div class="elder-status">
+                                        <span :class="['status-dot', onlineUsers[elder.id] ? 'online' : 'offline']"></span>
+                                        {{ onlineUsers[elder.id] ? '在线' : '离线' }}
+                                    </div>
+                                </div>
+                                <i class="fa fa-angle-right" style="color: var(--text-secondary); font-size: 18px;"></i>
+                            </div>
+                            <div class="elder-stats">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ elder.medicineCount || 0 }}</div>
+                                    <div class="stat-label">用药种类</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ elder.todayTaken || 0 }}/{{ elder.todayTotal || 0 }}</div>
+                                    <div class="stat-label">今日服药</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" :style="{color: elder.alertCount > 0 ? 'var(--danger)' : 'var(--success)'}">
+                                        {{ elder.alertCount || 0 }}
+                                    </div>
+                                    <div class="stat-label">预警提醒</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-section">
+                    <div class="section-title" style="margin-top: 24px;">
+                        <i class="fa fa-th-large"></i>
+                        快捷功能
+                    </div>
+
+                    <div class="quick-actions">
+                        <div class="action-card" @click="goToDraftReview">
+                            <div class="action-icon">
+                                <i class="fa fa-check-square-o"></i>
+                            </div>
+                            <div class="action-title">用药审核</div>
+                            <div class="action-desc">审核长辈用药草稿</div>
+                        </div>
+                        <div class="action-card" @click="goToMedicineMonitor">
+                            <div class="action-icon">
+                                <i class="fa fa-medkit"></i>
+                            </div>
+                            <div class="action-title">用药监控</div>
+                            <div class="action-desc">查看长辈用药记录</div>
+                        </div>
+                        <div class="action-card" @click="goToMedicineBox">
+                        <div class="action-icon">
+                          <i class="fa fa-cube"></i>
+                        </div>
+                        <div class="action-title">智能药盒</div>
+                     <div class="action-desc">监看长辈服药情况</div>
+                    </div>
+                        <div class="action-card" @click="goToHealth">
+                            <div class="action-icon">
+                                <i class="fa fa-heartbeat"></i>
+                            </div>
+                            <div class="action-title">健康监测</div>
+                            <div class="action-desc">查看健康数据趋势</div>
+                        </div>
+                        <div class="action-card" @click="goToMsg">
+                            <div class="action-icon">
+                                <i class="fa fa-comments-o"></i>
+                            </div>
+                            <div class="action-title">亲情留言</div>
+                            <div class="action-desc">与长辈实时聊天</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <nav class="bottom-nav">
+                <div :class="['nav-item', currentPage === 'home' ? 'active' : '']" @click="currentPage = 'home'">
+                    <i class="fa fa-home"></i>
+                    <span>首页</span>
+                </div>
+                <div :class="['nav-item', currentPage === 'medicine' ? 'active' : '']" @click="showMedicineModal = true">
+                    <i class="fa fa-medkit"></i>
+                    <span>用药</span>
+                    <span v-if="pendingDraftCount > 0" class="nav-badge">{{ pendingDraftCount }}</span>
+                </div>
+                <div :class="['nav-item', currentPage === 'health' ? 'active' : '']" @click="goToHealth">
+                    <i class="fa fa-heartbeat"></i>
+                    <span>健康</span>
+                </div>
+                <div :class="['nav-item', currentPage === 'msg' ? 'active' : '']" @click="goToMsg">
+                    <i class="fa fa-commenting-o"></i>
+                    <span>消息</span>
+                    <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                </div>
+                <div :class="['nav-item', currentPage === 'profile' ? 'active' : '']" @click="goToSettings">
+                    <i class="fa fa-user"></i>
+                    <span>我的</span>
+                </div>
+            </nav>
+        </div>
+
+        <div id="toast" class="toast"></div>
+
+        <div v-if="showMedicineModal" class="medicine-modal" @click.self="showMedicineModal = false">
+            <div class="medicine-modal-content">
+                <div class="medicine-modal-header">
+                    <h3><i class="fa fa-medkit"></i> 用药功能</h3>
+                    <button class="medicine-modal-close" @click="showMedicineModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="medicine-options">
+                    <div class="medicine-option" @click="selectMedicineOption('review')">
+                        <div class="medicine-option-icon review">
+                            <i class="fa fa-check-square-o"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药审核</div>
+                            <div class="medicine-option-desc">审核长辈用药草稿</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('monitor')">
+                        <div class="medicine-option-icon monitor">
+                            <i class="fa fa-medkit"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药监控</div>
+                            <div class="medicine-option-desc">查看长辈用药记录</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('box')">
+                        <div class="medicine-option-icon box">
+                            <i class="fa fa-cube"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">智能药盒</div>
+                            <div class="medicine-option-desc">监看长辈服药情况</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showAnomalyModal" class="anomaly-modal" @click.self="showAnomalyModal = false">
+            <div class="anomaly-modal-content">
+                <div class="anomaly-modal-header">
+                    <h2><i class="fa fa-exclamation-triangle"></i> 服药异常记录</h2>
+                    <button class="anomaly-modal-close" @click="showAnomalyModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="anomaly-modal-body">
+                    <div v-if="anomalies.length === 0" class="empty-state">
+                        <i class="fa fa-check-circle" style="color: var(--success);"></i>
+                        <p>暂无服药异常记录</p>
+                    </div>
+                    <div v-else>
+                        <div v-for="anomaly in anomalies" :key="anomaly.id" 
+                             :class="['anomaly-item', anomaly.alert_type]">
+                            <div class="anomaly-item-header">
+                                <span :class="['anomaly-type-badge', anomaly.alert_type]">
+                                    <i :class="['fa', getAlertIcon(anomaly.alert_type)]"></i>
+                                    {{ getAlertTypeText(anomaly.alert_type) }}
+                                </span>
+                                <span class="anomaly-time">{{ formatAnomalyTime(anomaly.create_time) }}</span>
+                            </div>
+                            <div class="anomaly-item-content">
+                                <strong>{{ anomaly.medicine_name }}</strong>
+                                <span v-if="anomaly.elder_name">（{{ anomaly.elder_name }}）</span>
+                                <br>
+                                <span>{{ anomaly.message }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="anomaly-modal-footer">
+                    <button class="anomaly-btn anomaly-btn-secondary" @click="showAnomalyModal = false">
+                        关闭
+                    </button>
+                    <button class="anomaly-btn anomaly-btn-primary" @click="markAllAnomaliesRead">
+                        全部标为已读
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentUser: null,
+                    elders: [],
+                    onlineUsers: {},
+                    pendingDraftCount: 0,
+                    totalUnread: 0,
+                    currentPage: 'home',
+                    wsConnected: false,
+                    socket: null,
+                    showAnomalyModal: false,
+                    showMedicineModal: false,
+                    anomalies: [],
+                    unreadAnomalyCount: 0,
+                    anomalySummary: { missed: 0, overdose: 0, lowStock: 0, total: 0 }
+                };
+            },
+            computed: {
+                greetingText() {
+                    const hour = new Date().getHours();
+                    if (hour < 6) return '夜深了';
+                    if (hour < 12) return '早上好';
+                    if (hour < 14) return '中午好';
+                    if (hour < 18) return '下午好';
+                    return '晚上好';
+                }
+            },
+            watch: {
+                showAnomalyModal(newVal) {
+                    if (newVal) {
+                        this.loadAnomalies();
+                    }
+                }
+            },
+            mounted() {
+                this.checkLogin();
+            },
+            methods: {
+                async checkLogin() {
+                    try {
+                        const res = await axios.get('/api/user/info');
+                        if (res.data.code === 200) {
+                            this.currentUser = res.data.data;
+                            this.setupMessageCallbacks();
+                            this.loadElders();
+                            this.loadPendingDraftCount();
+                            this.loadUnreadCount();
+                            this.loadUnreadAnomalyCount();
+                        } else {
+                            window.location.href = 'login.html';
+                        }
+                    } catch (e) {
+                        console.error('获取用户信息失败', e);
+                        window.location.href = 'login.html';
+                    }
+                },
+
+                setupMessageCallbacks() {
+                    if (window.YoungMessageCenter) {
+                        YoungMessageCenter.onOnlineStatus((userId, online) => {
+                            this.onlineUsers[userId] = online;
+                            this.$forceUpdate();
+                        });
+
+                        YoungMessageCenter.onElderUpdate((msg) => {
+                            if (msg.msgType === 'MEDICINE_DRAFT') {
+                                this.pendingDraftCount++;
+                            } else if (msg.msgType === 'MEDICINE_APPROVED') {
+                                this.loadElders();
+                            } else if (msg.msgType === 'MEDICINE_TAKEN') {
+                                this.loadElderStats();
+                            } else if (msg.msgType === 'MEDICINE_UPDATE' || msg.msgType === 'MEDICINE_DELETE') {
+                                this.loadElderStats();
+                            } else if (msg.msgType === 'MEDICATION_ANOMALY') {
+                                this.unreadAnomalyCount++;
+                                this.playNotice();
+                            } else if (msg.msgType === 'EMERGENCY_CONTACT_ACCEPTED' || 
+                                       msg.msgType === 'BECOME_EMERGENCY_CONTACT' ||
+                                       msg.msgType === 'REMOVED_EMERGENCY_CONTACT') {
+                                this.loadElders();
+                            }
+                        });
+
+                        YoungMessageCenter.onMessage((msg, contact) => {
+                            if (msg.fromId && msg.fromId != this.currentUser.id) {
+                                this.totalUnread++;
+                                this.playNotice();
+                            }
+                        });
+
+                        YoungMessageCenter.onConnectionStatus((connected) => {
+                            this.wsConnected = connected;
+                        });
+
+                        this.wsConnected = YoungMessageCenter.isConnected;
+                    }
+
+                    this.startPolling();
+                },
+                
+                startPolling() {
+                    this.pollingTimer = setInterval(() => {
+                        this.loadElderStats();
+                        this.loadPendingDraftCount();
+                        this.loadUnreadAnomalyCount();
+                    }, 30000);
+                },
+
+                async loadElders() {
+                    try {
+                        const res = await axios.get('/api/emergency/my-elders');
+                        if (res.data.code === 200) {
+                            this.elders = res.data.data || [];
+                            this.loadOnlineStatus();
+                            this.loadElderStats();
+                        }
+                    } catch (e) {
+                        console.error('加载家人列表失败', e);
+                    }
+                },
+
+                async loadOnlineStatus() {
+                    try {
+                        const res = await axios.get('/api/friend/online-status');
+                        if (res.data.code === 200) {
+                            this.onlineUsers = res.data.data || {};
+                        }
+                    } catch (e) {
+                        console.error('加载在线状态失败', e);
+                    }
+                },
+
+                async loadElderStats() {
+                    for (const elder of this.elders) {
+                        try {
+                            const medRes = await axios.get(`/api/medicine/family/${elder.id}`);
+                            if (medRes.data.code === 200) {
+                                const medicines = medRes.data.data || [];
+                                elder.medicineCount = medicines.length;
+                                // 计算今日所有提醒时间总数量
+                                elder.todayTotal = medicines.reduce((sum, m) => sum + ((m.reminderTimes || []).length), 0);
+                                // 计算今日实际服药记录数量
+                                let actualTakenCount = 0;
+                                medicines.forEach(m => {
+                                    if (m.takeRecords) {
+                                        const todayStr = new Date().toISOString().split('T')[0];
+                                        const todayTakeRecords = m.takeRecords.filter(r => {
+                                            if (!r.takeTime) return false;
+                                            const recordDate = r.takeTime.split(' ')[0];
+                                            return recordDate === todayStr;
+                                        });
+                                        actualTakenCount += todayTakeRecords.length;
+                                    }
+                                });
+                                elder.todayTaken = actualTakenCount;
+                                elder.alertCount = medicines.filter(m => m.daysLeft <= 2).length;
+                            }
+                        } catch (e) {}
+                    }
+                },
+
+                async loadPendingDraftCount() {
+                    try {
+                        const res = await axios.get('/api/medicine-draft/pending-count');
+                        if (res.data.code === 200) {
+                            this.pendingDraftCount = res.data.data || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载草稿数量失败', e);
+                    }
+                },
+
+                async loadUnreadCount() {
+                    try {
+                        const res = await axios.get('/api/msg/unread/count');
+                        if (res.data.code === 200) {
+                            this.totalUnread = res.data.data || 0;
+                        }
+                    } catch (e) {
+                        console.error('加载未读消息数失败', e);
+                    }
+                },
+
+                async loadUnreadAnomalyCount() {
+                    try {
+                        const res = await axios.get('/api/notification/alerts');
+                        if (res.data.code === 200) {
+                            const data = res.data.data || { missed: 0, overdose: 0, lowStock: 0, total: 0 };
+                            this.unreadAnomalyCount = data.total;
+                            this.anomalySummary = data;
+                        }
+                    } catch (e) {
+                        console.error('加载异常数量失败', e);
+                    }
+                },
+
+                async loadAnomalies() {
+                    try {
+                        const res = await axios.get('/api/notification/alerts/detail');
+                        if (res.data.code === 200) {
+                            this.anomalies = res.data.data || [];
+                        }
+                    } catch (e) {
+                        console.error('加载异常记录失败', e);
+                    }
+                },
+
+                async markAllAnomaliesRead() {
+                    try {
+                        const res = await axios.post('/api/notification/alerts/mark-all-read');
+                        if (res.data.code === 200) {
+                            this.showToast('已全部标为已读');
+                            this.anomalies = [];
+                            this.unreadAnomalyCount = 0;
+                            this.anomalySummary = { missed: 0, overdose: 0, lowStock: 0, total: 0 };
+                            this.showAnomalyModal = false;
+                        }
+                    } catch (e) {
+                        console.error('标记已读失败', e);
+                        this.showToast('操作失败');
+                    }
+                },
+
+                formatAnomalyTime(timeStr) {
+                    if (!timeStr) return '';
+                    const date = new Date(timeStr);
+                    const now = new Date();
+                    const diff = now - date;
+                    
+                    if (diff < 60000) return '刚刚';
+                    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+                    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+                    if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+                    
+                    return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+                },
+
+                formatTime(timeStr) {
+                    if (!timeStr) return '';
+                    const date = new Date(timeStr);
+                    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                },
+
+                getAlertIcon(type) {
+                    const icons = {
+                        'missed': 'fa-times-circle',
+                        'overdose': 'fa-plus-circle',
+                        'low_stock': 'fa-cube'
+                    };
+                    return icons[type] || 'fa-exclamation-circle';
+                },
+
+                getAlertTypeText(type) {
+                    const texts = {
+                        'missed': '漏服',
+                        'overdose': '多服',
+                        'low_stock': '库存不足'
+                    };
+                    return texts[type] || '异常';
+                },
+
+                playNotice() {
+                    try {
+                        const audio = new Audio('/music/notice.wav');
+                        audio.volume = 0.5;
+                        audio.play().catch(() => {});
+                    } catch (e) {}
+                },
+
+                showToast(msg) {
+                    const toast = document.getElementById('toast');
+                    toast.textContent = msg;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 3000);
+                },
+
+                goToElderDetail(elder) {
+                    window.location.href = `young_elder_detail.html?elderId=${elder.id}`;
+                },
+
+                goToDraftReview() {
+                    window.location.href = 'young_draft_review.html';
+                },
+
+                goToMedicineMonitor() {
+                    if (this.elders.length >= 1) {
+                        window.location.href = `young_medicine.html?elderId=${this.elders[0].id}`;
+                    } else {
+                        this.showToast('暂无关联的长辈');
+                    }
+                },
+
+                selectMedicineOption(option) {
+                    this.showMedicineModal = false;
+                    if (option === 'review') {
+                        this.goToDraftReview();
+                    } else if (option === 'monitor') {
+                        this.goToMedicineMonitor();
+                    } else if (option === 'box') {
+                        this.goToMedicineBox();
+                    }
+                },
+
+                goToMedicineBox() {
+                    window.location.href = 'young_medicine_box.html';
+                },
+
+                goToHealth() {
+                    window.location.href = 'young_health.html';
+                },
+
+                goToMsg() {
+                    window.location.href = 'young_msg.html';
+                },
+
+                goToSettings() {
+                    window.location.href = 'young_settings.html';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+

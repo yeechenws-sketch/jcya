@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>归档消息 · 解尘颐安智慧社区管理平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f9ff;
+            color: #1f2a3f;
+            padding: 24px 32px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        .app-container { max-width: 1400px; margin: 0 auto; }
+        .navbar {
+            background: rgba(11, 42, 65, 0.95);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            box-shadow: 0 15px 30px -10px rgba(0, 30, 60, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .navbar-left h1 {
+            font-weight: 500;
+            font-size: 1.6rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            letter-spacing: -0.3px;
+        }
+        .archive-badge-header {
+            background: #f59e0b;
+            border-radius: 40px;
+            padding: 5px 20px;
+            font-size: 0.9rem;
+            color: white;
+            border: 1px solid #d97706;
+            font-weight: 500;
+        }
+        .time-panel {
+            background: #153e5a;
+            padding: 8px 28px;
+            border-radius: 40px;
+            color: #cbd5e1;
+            text-align: right;
+            border: 1px solid #2f5575;
+        }
+        .time-panel .date { font-size: 0.9rem; color: #b0c9e0; }
+        .time-panel .clock { font-size: 1.7rem; font-weight: 350; color: white; line-height: 1.2; }
+        .back-link {
+            color: #a8ceff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .back-link:hover { color: white; }
+        
+        .resident-info-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e0ebf7;
+            padding: 24px 32px;
+            margin-bottom: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0, 45, 80, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+        .resident-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 600;
+            box-shadow: 0 8px 20px rgba(29, 90, 139, 0.3);
+        }
+        .resident-details { flex: 1; }
+        .resident-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0d4e7c;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .resident-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            color: #4f6379;
+            font-size: 0.95rem;
+        }
+        .resident-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0f7fe;
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid #d2e2f5;
+        }
+        .resident-meta-item i { color: #1d5a8b; }
+        
+        .archive-notice {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+            border: 2px dashed #f59e0b;
+            border-radius: 20px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .archive-notice i { font-size: 1.5rem; color: #f59e0b; }
+        .archive-notice-text { color: #92400e; font-size: 0.95rem; }
+        .archive-notice-text strong { color: #b45309; }
+        
+        .chat-container {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e0ebf7;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -12px rgba(0, 45, 80, 0.2);
+        }
+        .chat-header {
+            background: #f8fcff;
+            padding: 18px 28px;
+            border-bottom: 1px solid #e0e9f2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chat-header-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0d4e7c;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-message-count {
+            background: #e3eaf1;
+            border-radius: 30px;
+            padding: 4px 14px;
+            font-size: 0.85rem;
+            color: #2b4054;
+        }
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px 28px;
+            background: linear-gradient(180deg, #f5faff 0%, #ffffff 100%);
+        }
+        .chat-msg {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            clear: both;
+        }
+        .chat-msg.self { align-items: flex-end; }
+        .chat-msg.other { align-items: flex-start; }
+        .chat-bubble-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+        }
+        .chat-msg.self .chat-bubble-wrapper { align-items: flex-end; }
+        .chat-bubble {
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            display: inline-block;
+            max-width: 100%;
+        }
+        .chat-msg.self .chat-bubble {
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 3px 10px rgba(29, 90, 139, 0.25);
+        }
+        .chat-msg.other .chat-bubble {
+            background: white;
+            color: #1f3249;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e8f0fa;
+        }
+        .chat-msg-time {
+            font-size: 0.75rem;
+            color: #8aa0b8;
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+        .chat-msg.self .chat-msg-time { text-align: right; }
+        .chat-msg.other .chat-msg-time { text-align: left; }
+        .chat-media {
+            max-width: 260px;
+            max-height: 200px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: block;
+        }
+        .chat-media:hover { transform: scale(1.02); }
+        .chat-voice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            min-width: 100px;
+            padding: 4px 0;
+        }
+        .chat-voice i { font-size: 1.1rem; }
+        .chat-voice-duration {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 18px;
+        }
+        .voice-wave span {
+            width: 2px;
+            background: currentColor;
+            border-radius: 1px;
+            opacity: 0.5;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #8aa0b8;
+        }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; opacity: 0.4; }
+        .empty-state div { font-size: 1.1rem; }
+        
+        .loading-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #5f7d9c;
+            font-size: 1.1rem;
+        }
+        .loading-state i { margin-right: 10px; }
+        
+        [v-cloak] { display: none; }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,20,40,0.4);
+        }
+        .modal-content img, .modal-content video {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #1f3249;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .modal-close:hover { background: white; }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak class="app-container">
+    <header class="navbar">
+        <div class="navbar-left">
+            <h1>
+                <a href="admin_resident_information.html" class="back-link"><i class="fa fa-angle-left"></i></a>
+                <i class="fa fa-archive" style="color:#f59e0b;"></i> 归档消息
+                <span class="archive-badge-header"><i class="fa fa-history"></i> 历史记录</span>
+            </h1>
+        </div>
+        <div class="time-panel">
+            <div class="date">{{ currentDate }}</div>
+            <div class="clock">{{ currentTime }}</div>
+        </div>
+    </header>
+
+    <div v-if="loading" class="loading-state">
+        <i class="fa fa-spinner fa-spin"></i> 加载中...
+    </div>
+
+    <template v-else-if="residentInfo">
+        <div class="resident-info-card">
+            <div class="resident-avatar">
+                {{ residentInfo.realName ? residentInfo.realName.charAt(0) : '?' }}
+            </div>
+            <div class="resident-details">
+                <div class="resident-name">
+                    {{ residentInfo.realName }}
+                    <span style="font-size: 1rem; font-weight: 400; color: #64748b;">
+                        ({{ residentInfo.gender }} · {{ residentInfo.age }}岁)
+                    </span>
+                </div>
+                <div class="resident-meta">
+                    <div class="resident-meta-item">
+                        <i class="fa fa-calendar-plus-o"></i>
+                        <span>搬入: {{ residentInfo.moveInTime || '—' }}</span>
+                    </div>
+                    <div class="resident-meta-item">
+                        <i class="fa fa-calendar-times-o"></i>
+                        <span>搬离: {{ residentInfo.moveOutTime || '—' }}</span>
+                    </div>
+                    <div class="resident-meta-item" style="background: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
+                        <i class="fa fa-archive" style="color: #f59e0b;"></i>
+                        <span style="color: #92400e;">已归档</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="archive-notice">
+            <i class="fa fa-info-circle"></i>
+            <div class="archive-notice-text">
+                <strong>归档说明：</strong>此处显示的是该住户搬离社区时备份的聊天记录，仅供查看，无法发送新消息。
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="chat-header-title">
+                    <i class="fa fa-comments"></i> 聊天记录
+                </div>
+                <span class="chat-message-count">共 {{ messages.length }} 条消息</span>
+            </div>
+            <div class="chat-messages" ref="chatBox">
+                <div v-if="messages.length === 0" class="empty-state">
+                    <i class="fa fa-comments-o"></i>
+                    <div>暂无归档消息</div>
+                </div>
+                <div v-for="(msg, idx) in messages" :key="idx" 
+                     :class="['chat-msg', msg.fromId === currentAdminId ? 'self' : 'other']">
+                    <div class="chat-bubble-wrapper">
+                        <div class="chat-bubble">
+                            <template v-if="!msg.msgType || msg.msgType === 'text'">{{ msg.content }}</template>
+                            <template v-else-if="msg.msgType === 'image'">
+                                <img :src="msg.content" class="chat-media" @click="openMedia(msg.content, 'image')">
+                            </template>
+                            <template v-else-if="msg.msgType === 'video'">
+                                <video :src="msg.content" class="chat-media" @click="openMedia(msg.content, 'video')"></video>
+                            </template>
+                            <template v-else-if="msg.msgType === 'voice'">
+                                <div class="chat-voice" @click="playVoice(msg.content)">
+                                    <i class="fa fa-volume-up"></i>
+                                    <div class="voice-wave">
+                                        <span v-for="n in 8" :key="n" :style="{height: (8 + Math.random() * 12) + 'px'}"></span>
+                                    </div>
+                                    <span class="chat-voice-duration">{{ msg.duration || 0 }}''</span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="chat-msg-time">{{ formatTime(msg.createTime) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div v-else class="loading-state">
+        <i class="fa fa-exclamation-circle"></i> 未找到归档信息
+    </div>
+
+    <div v-if="showMediaModal" class="modal-overlay" @click.self="closeMedia">
+        <button class="modal-close" @click="closeMedia">&times;</button>
+        <div class="modal-content">
+            <img v-if="mediaType === 'image'" :src="mediaUrl">
+            <video v-if="mediaType === 'video'" :src="mediaUrl" controls autoplay></video>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, onMounted, nextTick } = Vue;
+
+createApp({
+    setup() {
+        const currentTime = ref('');
+        const currentDate = ref('');
+        const loading = ref(true);
+        const residentInfo = ref(null);
+        const messages = ref([]);
+        const chatBox = ref(null);
+        const currentAdminId = ref(null);
+        const showMediaModal = ref(false);
+        const mediaUrl = ref('');
+        const mediaType = ref('');
+        const currentPlayingVoice = ref(null);
+
+        const updateTime = () => {
+            const d = new Date();
+            currentTime.value = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+            const w = ['周日','周一','周二','周三','周四','周五','周六'];
+            currentDate.value = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+w[d.getDay()];
+        };
+
+        const checkLogin = async () => {
+            try {
+                const res = await fetch('/api/user/info');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    currentAdminId.value = data.data.id;
+                    return true;
+                } else {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+            } catch (e) {
+                console.error('检查登录失败', e);
+                return false;
+            }
+        };
+
+        const fetchArchiveInfo = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const recordId = urlParams.get('recordId');
+            
+            if (!recordId) {
+                loading.value = false;
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/archive/info?recordId=${recordId}`);
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    residentInfo.value = data.data;
+                    await fetchMessages(data.data.userId);
+                }
+            } catch (e) {
+                console.error('获取归档信息失败', e);
+            } finally {
+                loading.value = false;
+            }
+        };
+
+        const fetchMessages = async (userId) => {
+            try {
+                const res = await fetch(`/api/admin/archive/messages?userId=${userId}`);
+                const data = await res.json();
+                if (data.code === 200) {
+                    messages.value = data.data || [];
+                    scrollToBottom();
+                }
+            } catch (e) {
+                console.error('获取归档消息失败', e);
+            }
+        };
+
+        const scrollToBottom = () => {
+            nextTick(() => {
+                if (chatBox.value) {
+                    chatBox.value.scrollTop = chatBox.value.scrollHeight;
+                }
+            });
+        };
+
+        const formatTime = (timeStr) => {
+            if (!timeStr) return '';
+            let date;
+            if (Array.isArray(timeStr)) {
+                date = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5]);
+            } else {
+                date = new Date(timeStr);
+            }
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const hour = date.getHours().toString().padStart(2, '0');
+            const minute = date.getMinutes().toString().padStart(2, '0');
+            return `${month}-${day} ${hour}:${minute}`;
+        };
+
+        const playVoice = (url) => {
+            if (currentPlayingVoice.value) {
+                currentPlayingVoice.value.pause();
+                currentPlayingVoice.value = null;
+            }
+            const audio = new Audio(url);
+            audio.volume = 1.0;
+            audio.play();
+            currentPlayingVoice.value = audio;
+            audio.onended = () => { currentPlayingVoice.value = null; };
+            audio.onerror = () => { currentPlayingVoice.value = null; };
+        };
+
+        const openMedia = (url, type) => {
+            mediaUrl.value = url;
+            mediaType.value = type;
+            showMediaModal.value = true;
+        };
+
+        const closeMedia = () => {
+            showMediaModal.value = false;
+            mediaUrl.value = '';
+            mediaType.value = '';
+        };
+
+        onMounted(async () => {
+            updateTime();
+            setInterval(updateTime, 1000);
+            const loggedIn = await checkLogin();
+            if (loggedIn) {
+                await fetchArchiveInfo();
+            }
+        });
+
+        return {
+            currentTime, currentDate, loading, residentInfo, messages, chatBox,
+            currentAdminId, showMediaModal, mediaUrl, mediaType,
+            formatTime, playVoice, openMedia, closeMedia
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 解尘颐安养老平台</title>
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #CFDEF3, #E0EAFC);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid white;
+        }
+
+        h2 {
+            color: #1E3A8A;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 800;
+        }
+
+        input {
+            width: 100%;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+
+        input:focus {
+            border-color: #4361EE;
+            box-shadow: 0 0 8px rgba(67,97,238,0.2);
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            background: rgba(255,255,255,0.5);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+        }
+
+        .role-option {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .role-option:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #4361EE;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #304FFE;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #64748B;
+        }
+
+        .login-link a {
+            color: #4361EE;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        /* 弹窗遮罩层 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 弹窗内容 */
+        .modal-container {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .modal-overlay.show .modal-container {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            padding: 24px 20px;
+            text-align: center;
+        }
+
+        .modal-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 12px;
+            font-size: 28px;
+        }
+
+        .modal-title {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 24px 20px;
+            text-align: center;
+        }
+
+        .modal-message {
+            color: #374151;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .modal-submessage {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .modal-footer {
+            padding: 0 20px 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            margin-top: 0;
+        }
+
+        .modal-btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e5e7eb;
+            transform: none;
+        }
+
+        .modal-btn-confirm {
+            background: #ef4444;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #dc2626;
+            transform: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 16px;
+            font-size: 13px;
+            color: rgba(30, 58, 138, 0.5);
+        }
+
+        .footer-brand {
+            font-weight: 700;
+            color: rgba(30, 58, 138, 0.7);
+        }
+
+        .logo-container {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        .logo-container img {
+            height: 50px;
+            width: auto;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+
+            .card {
+                padding: 30px 25px;
+            }
+
+            .modal-container {
+                width: 95%;
+                margin: 10px;
+            }
+
+            .modal-header {
+                padding: 20px 15px;
+            }
+
+            .modal-body {
+                padding: 20px 15px;
+            }
+
+            .modal-footer {
+                padding: 0 15px 20px;
+                flex-direction: column;
+            }
+
+            .modal-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="logo-container">
+    <img src="/images/logo/logo-xiechen.png" alt="懈尘颐安" onerror="this.style.display='none'">
+</div>
+<div id="app">
+    <div class="card">
+        <h2>创建新账号</h2>
+        <input type="text" v-model="form.username" placeholder="登录账号">
+        <input type="text" v-model="form.nickname" placeholder="昵称 (如：王阿姨 / 小明)">
+        <input type="password" v-model="form.password" placeholder="登录密码">
+
+        <div style="font-size: 14px; color: #4361EE; font-weight: bold; margin-top: 10px; margin-left: 5px;">我的身份是：</div>
+        <div class="role-selector">
+            <label class="role-option">
+                <input type="radio" v-model="form.role" value="older">
+                <span style="margin-left: 8px;">长辈 (Older)</span>
+            </label>
+            <label class="role-option">
+                <input type="radio" v-model="form.role" value="younger">
+                <span style="margin-left: 8px;">晚辈 (Younger)</span>
+            </label>
+        </div>
+
+        <button @click="doRegister" :disabled="isLoading">
+            <span v-if="isLoading" class="loading-spinner"></span>
+            {{ isLoading ? '注册中...' : '立即注册' }}
+        </button>
+        <div class="login-link">
+            已有账号？<a href="login.html">去登录</a>
+        </div>
+    </div>
+
+    <!-- 注册关闭弹窗 -->
+    <div class="modal-overlay" :class="{ show: showModal }">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-icon">🔒</div>
+                <h3 class="modal-title">注册功能已关闭</h3>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">抱歉，当前系统注册功能已关闭，暂不接受新用户注册。</p>
+                <p class="modal-submessage">如有疑问，请联系管理员或稍后再试。</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" @click="closeModalAndStay">
+                    取消
+                </button>
+                <button class="modal-btn modal-btn-confirm" @click="closeModalAndLeave">
+                    确认关闭
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                form: {
+                    username: '',
+                    nickname: '',
+                    password: '',
+                    role: 'older',
+                    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + Math.random()
+                },
+                showModal: false,
+                isLoading: false,
+                registrationEnabled: true,
+                hasCheckedRegistration: false
+            }
+        },
+        mounted() {
+            this.checkRegistrationStatus();
+        },
+        methods: {
+            async checkRegistrationStatus() {
+                try {
+                    const res = await axios.get('/api/admin/config/registration');
+                    if (res.data.success) {
+                        this.registrationEnabled = res.data.enabled;
+                        if (!this.registrationEnabled) {
+                            this.showModal = true;
+                        }
+                    }
+                } catch (err) {
+                    console.error('检查注册状态失败:', err);
+                }
+                this.hasCheckedRegistration = true;
+            },
+
+            async doRegister() {
+                if (!this.hasCheckedRegistration) {
+                    return;
+                }
+
+                if (!this.registrationEnabled) {
+                    this.showModal = true;
+                    return;
+                }
+
+                if (!this.form.username || !this.form.nickname) {
+                    alert("请填写完整内容");
+                    return;
+                }
+
+                this.isLoading = true;
+                try {
+                    const res = await axios.post('/api/user/register', this.form);
+                    if (res.data.code === 200) {
+                        alert("注册成功！请登录");
+                        window.location.href = 'login.html';
+                    } else {
+                        alert(res.data.msg);
+                    }
+                } catch (err) {
+                    if (err.response && err.response.data && err.response.data.msg) {
+                        if (err.response.data.msg.includes('注册功能已关闭')) {
+                            this.registrationEnabled = false;
+                            this.showModal = true;
+                        } else {
+                            alert(err.response.data.msg);
+                        }
+                    } else {
+                        alert('注册失败，请稍后重试');
+                    }
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            closeModalAndStay() {
+                this.showModal = false;
+            },
+
+            closeModalAndLeave() {
+                this.showModal = false;
+                window.location.href = 'login.html';
+            }
+        }
+    }).mount('#app');
+</script>
+
+<footer class="footer">
+    2026 Powered by <span class="footer-brand">𝙓𝙄𝙀𝘾𝙃𝙀𝙉</span> · 解尘颐安养老平台
+</footer>
+</body>
+</html>
+
+
+

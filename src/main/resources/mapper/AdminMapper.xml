@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.AdminMapper">
+
+    <resultMap id="ResidentVOResultMap" type="com.chat.older.xiechen.vo.ResidentVO">
+        <id property="userId" column="user_id"/>
+        <result property="realName" column="real_name"/>
+        <result property="gender" column="gender"/>
+        <result property="age" column="age"/>
+        <result property="phone" column="user_phone"/>
+        <result property="neighborhoodId" column="neighborhood_id"/>
+        <result property="neighborhoodName" column="neighborhood_name"/>
+        <result property="addressDetail" column="address_detail"/>
+        <result property="customHistory" column="custom_history"/>
+        <result property="moveInTime" column="move_in_time"/>
+    </resultMap>
+
+    <resultMap id="EmergencyContactVOResultMap" type="com.chat.older.xiechen.vo.EmergencyContactVO">
+        <result property="contactUserId" column="contact_user_id"/>
+        <result property="contactName" column="contact_name"/>
+        <result property="gender" column="gender"/>
+        <result property="contactPhone" column="contact_phone"/>
+    </resultMap>
+
+    <resultMap id="MovedOutResidentVOResultMap" type="com.chat.older.xiechen.vo.MovedOutResidentVO">
+        <result property="userId" column="user_id"/>
+        <result property="realName" column="real_name"/>
+        <result property="gender" column="gender"/>
+        <result property="age" column="age"/>
+        <result property="moveInTime" column="move_in_time"/>
+        <result property="moveOutTime" column="move_out_time"/>
+        <result property="recordId" column="record_id"/>
+    </resultMap>
+
+    <resultMap id="HealthStatusVOResultMap" type="com.chat.older.xiechen.vo.HealthStatusVO">
+        <result property="level" column="alert_level"/>
+        <result property="alertTypes" column="alert_types"/>
+    </resultMap>
+
+    <select id="selectResidentsByCommunityId" resultMap="ResidentVOResultMap">
+        SELECT 
+            up.user_id,
+            up.real_name,
+            up.gender,
+            up.age,
+            up.user_phone,
+            up.neighborhood_id,
+            n.neighborhood_name,
+            up.address_detail,
+            up.custom_history,
+            DATE_FORMAT(uc.move_in_time, '%Y-%m-%d') as move_in_time
+        FROM user_profiles up
+        INNER JOIN user_community uc ON up.user_id = uc.user_id
+        INNER JOIN neighborhoods n ON up.neighborhood_id = n.id
+        WHERE uc.community_id = #{communityId}
+          AND uc.status = 1
+          AND uc.move_out_time IS NULL
+    </select>
+
+    <select id="selectEmergencyContactsByUserId" resultMap="EmergencyContactVOResultMap">
+        SELECT 
+            ec.contact_user_id,
+            COALESCE(up.real_name, ec.contact_name) as contact_name,
+            up.gender,
+            ec.contact_phone
+        FROM emergency_contacts ec
+        LEFT JOIN user_profiles up ON ec.contact_user_id = up.user_id
+        WHERE ec.user_id = #{userId}
+          AND (ec.is_staff = 0 OR ec.is_system_add = 0)
+    </select>
+
+    <select id="selectMovedOutResidents" resultMap="MovedOutResidentVOResultMap">
+        SELECT 
+            up.user_id,
+            up.real_name,
+            up.gender,
+            up.age,
+            DATE_FORMAT(uc.move_in_time, '%Y-%m-%d') as move_in_time,
+            DATE_FORMAT(uc.move_out_time, '%Y-%m-%d') as move_out_time,
+            uc.id as record_id
+        FROM user_profiles up
+        INNER JOIN user_community uc ON up.user_id = uc.user_id
+        WHERE uc.community_id = #{communityId}
+          AND uc.status = 0
+          AND uc.move_out_time IS NOT NULL
+          AND up.user_id NOT IN (
+            SELECT user_id FROM user_community 
+            WHERE community_id = #{communityId} 
+            AND (status = 1 OR move_out_time IS NULL)
+          )
+        ORDER BY up.user_id, uc.move_out_time DESC
+    </select>
+
+    <select id="selectTodayHealthStatus" resultMap="HealthStatusVOResultMap">
+        SELECT 
+            MAX(alert_level) as alert_level,
+            GROUP_CONCAT(DISTINCT alert_type ORDER BY alert_level DESC SEPARATOR '/') as alert_types
+        FROM health_alerts
+        WHERE user_id = #{userId}
+          AND DATE(create_time) = CURDATE()
+    </select>
+
+    <select id="selectDiseaseNamesByUserId" resultType="java.lang.String">
+        SELECT mhd.disease_name
+        FROM user_medical_mapping umm
+        INNER JOIN medical_history_dict mhd ON umm.history_id = mhd.id
+        WHERE umm.user_id = #{userId}
+    </select>
+
+    <select id="selectCommunityIdByAdminUserId" resultType="java.lang.Integer">
+        SELECT id FROM communities WHERE admin_user_id = #{adminUserId}
+    </select>
+
+    <select id="selectMovedOutResidentByRecordId" resultMap="MovedOutResidentVOResultMap">
+        SELECT 
+            up.user_id,
+            up.real_name,
+            up.gender,
+            up.age,
+            DATE_FORMAT(uc.move_in_time, '%Y-%m-%d') as move_in_time,
+            DATE_FORMAT(uc.move_out_time, '%Y-%m-%d') as move_out_time,
+            uc.id as record_id
+        FROM user_profiles up
+        INNER JOIN user_community uc ON up.user_id = uc.user_id
+        WHERE uc.id = #{recordId}
+    </select>
+
+</mapper>

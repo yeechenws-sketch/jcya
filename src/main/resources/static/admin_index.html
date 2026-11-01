@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>负责人主页 · 解尘颐安智慧社区管理平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .dashboard {
+            max-width: 1300px;
+            width: 100%;
+            background: rgba(255,255,255,0.5);
+            backdrop-filter: blur(2px);
+            border-radius: 2.5rem;
+            padding: 2rem 2rem 2.5rem 2rem;
+            box-shadow: 0 20px 40px -12px rgba(0,20,40,0.25);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            gap: 1rem 0.5rem;
+        }
+
+        .title-section h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            color: #1a2e3b;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .title-section h1 i {
+            color: #2f5e8c;
+            background: rgba(47, 94, 140, 0.12);
+            padding: 0.5rem;
+            border-radius: 1rem;
+            font-size: 1.6rem;
+        }
+
+        .profile-badge {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 0.5rem 1.2rem 0.5rem 0.8rem;
+            border-radius: 40px;
+            box-shadow: 0 6px 14px rgba(0,20,40,0.05);
+            border: 1px solid rgba(0,0,0,0.02);
+            gap: 0.8rem;
+        }
+
+        .profile-badge i {
+            font-size: 2.2rem;
+            color: #2b4f6e;
+        }
+
+        .profile-badge .name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #173247;
+        }
+
+        .profile-badge .role {
+            font-size: 0.85rem;
+            color: #5f7d9c;
+            background: #eef2f6;
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            margin-left: 0.3rem;
+        }
+
+        .edit-profile-link {
+            color: #2b4f6e;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 50%;
+            transition: background 0.2s, color 0.2s;
+            margin-left: 0.1rem;
+        }
+
+        .edit-profile-link i {
+            font-size: 1.2rem;
+            color: #2b4f6e;
+        }
+
+        .edit-profile-link:hover {
+            background: rgba(43, 79, 110, 0.1);
+            color: #1d3b54;
+        }
+
+        .edit-profile-link:hover i {
+            color: #1d3b54;
+        }
+
+        .edit-profile-link:focus-visible {
+            outline: 3px solid #8bb5d0;
+            outline-offset: 2px;
+            background: rgba(43, 79, 110, 0.06);
+        }
+        .logout-btn {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .logout-btn:hover i {
+            color: #ef4444;
+        }
+
+        .date-tag {
+            color: #3c5a77;
+            background: rgba(255,255,255,0.7);
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,255,255,0.9);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.8rem;
+            margin-top: 1rem;
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 2rem;
+            padding: 1.8rem 1.5rem 1.5rem 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 12px 28px -8px rgba(0, 32, 64, 0.08);
+            transition: all 0.25s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(2px);
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 40px -12px rgba(18, 52, 77, 0.18);
+            border-color: rgba(110, 159, 208, 0.3);
+        }
+
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 2.2rem;
+            transition: background 0.2s;
+        }
+
+        .card-resident .card-icon {
+            background: #e1edfb;
+            color: #1f5f96;
+        }
+
+        .card-notice .card-icon {
+            background: #fdedd7;
+            color: #c05e1c;
+        }
+
+        .card-chat .card-icon {
+            background: #dcf2e9;
+            color: #1e6f5c;
+        }
+
+        .card-main {
+            flex: 1;
+        }
+
+        .card-main h3 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #152b39;
+            line-height: 1.3;
+        }
+
+        .card-main p {
+            color: #4d6275;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin-bottom: 1.3rem;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-item {
+            background: #f0f4fa;
+            padding: 0.4rem 1rem;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #23496b;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .stats-item i {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .card-footer {
+            margin-top: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 550;
+            border-top: 1px dashed rgba(0,0,0,0.08);
+            padding-top: 1.2rem;
+            color: #2b5f8a;
+            transition: color 0.2s;
+        }
+
+        .card:hover .card-footer {
+            color: #1f4970;
+        }
+
+        .card-footer span {
+            letter-spacing: 0.3px;
+        }
+
+        .card-footer i {
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+
+        .card:hover .card-footer i {
+            transform: translateX(5px);
+        }
+
+        .card-resident .card-footer { color: #1f5f96; }
+        .card-notice .card-footer { color: #b35617; }
+        .card-chat .card-footer { color: #1b6b58; }
+
+        .disabled-card {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .disabled-card:hover {
+            transform: none;
+            box-shadow: 0 12px 28px -8px rgba(0, 32, 64, 0.08);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .coming-soon-badge {
+            background: #ff9800;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        @media screen and (max-width: 900px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .dashboard {
+                padding: 1.5rem;
+            }
+        }
+
+        @media screen and (max-width: 600px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .title-section h1 {
+                font-size: 1.7rem;
+            }
+            .profile-badge {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .card {
+                padding: 1.5rem;
+            }
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 2.5rem;
+            color: #7089a3;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            border-top: 1px solid rgba(0,0,0,0.04);
+            padding-top: 1.5rem;
+        }
+
+        .footer-note i {
+            color: #9fb8d0;
+            margin: 0 2px;
+        }
+
+        a:visited, a:focus {
+            color: inherit;
+            outline: none;
+        }
+
+        a:focus-visible {
+            outline: 3px solid #8bb5d0;
+            outline-offset: 2px;
+        }
+
+        .ws-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #a8ceff;
+            margin-left: 12px;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ws-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            animation: wsPulse 1.5s infinite;
+        }
+
+        .ws-dot.connected { 
+            background: #22c55e; 
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+        
+        .ws-dot.disconnected { 
+            background: #ef4444; 
+            animation: none; 
+        }
+        
+        .ws-dot.connecting { 
+            background: #f59e0b; 
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        }
+
+        @keyframes wsPulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <div class="title-section">
+                <h1>
+                    <i class="fas fa-clipboard-list"></i> 
+                    负责人工作台
+                    <span id="wsStatus" class="ws-status">
+                        <span class="ws-dot disconnected"></span>
+                        <span class="ws-text">已断开</span>
+                    </span>
+                </h1>
+                <div class="date-tag">
+                    <i class="far fa-calendar-alt" style="margin-right: 5px;"></i> <span id="currentDate"></span>
+                </div>
+            </div>
+            <div class="profile-badge">
+                <i class="fas fa-user-circle"></i>
+                <span class="name" id="adminName">管理员  <span class="role">社区负责人</span></span>
+                <a href="admin_set.html" class="edit-profile-link" title="个人信息设置" aria-label="个人信息设置">
+                    <i class="fas fa-pencil-alt"></i>
+                </a>
+                <button onclick="logout()" class="edit-profile-link logout-btn" title="退出登录" aria-label="退出登录">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="cards-grid">
+            <a class="card card-dashboard" href="admin_dashboard.html" title="前往数据看板" style="background: linear-gradient(135deg, #1677FF 0%, #4096ff 100%); color: #fff;">
+                <div class="card-icon" style="background: rgba(255,255,255,0.2); color: #fff;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="card-main">
+                    <h3 style="color: #fff;">数据看板</h3>
+                    <p style="color: rgba(255,255,255,0.9);">用药统计 · 健康监测 · 紧急呼叫</p>
+                    <div class="stats">
+                        <span class="stats-item" style="background: rgba(255,255,255,0.2); color: #fff;"><i class="fas fa-tachometer-alt"></i> 社区管理大屏</span>
+                    </div>
+                </div>
+                <div class="card-footer" style="color: #fff; border-top-color: rgba(255,255,255,0.2);">
+                    <span>进入数据看板</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <a class="card card-resident" href="admin_resident_information.html" title="前往住户信息管理">
+                <div class="card-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="card-main">
+                    <h3>住户信息</h3>
+                    <p>档案 · 联系方式 · 家庭成员</p>
+                    <div class="stats">
+                        <span class="stats-item"><i class="fas fa-door-open"></i> 在住住户管理</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span>进入住户信息</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <a class="card card-notice" href="admin_newsList.html" title="前往新闻发布管理">
+                <div class="card-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <div class="card-main">
+                    <h3>新闻发布</h3>
+                    <p>公告 · 党建 · 健康 · 活动</p>
+                    <div class="stats">
+                        <span class="stats-item"><i class="fas fa-newspaper"></i> 社区新闻管理</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span>进入新闻管理</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <a class="card card-chat" href="admin_msg.html" title="与住户在线沟通">
+                <div class="card-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="card-main">
+                    <h3>住户沟通</h3>
+                    <p>即时消息 · 意见反馈 · 群发</p>
+                    <div class="stats">
+                        <span class="stats-item"><i class="fas fa-message"></i> 在线聊天</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span>进入沟通</span>
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+        </div>
+
+        <div class="footer-note">
+            <i class="fas fa-shield-alt"></i> 解尘颐安 2026
+        </div>
+    </div>
+
+    <script src="lib/js/axios.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+    <script>
+        function updateDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const weekday = weekdays[now.getDay()];
+            document.getElementById('currentDate').textContent = year + '年' + month + '月' + day + '日 · ' + weekday;
+        }
+        
+        function loadAdminInfo() {
+            fetch('/api/user/info')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.code === 200 && data.data) {
+                        const user = data.data;
+                        document.getElementById('adminName').innerHTML = 
+                            (user.nickname || '管理员') + '  <span class="role">社区负责人</span>';
+                    }
+                })
+                .catch(err => console.log('获取用户信息失败', err));
+        }
+
+        function setupWebSocketStatusMonitor() {
+            const wsStatusEl = document.getElementById('wsStatus');
+            const wsDot = wsStatusEl ? wsStatusEl.querySelector('.ws-dot') : null;
+            const wsText = wsStatusEl ? wsStatusEl.querySelector('.ws-text') : null;
+
+            const updateStatus = () => {
+                if (!window.AdminMessageCenter) {
+                    return;
+                }
+
+                const status = window.AdminMessageCenter.getConnectionStatus();
+                if (wsDot && wsText) {
+                    wsDot.className = 'ws-dot ' + status;
+                    const statusMap = {
+                        'connected': '已连接',
+                        'disconnected': '已断开',
+                        'connecting': '连接中'
+                    };
+                    wsText.textContent = statusMap[status] || '未知';
+                }
+            };
+
+            // 立即执行一次
+            updateStatus();
+            
+            // 等待 AdminMessageCenter 初始化
+            let initAttempts = 0;
+            const initCheck = setInterval(() => {
+                initAttempts++;
+                if (window.AdminMessageCenter && window.AdminMessageCenter.isConnected !== undefined) {
+                    updateStatus();
+                    clearInterval(initCheck);
+                } else if (initAttempts > 20) {
+                    clearInterval(initCheck);
+                }
+            }, 500);
+
+            // 持续监控状态
+            setInterval(updateStatus, 2000);
+        }
+        
+        function logout() {
+            if (!confirm('确定要退出登录吗？')) {
+                return;
+            }
+            fetch('/api/user/logout', {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                window.location.href = 'login.html';
+            })
+            .catch(err => {
+                window.location.href = 'login.html';
+            });
+        }
+        
+        updateDate();
+        loadAdminInfo();
+        
+        // 等待 AdminMessageCenter 初始化
+        setTimeout(() => {
+            setupWebSocketStatusMonitor();
+        }, 1000);
+    </script>
+</body>
+</html>
+
+
+

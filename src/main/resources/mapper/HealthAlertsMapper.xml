@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.HealthAlertsMapper">
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.HealthAlerts">
+        INSERT INTO health_alerts (
+            user_id, alert_type, alert_level, current_value, threshold_value, 
+            vital_sign_id, is_read, read_time, create_time
+        ) VALUES (
+            #{userId}, #{alertType}, #{alertLevel}, #{currentValue}, #{thresholdValue}, 
+            #{vitalSignId}, #{isRead}, #{readTime}, #{createTime}
+        )
+    </insert>
+
+    <select id="selectById" parameterType="java.lang.Long" resultType="com.chat.older.xiechen.model.HealthAlerts">
+        SELECT * FROM health_alerts WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultType="com.chat.older.xiechen.model.HealthAlerts">
+        SELECT * FROM health_alerts
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectUnreadByUserId" parameterType="java.lang.Long" resultType="com.chat.older.xiechen.model.HealthAlerts">
+        SELECT * FROM health_alerts
+        WHERE user_id = #{userId} AND is_read = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="updateReadStatus">
+        UPDATE health_alerts SET
+            is_read = #{isRead},
+            read_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateReadStatusByUserId">
+        UPDATE health_alerts SET
+            is_read = 1,
+            read_time = NOW()
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

@@ -1,0 +1,47 @@
+### Java / Maven ###
+target/
+*.class
+*.log
+*.jar
+*.war
+*.iml
+*.ipr
+*.iws
+
+### IDE ###
+.idea/
+.vscode/
+*.swp
+
+### Node ###
+node_modules/
+
+### 本地配置与密钥（重要：不要提交真实密钥）###
+src/main/resources/application.yml
+src/main/resources/application-prod.yml
+src/main/resources/application-local.yml
+*.key
+*.pem
+*.crt
+*.p12
+*.jks
+.env
+
+### 用户上传文件 ###
+uploads/**/*
+!uploads/audios/.gitkeep
+!uploads/avatars/.gitkeep
+!uploads/files/.gitkeep
+!uploads/images/.gitkeep
+!uploads/videos/.gitkeep
+
+### 证书与打包产物 ###
+*.tar.gz
+*.zip
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### 本地助手工作目录 ###
+.workbuddy/

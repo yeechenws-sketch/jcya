@@ -1,0 +1,1390 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>新闻播报 -解尘颐安养老平台</title>
+  <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+      <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="lib/js/axios.min.js"></script>
+  <script src="lib/js/socket.io.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="/js/global-mqtt-manager.js"></script>
+  <script src="/js/global-message-center.js"></script>
+  <script src="/js/user-settings-manager.js"></script>
+
+  <style>
+    :root{
+      --primary: #4361EE;
+      --primary-600: #3759d9;
+      --primary-light: rgba(67, 97, 238, 0.2);
+      --accent: #ef4444;
+      --community-color: #06D6A0;
+      --glass-bg: rgba(255,255,255,0.20);
+      --glass-border: rgba(255,255,255,0.45);
+      --blur: 45px;
+      --card-radius: 22px;
+      --text: #1E293B;
+      --muted: #64748b;
+      --max-width: 1320px;
+      --gap: 22px;
+      font-family: 'PingFang SC','Microsoft YaHei',system-ui,Arial,Helvetica;
+    }
+
+    .ai-summary-btn {
+      position: fixed;
+      bottom: 50px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4361EE, #3a0ca3);
+      box-shadow: 0 8px 20px rgba(67, 97, 238, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      z-index: 9999;
+      transition: all 0.3s;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+    .ai-summary-btn:hover {
+      transform: scale(1.1) rotate(-5deg);
+    }
+    .ai-summary-btn i { font-size: 20px; margin-bottom: 2px; }
+    .ai-summary-btn span { font-size: 10px; }
+
+    .summary-bubble {
+      position: fixed;
+      bottom: 120px;
+      right: 30px;
+      width: 320px;
+      max-width: 90vw;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 15px 15px 5px 15px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border: 1px solid rgba(67, 97, 238, 0.2);
+      z-index: 1999;
+      display: none;
+      flex-direction: column;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .bubble-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+    .bubble-title {
+      font-weight: bold;
+      color: var(--primary);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bubble-close {
+      cursor: pointer;
+      color: #999;
+      padding: 5px;
+      transition: color 0.2s;
+    }
+    .bubble-close:hover { color: var(--primary); }
+
+    .bubble-content {
+      line-height: 1.6;
+      color: #333;
+      margin-bottom: 15px;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-line;
+      font-size: 15px;
+    }
+
+    .btn-voice {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    .btn-voice:hover {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-voice.playing {
+      background: var(--primary);
+      color: white;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(67, 97, 238, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
+    }
+
+    .bubble-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .loading-box {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    html,body{height:100%;margin:0;padding:0;background:linear-gradient(135deg,#e7eef8 0%,#f6fbff 100%);color:var(--text);overflow-y:auto;}
+    button{font-family:inherit;border:none;cursor:pointer;background:transparent}
+
+    .topbar{
+      position:fixed;left:0;right:0;top:0;
+      height:96px;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 28px;
+      background:var(--glass-bg);
+      backdrop-filter:blur(var(--blur)) saturate(160%);
+      border-bottom:1px solid var(--glass-border);
+      z-index:1200;
+    }
+    .top-left{display:flex;align-items:center;gap:16px}
+    .btn-back{color:#16317a;font-size:34px;font-weight:700;padding:6px 8px}
+    .logo{font-size:34px;font-weight:900;color:#16317a;letter-spacing:1px}
+    .top-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+    .time{font-weight:900;font-size:36px;color:var(--primary);line-height:1}
+    .date{color:var(--muted);font-weight:700;font-size:14px}
+
+    .container{
+      max-width:var(--max-width);
+      margin:120px auto 60px;
+      padding:0 20px;
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:var(--gap);
+      align-items:start;
+    }
+
+    @media (max-width:1100px){
+      .container{grid-template-columns:1fr; margin-top:116px;padding-bottom:120px}
+    }
+
+    .card{
+      background:var(--glass-bg);
+      border-radius:var(--card-radius);
+      padding:20px;
+      box-shadow:0 18px 48px rgba(24,39,75,0.06);
+      border:1px solid var(--glass-border);
+    }
+
+    .category-row{display:flex;gap:10px;overflow:auto;padding:10px 6px;margin-bottom:12px}
+    .category-row::-webkit-scrollbar{display:none}
+    .nav-btn{
+      padding:8px 16px;border-radius:999px;background:rgba(255,255,255,0.14);
+      font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;transition:all .22s;
+    }
+    .nav-btn.active{background:var(--primary);color:#fff;box-shadow:0 8px 24px rgba(67,97,238,0.18);transform:translateY(-2px)}
+
+    .carousel{
+      position:relative;border-radius:18px;overflow:hidden;height:420px;
+      background:rgba(0,0,0,0.05);
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: scale(1.02);
+      transition: opacity .6s ease, transform .6s ease;
+      display: flex;
+      align-items: stretch;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .slide.active {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+      z-index: 2;
+    }
+    .slide img{width:100%;height:100%;object-fit:cover}
+    .slide-caption{
+      position:absolute;left:0;right:0;bottom:0;padding:24px;
+      background:linear-gradient(180deg,transparent,rgba(6,10,25,0.85));color:#fff;
+      display:flex;align-items:flex-end;justify-content:space-between;
+    }
+    .slide.active h2{color:#fff; text-shadow:0 0 15px rgba(255,255,255,0.5);}
+
+    .carousel-btn{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:50px;height:50px;border-radius:50%;
+      background:rgba(255,255,255,0.2);color:#fff;
+      font-size:24px;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;z-index:10;transition:background .3s;
+    }
+    .carousel-btn:hover{background:rgba(255,255,255,0.4);}
+    .carousel-prev{left:20px;}
+    .carousel-next{right:20px;}
+
+    .carousel-dots{
+      position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+      display:flex;gap:8px;z-index:10;
+    }
+    .dot{
+      width:12px;height:12px;border-radius:50%;
+      background:rgba(255,255,255,0.5);cursor:pointer;
+      transition:background .3s, width .3s;
+    }
+    .dot.active{
+      background:#fff;width:30px;border-radius:6px;
+    }
+
+    .news-list{display:flex;flex-direction:column;gap:14px}
+    .news-item{
+      display:flex;gap:16px;padding:18px;border-radius:14px;
+      background:rgba(255,255,255,0.5);transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor:pointer;border:1px solid transparent;
+    }
+    .news-item:hover{transform:translateX(8px); background:rgba(255,255,255,0.8);}
+    .news-item img{width:200px;height:112px;object-fit:cover;border-radius:10px;flex-shrink:0}
+    .news-main h3{margin:0;font-size:20px;font-weight:900;transition: color .3s;}
+
+    .hot-list{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+    .hot-item{display:flex;gap:14px;align-items:center;padding:10px;border-radius:12px;transition:all .2s;}
+    .hot-item:hover{background:rgba(255,255,255,0.4);transform:translateX(5px)}
+
+    .badge{
+      width:40px; height:40px;
+      flex-shrink:0;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-weight:900;font-size:16px;
+      background:var(--muted);
+    }
+    .badge.rank-1{ background:linear-gradient(135deg, #f5c542, #d4a017); font-size:20px; box-shadow:0 4px 10px rgba(245,197,66,0.3); }
+    .badge.rank-2{ background:linear-gradient(135deg, #ff8c00, #e67e22); }
+    .badge.rank-3{ background:linear-gradient(135deg, #3b82f6, #2563eb); }
+
+    .muted{color:var(--muted); font-size:13px;}
+    .pill{padding:4px 10px; border-radius:99px; background:rgba(67,97,238,0.1); color:var(--primary); font-weight:700; font-size:12px;}
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      padding: 10px 0;
+    }
+    .page-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--glass-border);
+      font-weight: 700;
+      color: var(--text);
+      transition: all 0.3s;
+    }
+    .page-btn:hover:not(:disabled) {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .page-info {
+      font-weight: 800;
+      color: var(--muted);
+      margin: 0 10px;
+    }
+
+    /* 社区新闻板块样式 */
+    .community-section {
+      margin-bottom: 20px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title i {
+      color: var(--community-color);
+    }
+    .community-badge {
+      background: linear-gradient(135deg, var(--community-color), #059669);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .view-all {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: color 0.2s;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .view-all:hover {
+      color: var(--primary-600);
+    }
+    .view-all .unread-badge {
+      position: absolute;
+      top: -8px;
+      right: -12px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+      animation: pulse-badge 2s infinite;
+    }
+    .view-all .unread-badge.hidden {
+      display: none;
+    }
+    @keyframes pulse-badge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .community-news-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+    @media (max-width: 768px) {
+      .community-news-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .community-news-item {
+      display: flex;
+      gap: 12px;
+      padding: 15px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.5);
+      transition: all .3s;
+      cursor: pointer;
+      border-left: 3px solid var(--community-color);
+    }
+    .community-news-item:hover {
+      transform: translateX(5px);
+      background: rgba(255,255,255,0.8);
+    }
+    .community-news-item img {
+      width: 100px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .community-news-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .community-news-content h4 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .community-news-content p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .no-community-tip {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.3);
+      border-radius: 14px;
+    }
+    .no-community-tip i {
+      font-size: 40px;
+      margin-bottom: 10px;
+      color: var(--muted);
+    }
+
+    /* 社区新闻标签 */
+    .news-type-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .news-type-tag.community {
+      background: rgba(6, 214, 160, 0.15);
+      color: var(--community-color);
+    }
+    .news-type-tag.platform {
+      background: rgba(67, 97, 238, 0.15);
+      color: var(--primary);
+    }
+
+    .login-required-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    .login-required-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .login-required-modal {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px 50px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transform: scale(0.9) translateY(20px);
+      transition: all 0.3s ease;
+    }
+    .login-required-overlay.show .login-required-modal {
+      transform: scale(1) translateY(0);
+    }
+    .login-required-modal .icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #4361EE, #3a0ca3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 25px;
+      box-shadow: 0 10px 30px rgba(67, 97, 238, 0.3);
+    }
+    .login-required-modal .icon i {
+      font-size: 36px;
+      color: white;
+    }
+    .login-required-modal h2 {
+      color: #1e3a8a;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .login-required-modal p {
+      color: #64748b;
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+    .login-required-modal .btn-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+    .login-required-modal .btn {
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    .login-required-modal .btn-primary {
+      background: linear-gradient(135deg, #4361EE, #3a0ca3);
+      color: white;
+      box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
+    }
+    .login-required-modal .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(67, 97, 238, 0.5);
+    }
+    .login-required-modal .btn-secondary {
+      background: rgba(100, 116, 139, 0.1);
+      color: #64748b;
+    }
+    .login-required-modal .btn-secondary:hover {
+      background: rgba(100, 116, 139, 0.2);
+    }
+    .content-blur {
+      filter: blur(10px);
+      pointer-events: none;
+      user-select: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="loginRequiredOverlay" class="login-required-overlay">
+  <div class="login-required-modal">
+    <div class="icon">
+      <i class="fa fa-lock"></i>
+    </div>
+    <h2>请先登录</h2>
+    <p>登录后即可查看新闻资讯<br>享受更多专属服务</p>
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="goBack()">返回首页</button>
+      <button class="btn btn-primary" onclick="goToLogin()">立即登录</button>
+    </div>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="top-left">
+    <button class="btn-back" onclick="window.location.href='index.html'">
+      <i class="fa fa-angle-left"></i> 返回
+    </button>
+  </div>
+  <div class="logo">新闻播报</div>
+  <div class="top-right">
+    <div class="time" id="timeNow">00:00</div>
+    <div class="date" id="dateNow">01月01日 星期一</div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="main-column">
+    <div class="card">
+      <div class="category-row" role="tablist" aria-label="新闻分类">
+        <button class="nav-btn active" onclick="changeCategory(this,'推荐')">推荐</button>
+        <button class="nav-btn" onclick="changeCategory(this,'财经')">财经</button>
+        <button class="nav-btn" onclick="changeCategory(this,'科技热点')">科技</button>
+        <button class="nav-btn" onclick="changeCategory(this,'国际')">国际</button>
+        <button class="nav-btn" onclick="changeCategory(this,'军事')">军事</button>
+        <button class="nav-btn" onclick="changeCategory(this,'体育')">体育</button>
+        <button class="nav-btn" onclick="changeCategory(this,'娱乐')">娱乐</button>
+        <button class="nav-btn" onclick="changeCategory(this,'历史')">历史</button>
+        <button class="nav-btn" onclick="changeCategory(this,'健康')">健康</button>
+        <button class="nav-btn" onclick="changeCategory(this,'旅游')">旅游</button>
+      </div>
+
+      <div id="carousel" class="carousel">
+        <div class="carousel-btn carousel-prev" onclick="prevSlide()"><i class="fa fa-angle-left"></i></div>
+        <div class="carousel-btn carousel-next" onclick="nextSlide()"><i class="fa fa-angle-right"></i></div>
+        <div id="slides" class="slides"></div>
+        <div id="carouselDots" class="carousel-dots"></div>
+      </div>
+    </div>
+
+    <!-- 社区新闻板块 -->
+    <div id="communitySection" class="card community-section" style="margin-top:10px">
+      <div class="section-header">
+        <div class="section-title">
+          <i class="fa fa-building"></i> 社区新闻
+          <span id="communityBadge" class="community-badge" style="display:none;"></span>
+        </div>
+        <div class="view-all" onclick="viewAllCommunityNews()" id="viewAllBtn" style="display:none;">
+          查看全部 <i class="fa fa-angle-right"></i>
+          <span class="unread-badge hidden" id="unreadBadge">0</span>
+        </div>
+      </div>
+      <div id="communityNewsContent">
+        <div class="loading-box">
+          <i class="fa fa-spinner fa-spin fa-2x"></i>
+          <p>正在加载社区新闻...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="newsList" class="news-list card" style="margin-top:10px"></div>
+    <div id="pagination" class="pagination">
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <div class="card">
+      <div style="font-weight:900;font-size:18px;margin-bottom:10px"><i class="fa fa-fire" style="color:#ef4444"></i> 24小时热榜</div>
+      <div id="hotList" class="hot-list"></div>
+    </div>
+  </aside>
+</main>
+
+<script>
+  let newsData = [];
+  let carouselData = [];
+  let hotNewsData = [];
+  let communityNewsData = [];
+  let currentCategory = '推荐';
+  let currentPage = 1;
+  let hasCommunity = false;
+  let communityId = null;
+  let isLoggedIn = false;
+
+  const API_BASE = "/api";
+  let carouselIndex = 0;
+  let autoPlayTimer = null;
+
+  let isSpeaking = false;
+  let audioPlayer = null;
+  let briefCache = "";
+  let communityNewsIdsInBrief = [];
+  let isBriefLoading = false;
+
+  async function checkLoginStatus() {
+    try {
+      const res = await axios.get(`${API_BASE}/user/info`, { withCredentials: true });
+      if (res.data && res.data.code === 200 && res.data.data) {
+        isLoggedIn = true;
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('检查登录状态失败', err);
+      return false;
+    }
+  }
+
+  function showLoginRequired() {
+    const overlay = document.getElementById('loginRequiredOverlay');
+    const mainContent = document.querySelector('.container');
+    const topbar = document.querySelector('.topbar');
+    const aiBtn = document.querySelector('.ai-summary-btn');
+    const briefBubble = document.getElementById('dailyBriefBubble');
+    
+    if (mainContent) mainContent.classList.add('content-blur');
+    if (topbar) topbar.classList.add('content-blur');
+    if (aiBtn) aiBtn.style.display = 'none';
+    if (briefBubble) briefBubble.style.display = 'none';
+    
+    overlay.classList.add('show');
+  }
+
+  function hideLoginRequired() {
+    const overlay = document.getElementById('loginRequiredOverlay');
+    const mainContent = document.querySelector('.container');
+    const topbar = document.querySelector('.topbar');
+    const aiBtn = document.querySelector('.ai-summary-btn');
+    
+    if (mainContent) mainContent.classList.remove('content-blur');
+    if (topbar) topbar.classList.remove('content-blur');
+    if (aiBtn) aiBtn.style.display = 'flex';
+    
+    overlay.classList.remove('show');
+  }
+
+  function goToLogin() {
+    window.location.href = 'login.html';
+  }
+
+  function goBack() {
+    window.location.href = 'index.html';
+  }
+
+  function pauseAutoPlay() {
+    stopAutoPlay();
+    setTimeout(() => startAutoPlay(), 5000);
+  }
+
+  function stopAutoPlay() {
+    if (autoPlayTimer) {
+      clearInterval(autoPlayTimer);
+      autoPlayTimer = null;
+    }
+  }
+
+  function updateClock() {
+    const d = new Date();
+    document.getElementById('timeNow').textContent =
+            d.getHours().toString().padStart(2,'0') + ':' +
+            d.getMinutes().toString().padStart(2,'0');
+
+    const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const date = d.getDate().toString().padStart(2, '0');
+
+    document.getElementById('dateNow').textContent = `${month}月${date}日 ${days[d.getDay()]}`;
+  }
+
+  const pageSize = 10;
+
+  async function fetchNews(category = currentCategory, page = 1) {
+    try {
+      currentCategory = category;
+      currentPage = page;
+
+      const res = await axios.get(`${API_BASE}/news/list`, {
+        params: { category, page, limit: 10 }
+      });
+
+      const data = res.data;
+      newsData = data.list || [];
+
+      renderNewsList();
+      renderPagination(data.totalPages, data.currentPage);
+
+      if (page > 1) {
+        scrollToNewsTop();
+      }
+    } catch (err) {
+      console.error('加载新闻失败', err);
+    }
+  }
+
+  async function fetchHotNews() {
+    try {
+      const res = await axios.get(`${API_BASE}/news/today-hot?limit=8`);
+      hotNewsData = Array.isArray(res.data) ? res.data : [];
+      renderHotList(hotNewsData);
+    } catch (err) {
+      console.error('获取24h热榜失败', err);
+    }
+  }
+
+  async function fetchCarousel() {
+    try {
+      const res = await axios.get(`${API_BASE}/news/community/carousel`, { withCredentials: true });
+      console.log("轮播图数据(含社区新闻):", res.data);
+      carouselData = res.data || [];
+      renderCarousel();
+      startAutoPlay();
+    } catch (err) {
+      console.error('轮播加载失败', err);
+    }
+  }
+
+  async function fetchCommunityNews() {
+    try {
+      const res = await axios.get(`${API_BASE}/news/community/list`, {
+        params: { page: 1, limit: 4 },
+        withCredentials: true
+      });
+      
+      hasCommunity = res.data.hasCommunity;
+      communityId = res.data.communityId;
+      communityNewsData = res.data.list || [];
+      
+      renderCommunityNews(res.data);
+    } catch (err) {
+      console.error('获取社区新闻失败', err);
+      document.getElementById('communityNewsContent').innerHTML = `
+        <div class="no-community-tip">
+          <i class="fa fa-exclamation-circle"></i>
+          <p>暂无法加载社区新闻</p>
+        </div>
+      `;
+    }
+  }
+
+  function renderCommunityNews(data) {
+    const container = document.getElementById('communityNewsContent');
+    const badge = document.getElementById('communityBadge');
+    const viewAllBtn = document.getElementById('viewAllBtn');
+    const unreadBadge = document.getElementById('unreadBadge');
+    
+    console.log("社区新闻数据:", data);
+    
+    if (!data.hasCommunity) {
+      const message = data.message || "您尚未加入任何社区";
+      const isNotLoggedIn = message.includes("登录") || !data.communityId;
+      
+      container.innerHTML = `
+        <div class="no-community-tip">
+          <i class="fa fa-${isNotLoggedIn ? 'sign-in' : 'users'}"></i>
+          <p>${message}</p>
+          ${isNotLoggedIn ? '<p style="font-size: 12px; margin-top: 5px;"><a href="index.html" style="color: var(--primary);">点击登录</a>后可查看社区新闻</p>' : '<p style="font-size: 12px; margin-top: 5px;">加入社区后可查看社区专属新闻</p>'}
+        </div>
+      `;
+      badge.style.display = 'none';
+      viewAllBtn.style.display = 'none';
+      unreadBadge.classList.add('hidden');
+      return;
+    }
+
+    badge.textContent = `社区ID: ${data.communityId}`;
+    badge.style.display = 'inline-block';
+    viewAllBtn.style.display = 'block';
+    
+    const unreadCount = data.unreadCount || 0;
+    if (unreadCount > 0) {
+      unreadBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+      unreadBadge.classList.remove('hidden');
+    } else {
+      unreadBadge.classList.add('hidden');
+    }
+
+    if (!data.list || data.list.length === 0) {
+      container.innerHTML = `
+        <div class="no-community-tip">
+          <i class="fa fa-newspaper-o"></i>
+          <p>暂无社区新闻</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="community-news-grid">
+        ${data.list.map(n => `
+          <div class="community-news-item" onclick="goToCommunityNews(${n.id})">
+            ${n.coverImage ? `<img src="${n.coverImage}" alt="${n.title}">` : ''}
+            <div class="community-news-content">
+              <h4>${n.title}</h4>
+              <p>${n.category || '社区公告'} · ${formatDate(n.publishTime)}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${month}-${day}`;
+  }
+
+  function viewAllCommunityNews() {
+    window.location.href = 'community_news.html';
+  }
+
+  function goToCommunityNews(id) {
+    window.location.href = `community_news.html?id=${id}`;
+  }
+
+  function renderAll() {
+    renderCarousel();
+    renderNewsList();
+    updateCarouselDots();
+  }
+
+  function renderCarousel() {
+    const container = document.getElementById('slides');
+    const dotsContainer = document.getElementById('carouselDots');
+
+    if (!carouselData.length) {
+      container.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted)">暂无轮播数据</div>';
+      dotsContainer.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = carouselData.map(n => {
+      const isCommunity = n.type === 'community';
+      const clickHandler = isCommunity ? `goToCommunityNews(${n.id})` : `goToNews(${n.id})`;
+      const tagHtml = isCommunity 
+        ? `<span class="news-type-tag community">社区</span>` 
+        : `<span class="news-type-tag platform">平台</span>`;
+      
+      return `
+        <div class="slide" onclick="${clickHandler}">
+          <img src="${n.coverImage || ''}" alt="${n.title}">
+          <div class="slide-caption">
+            <h2>${tagHtml}${n.title}</h2>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dotsContainer.innerHTML = carouselData.map((_, i) =>
+            `<div class="dot ${i === 0 ? 'active' : ''}" onclick="showSlide(${i})"></div>`
+    ).join('');
+
+    showSlide(0);
+  }
+
+  function updateCarouselDots() {
+    const dotsEl = document.getElementById('carouselDots');
+    if (!carouselData.length) return;
+
+    dotsEl.innerHTML = carouselData.map((_, i) => `
+      <div class="dot ${i===carouselIndex?'active':''}" onclick="showSlide(${i})"></div>
+    `).join('');
+  }
+
+  function renderNewsList() {
+    const el = document.getElementById('newsList');
+    if (newsData.length === 0) {
+      el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">暂无更多新闻</div>';
+      return;
+    }
+    el.innerHTML = newsData.map((n, i) => `
+    <div class="news-item" id="item-${i}" data-id="${n.id}" onclick="handleListClick(${n.id})">
+      <img src="${n.localImagePath || n.image || ''}" alt="${n.title}">
+      <div class="news-main">
+        <h3>${n.title}</h3>
+        <p class="muted" style="margin-top:8px">${n.summary || ''}</p>
+        <div style="margin-top:10px" class="muted">${n.source} · 🔥 ${n.viewCount || 0}</div>
+      </div>
+    </div>
+  `).join('');
+  }
+
+  function renderPagination(totalPages, current) {
+    const el = document.getElementById('pagination');
+    if (totalPages <= 1) {
+      el.innerHTML = '';
+      return;
+    }
+
+    el.innerHTML = `
+    <button class="page-btn" ${current === 1 ? 'disabled' : ''} onclick="changePage(${current - 1})">
+      <i class="fa fa-chevron-left"></i> 上一页
+    </button>
+    <span class="page-info">第 ${current} / ${totalPages} 页</span>
+    <button class="page-btn" ${current === totalPages ? 'disabled' : ''} onclick="changePage(${current + 1})">
+      下一页 <i class="fa fa-chevron-right"></i>
+    </button>
+  `;
+  }
+
+  function changePage(newPage) {
+    fetchNews(currentCategory, newPage);
+    setTimeout(() => {
+      scrollToNewsTop();
+    }, 100);
+  }
+
+  function renderHotList(data) {
+    const el = document.getElementById('hotList');
+    if (data.length === 0) {
+      el.innerHTML = '<div class="muted" style="padding:20px; text-align:center;">近24小时暂无热门</div>';
+      return;
+    }
+
+    el.innerHTML = data.map((n, i) => {
+      const rank = i + 1;
+      let rankClass = '';
+      let badgeContent = rank;
+
+      if (rank === 1) {
+        rankClass = 'rank-1';
+        badgeContent = '1';
+      } else if (rank === 2) {
+        rankClass = 'rank-2';
+        badgeContent = '2';
+      } else if (rank === 3) {
+        rankClass = 'rank-3';
+        badgeContent = '3';
+      }
+
+      return `
+      <div class="hot-item" onclick="handleHotClick(${n.id})" style="cursor:pointer;">
+        <div class="badge ${rankClass}">${badgeContent}</div>
+        <div style="flex:1; overflow:hidden;">
+          <div style="
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          ">${n.title}</div>
+          <div class="muted" style="font-size: 12px; margin-top: 2px;">
+            ${n.source} · 🔥 ${n.viewCount || 0}
+          </div>
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
+
+  function syncCarousel() {
+    document.querySelectorAll('.slide').forEach((s, i) => s.classList.toggle('active', i === carouselIndex));
+    updateCarouselDots();
+  }
+
+  function scrollToNewsTop() {
+    const newsListEl = document.getElementById('carouselDots');
+    if (!newsListEl) return;
+
+    newsListEl.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest'
+    });
+
+    setTimeout(() => {
+      const topBarHeight = document.querySelector('.topbar').offsetHeight;
+      const scrollTop = newsListEl.getBoundingClientRect().top + window.pageYOffset - topBarHeight - 20;
+      window.scrollTo({
+        top: scrollTop,
+        behavior: 'smooth'
+      });
+    }, 50);
+  }
+
+  function showSlide(index) {
+    if (!carouselData.length) return;
+    carouselIndex = Math.max(0, Math.min(index, carouselData.length - 1));
+    syncCarousel();
+    pauseAutoPlay();
+  }
+
+  function prevSlide() {
+    if (!carouselData.length) return;
+    carouselIndex = (carouselIndex - 1 + carouselData.length) % carouselData.length;
+    syncCarousel();
+    pauseAutoPlay();
+  }
+
+  function nextSlide() {
+    if (!carouselData.length) return;
+    carouselIndex = (carouselIndex + 1) % carouselData.length;
+    syncCarousel();
+    pauseAutoPlay();
+  }
+
+  function goToSlide(index) {
+    showSlide(index);
+  }
+
+  function handleListClick(id) {
+    console.log("正在跳转到 ID:", id);
+    pauseAutoPlay();
+    setTimeout(() => goToNews(id), 200);
+  }
+
+  function handleHotClick(id) {
+    const idx = newsData.findIndex(n => n.id === id);
+    if(idx !== -1) {
+      document.getElementById(`item-${idx}`).scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    setTimeout(() => goToNews(id), 200);
+  }
+
+  function goToNews(id) {
+    axios.post(`${API_BASE}/news/click?newsId=${id}`).catch(()=>{});
+    setTimeout(() => {
+      window.location.href = `news_detail.html?id=${id}`;
+    }, 250);
+  }
+
+  function changeCategory(btn, cat) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    fetchNews(cat, 1);
+    setTimeout(() => scrollToNewsTop(), 100);
+  }
+
+  function startAutoPlay() {
+    stopAutoPlay();
+    if (!carouselData.length) return;
+    autoPlayTimer = setInterval(() => {
+      carouselIndex = (carouselIndex + 1) % carouselData.length;
+      syncCarousel();
+    }, 5000);
+  }
+
+  function initCarouselSwipe() {
+    const carousel = document.getElementById('carousel');
+    if (!carousel) return;
+
+    let startX = 0;
+    let endX = 0;
+
+    carousel.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      pauseAutoPlay();
+    });
+
+    carousel.addEventListener('touchend', (e) => {
+      endX = e.changedTouches[0].clientX;
+      const diff = startX - endX;
+      if (diff > 30) {
+        nextSlide();
+      } else if (diff < -30) {
+        prevSlide();
+      }
+    });
+
+    carousel.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+  }
+
+  async function toggleDailyBrief() {
+    const bubble = document.getElementById('dailyBriefBubble');
+    const contentDiv = document.getElementById('briefContent');
+    const voiceBtn = document.getElementById('voiceBtn');
+
+    if (bubble.style.display === 'flex') {
+      closeDailyBrief();
+      return;
+    }
+
+    bubble.style.display = 'flex';
+    stopVoice();
+
+    if (!briefCache && !isBriefLoading) {
+      isBriefLoading = true;
+      contentDiv.innerHTML = `
+        <div class="loading-box">
+          <i class="fa fa-spinner fa-spin fa-2x"></i>
+          <p style="margin-top:10px">正在为您汇总今日资讯...</p>
+        </div>`;
+
+      voiceBtn.style.display = 'none';
+
+      try {
+        const response = await axios.get('/api/news/daily-summary');
+        briefCache = response.data.summary || response.data;
+        communityNewsIdsInBrief = response.data.communityNewsIds || [];
+        contentDiv.innerText = briefCache;
+
+        voiceBtn.style.display = 'inline-block';
+        voiceBtn.className = 'fa fa-volume-up';
+        voiceBtn.classList.remove('speaking');
+        
+        if (communityNewsIdsInBrief.length > 0) {
+          markBriefNewsAsRead(communityNewsIdsInBrief);
+        }
+      } catch (error) {
+        console.error("获取简报失败:", error);
+        contentDiv.innerHTML = `<p style="color:#ef4444; text-align:center;">抱歉，小智暂时无法联网，请稍后再试。</p>`;
+        voiceBtn.style.display = 'none';
+      } finally {
+        isBriefLoading = false;
+      }
+    } else if (briefCache) {
+      contentDiv.innerText = briefCache;
+      voiceBtn.style.display = 'inline-block';
+      voiceBtn.className = 'fa fa-volume-up';
+      voiceBtn.classList.remove('speaking');
+    }
+  }
+
+  function toggleVoice() {
+    const voiceBtn = document.getElementById('voiceBtn');
+    const text = document.getElementById('briefContent').innerText;
+
+    if (isSpeaking) {
+      stopVoice();
+    } else {
+      startVoice(text);
+    }
+  }
+
+  function startVoice(text) {
+    if (!text || text.trim() === '') return;
+    stopVoice();
+
+    const encodedText = encodeURIComponent(text);
+    const url = `${API_BASE}/tts/speak?text=${encodedText}&t=${Date.now()}`;
+
+    audioPlayer = new Audio(url);
+    isSpeaking = true;
+
+    const voiceBtn = document.getElementById('voiceBtn');
+    voiceBtn.className = 'fa fa-stop-circle';
+    voiceBtn.classList.add('speaking');
+
+    audioPlayer.play().catch(e => {
+      console.error("播放失败", e);
+      isSpeaking = false;
+      voiceBtn.className = 'fa fa-volume-up';
+      voiceBtn.classList.remove('speaking');
+    });
+
+    audioPlayer.onended = () => {
+      isSpeaking = false;
+      voiceBtn.className = 'fa fa-volume-up';
+      voiceBtn.classList.remove('speaking');
+      
+      if (communityNewsIdsInBrief.length > 0) {
+        axios.post(`${API_BASE}/news/community/read/batch`, null, {
+          params: {
+            newsIds: communityNewsIdsInBrief.join(','),
+            source: 'voice'
+          }
+        }).catch(e => console.log("标记社区新闻已读失败:", e));
+      }
+    };
+  }
+
+  function stopVoice() {
+    if (audioPlayer) {
+      audioPlayer.pause();
+      audioPlayer = null;
+    }
+    isSpeaking = false;
+    const voiceBtn = document.getElementById('voiceBtn');
+    voiceBtn.className = 'fa fa-volume-up';
+    voiceBtn.classList.remove('speaking');
+  }
+
+  function closeDailyBrief() {
+    stopVoice();
+    document.getElementById('dailyBriefBubble').style.display = 'none';
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    const loggedIn = await checkLoginStatus();
+    if (!loggedIn) {
+      showLoginRequired();
+      return;
+    }
+
+    fetchCarousel();
+    fetchHotNews();
+    fetchCommunityNews();
+    fetchNews('推荐', 1);
+
+    initCarouselSwipe();
+    
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshUnreadCount();
+      }
+    });
+    
+    window.addEventListener('focus', () => {
+      refreshUnreadCount();
+    });
+    
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'communityNewsReadUpdated') {
+        refreshUnreadCount();
+      }
+    });
+  });
+
+  async function refreshUnreadCount() {
+    try {
+      const res = await axios.get(`${API_BASE}/news/community/unread-count`, { withCredentials: true });
+      const unreadBadge = document.getElementById('unreadBadge');
+      const viewAllBtn = document.getElementById('viewAllBtn');
+      
+      console.log('刷新未读数响应:', res.data);
+      
+      if (res.data.hasCommunity) {
+        const unreadCount = res.data.unreadCount || 0;
+        console.log('未读数量:', unreadCount);
+        if (unreadCount > 0) {
+          unreadBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+          unreadBadge.classList.remove('hidden');
+        } else {
+          unreadBadge.classList.add('hidden');
+        }
+        if (viewAllBtn) viewAllBtn.style.display = 'block';
+      } else {
+        unreadBadge.classList.add('hidden');
+      }
+    } catch (e) {
+      console.error('刷新未读数失败:', e);
+    }
+  }
+
+  async function markBriefNewsAsRead(newsIds) {
+    if (!newsIds || newsIds.length === 0) return;
+    
+    try {
+      const response = await axios.post(`${API_BASE}/news/community/read/batch`, null, {
+        params: {
+          newsIds: newsIds.join(','),
+          source: 'brief'
+        }
+      });
+      
+      console.log('简报新闻已标记已读:', response.data);
+      
+      localStorage.setItem('communityNewsReadUpdated', Date.now().toString());
+      
+      refreshUnreadCount();
+      
+    } catch (e) {
+      console.error('标记简报新闻已读失败:', e);
+    }
+  }
+
+</script>
+
+<div class="ai-summary-btn" onclick="toggleDailyBrief()">
+  <i class="fa fa-magic"></i>
+  <span>小智简报</span>
+</div>
+
+<div id="dailyBriefBubble" class="summary-bubble">
+  <div class="bubble-header">
+    <div class="bubble-title">
+      <i class="fa fa-magic"></i> 小智今日简报
+    </div>
+    <i class="fa fa-times bubble-close" onclick="closeDailyBrief()"></i>
+  </div>
+  <div id="briefContent" class="bubble-content">
+  </div>
+  <div class="bubble-actions">
+    <button id="voiceBtn" class="btn-voice" onclick="toggleVoice()" style="display:none;">
+      语音播报
+    </button>
+    <span style="font-size:12px; color:var(--muted);">
+      <i class="fa fa-info-circle"></i> 社区新闻优先，热点资讯汇总
+    </span>
+  </div>
+</div>
+
+</body>
+</html>
+
+
+

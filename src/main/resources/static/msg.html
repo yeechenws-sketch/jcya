@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>留言 - 解尘颐安养老平台</title>
+    <script src="js/image-compressor.js"></script>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="/js/global-mqtt-manager.js"></script>
+    <script src="/js/global-message-center.js"></script>
+    <script src="/js/user-settings-manager.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #4361EE;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --blur-val: 45px;
+        }
+
+        /* --- 1. 基础样式与滚动条隐藏 --- */
+        * { scrollbar-width: none; -ms-overflow-style: none; box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            margin: 0; padding: 0;
+            background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
+            height: 100vh; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        /* --- 2. 布局缩放逻辑 --- */
+        #app {
+            display: flex; flex-direction: column;
+            height: 133.33vh; width: 133.33vw;
+            transform: scale(0.75); transform-origin: top left;
+            position: relative;
+        }
+
+        /* --- 3. 顶部导航栏 --- */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 110px;
+            padding: 0 50px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--glass-bg); backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            border-bottom: 1px solid var(--glass-border); z-index: 9999;
+        }
+
+        .main-container { display: flex; height: 100%; box-sizing: border-box; }
+
+        /* --- 4. 聊天区域 --- */
+        .content-area {
+            flex: 1; overflow-y: auto;
+            padding: 130px 50px 320px; /* 顶部留白给导航栏，底部留白给输入框 */
+            scroll-behavior: smooth;
+        }
+
+        .scroll-spacer { height: 130px; width: 100%; flex-shrink: 0; }
+
+        /* 消息动效 */
+        .msg-row { display: flex; margin-bottom: 45px; width: 100%; opacity: 0; }
+        .msg-left { flex-direction: row; animation: slideInLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .msg-right { flex-direction: row-reverse; animation: slideInRight 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px) scale(0.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px) scale(0.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
+
+        .avatar-box img {
+            width: 80px; height: 80px; border-radius: 50%;
+            border: 4px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .msg-row:hover .avatar-box img { transform: scale(1.1); }
+
+        .msg-content { max-width: 65%; margin: 0 30px; display: flex; flex-direction: column; }
+
+        .bubble {
+            padding: 24px 35px; border-radius: 30px; background: white;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.07); font-size: 28px; font-weight: 600;
+            color: #1E293B; border: 1px solid rgba(255,255,255,0.8); word-break: break-all;
+            transition: all 0.3s;
+        }
+        .bubble:hover { transform: translateY(-3px); box-shadow: 0 15px 45px rgba(0,0,0,0.1); }
+        .msg-right .bubble { background: var(--primary); color: white; border: none; }
+        
+        .call-event-bubble {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+            color: #0369a1 !important;
+            text-align: center;
+            font-size: 24px !important;
+            padding: 16px 30px !important;
+            border: 1px solid #bae6fd !important;
+        }
+        
+        .msg-right .call-event-bubble {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+            color: #1e40af !important;
+        }
+
+        .health-config-bubble {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%) !important;
+            color: #991B1B !important;
+            text-align: left;
+            font-size: 22px !important;
+            padding: 16px 24px !important;
+            border-left: 4px solid #EF4444;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        /* 多媒体对象 */
+        .media-obj { width: 100%; max-width: 500px; border-radius: 25px; display: block; box-shadow: 0 8px 20px rgba(0,0,0,0.1); cursor: pointer; }
+
+        /* 语音气泡样式优化 - 振幅样式 */
+        .voice-bubble {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; min-width: 160px; max-width: 500px;
+            background: var(--primary); color: white;
+            padding: 20px 30px; border-radius: 30px;
+            position: relative;
+        }
+        .voice-bubble-left {
+            background: white; color: #1E293B;
+        }
+        .voice-info {
+            display: flex; align-items: center; gap: 15px;
+            position: absolute;
+            left: 30px;
+            z-index: 2;
+        }
+        .voice-icon { font-size: 36px; }
+        .voice-duration {
+            font-size: 28px; font-weight: 800;
+            min-width: 60px;
+        }
+
+        /* 振幅波形样式 */
+        .voice-wave-container {
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            margin-left: 100px; /* 给左侧信息留出空间 */
+            flex: 1;
+        }
+
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            gap: 3px;
+        }
+
+        .wave-bar {
+            width: 3px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 1.5px;
+        }
+
+        .voice-bubble-left .wave-bar {
+            background-color: rgba(67, 97, 238, 0.6);
+        }
+
+        /* 为每个波形条设置不同的动画延迟 */
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.6); }
+        }
+
+        /* --- 5. 侧边栏 (融合了好友功能) --- */
+        .control-sidebar {
+            width: 420px; background: var(--glass-bg); backdrop-filter: blur(var(--blur-val));
+            -webkit-backdrop-filter: blur(var(--blur-val));
+            border-left: 1px solid var(--glass-border); padding: 130px 35px 35px; overflow-y: auto;
+        }
+
+        /* 申请面板 */
+        .req-panel {
+            background: rgba(239, 68, 68, 0.1); border: 2px dashed var(--danger);
+            border-radius: 25px; padding: 20px; margin-bottom: 30px;
+        }
+        .req-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px;
+        }
+
+        /* 联系人卡片 */
+        .contact-card {
+            display: flex; align-items: center; gap: 25px; padding: 28px;
+            background: rgba(255, 255, 255, 0.25); border-radius: 30px; margin-bottom: 20px;
+            cursor: pointer; position: relative; transition: all 0.4s;
+            border: 2px solid transparent;
+        }
+        .contact-card.active {
+            background: white; border-color: var(--primary);
+            transform: translateX(-15px); box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        .contact-card:hover:not(.active) { background: rgba(255, 255, 255, 0.4); }
+
+        .unread-badge {
+            background: #F72585; color: white; min-width: 32px; height: 32px;
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: bold; position: absolute; right: 25px;
+            box-shadow: 0 5px 15px rgba(247, 37, 133, 0.4); animation: bounceIn 0.5s;
+        }
+        @keyframes bounceIn { from { scale: 0; } to { scale: 1; } }
+
+        /* --- 6. 底部控制栏 --- */
+        .bottom-container { position: fixed; bottom: 50px; left: 50px; right: 470px; z-index: 9000; }
+
+        .input-box-glass {
+            background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(35px) saturate(180%);
+            -webkit-backdrop-filter: blur(35px) saturate(180%);
+            padding: 15px 30px; border-radius: 70px; display: flex; align-items: center;
+            border: 1px solid var(--glass-border); box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .tool-btn {
+            width: 65px; height: 65px; border-radius: 50%; background: rgba(0,0,0,0.05);
+            border: none; color: #64748b; font-size: 30px; cursor: pointer;
+            transition: all 0.2s; margin-right: 15px; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .tool-btn:hover { transform: scale(1.1); background: rgba(0,0,0,0.1); }
+
+        /* 模式切换按钮 */
+        .mode-toggle-btn {
+            width: 65px; height: 65px; border-radius: 50%;
+            background: rgba(67, 97, 238, 0.1); border: none;
+            color: var(--primary); font-size: 30px; cursor: pointer;
+            transition: all 0.2s; margin-right: 15px; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .mode-toggle-btn:hover { background: rgba(67, 97, 238, 0.2); transform: scale(1.1); }
+
+        /* 语音录制按钮样式 */
+        .voice-input-btn {
+            flex: 1; height: 70px; border-radius: 35px; border: none;
+            background: white; color: #64748b; font-size: 26px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; display: flex;
+            align-items: center; justify-content: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .voice-input-btn.recording {
+            background: var(--danger); color: white;
+        }
+        .voice-input-btn:hover:not(.recording) { background: #f8fafc; }
+
+        @keyframes breathe {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .input-box-glass input {
+            flex: 1; border: none; background: transparent; font-size: 26px;
+            outline: none; font-weight: 600; padding: 15px;
+            height: 70px;
+        }
+
+        .send-btn {
+            background: var(--primary); color: white; border: none;
+            padding: 18px 55px; border-radius: 45px; font-size: 26px;
+            font-weight: bold; cursor: pointer; transition: all 0.3s;
+            margin-left: 15px; flex-shrink: 0;
+        }
+        .send-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+        .send-btn:disabled {
+            background: #94a3b8; cursor: not-allowed; transform: none;
+        }
+
+        /* 工具面板 - 保持flex布局，可扩展 */
+        .tool-panel {
+            background: rgba(255, 255, 255, 0.9); border-radius: 45px; padding: 40px; margin-bottom: 25px;
+            display: flex; flex-wrap: wrap; gap: 40px;
+            border: 1px solid var(--glass-border); box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+        }
+        .tool-item { text-align: center; cursor: pointer; width: 140px; transition: transform 0.2s; }
+        .tool-item:hover { transform: translateY(-5px); }
+        .tool-item.disabled { opacity: 0.5; cursor: not-allowed; }
+        .tool-item.disabled:hover { transform: none; }
+        .tool-item.disabled .tool-icon { box-shadow: none; }
+        .tool-icon {
+            width: 110px; height: 110px; border-radius: 30px; background: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 50px; margin: 0 auto 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+        .tool-label { font-size: 26px; font-weight: bold; color: #334155; }
+
+        /* 弹窗 */
+        .modal-mask {
+            position: fixed; top: 0; left: 0; width: 133.33vw; height: 133.33vh;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000;
+        }
+        .modal-box {
+            background: white; width: 550px; padding: 40px; border-radius: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-box h2 {
+            margin: 0 0 20px 0; color: #1E3A8A; font-size: 32px;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .modal-box h2 i { font-size: 36px; }
+        .modal-box .modal-content {
+            font-size: 26px; line-height: 1.5; color: #475569;
+            margin: 25px 0; padding: 15px; background: #f8fafc;
+            border-radius: 15px;
+        }
+        .modal-box input {
+            width: 100%; padding: 20px; margin: 25px 0;
+            border-radius: 20px; border: 2px solid #e2e8f0;
+            font-size: 26px; transition: border-color 0.3s;
+        }
+        .modal-box input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        .modal-btns { display: flex; gap: 20px; }
+        .modal-btns button {
+            flex: 1; padding: 20px; border-radius: 20px;
+            border: none; font-size: 24px; cursor: pointer;
+            font-weight: bold; transition: all 0.3s;
+        }
+        .modal-btns button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 过渡动画 */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* 隐藏的文件输入 */
+        .hidden-input { display: none; }
+
+        /* 在线提醒通知样式 */
+        .online-notification {
+            position: fixed;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            animation: notificationSlide 0.5s ease-out;
+            max-width: 600px;
+        }
+        @keyframes notificationSlide {
+            from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .notification-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+        .notification-content {
+            flex: 1;
+        }
+        .notification-sender {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .notification-message {
+            font-size: 20px;
+            opacity: 0.9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 400px;
+        }
+        .notification-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .notification-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* 连接状态指示器 */
+        .connection-status {
+            position: fixed;
+            top: 115px;
+            right: 50px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .connection-status.connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        .connection-status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .connection-status.connecting {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        .connected .status-dot { background: #22c55e; }
+        .disconnected .status-dot { background: #ef4444; animation: none; }
+        .connecting .status-dot { background: #f59e0b; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 联系人最后消息预览 */
+        .contact-last-msg {
+            font-size: 20px;
+            color: #64748b;
+            margin-top: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 200px;
+        }
+        .contact-time {
+            font-size: 18px;
+            color: #94a3b8;
+            position: absolute;
+            right: 25px;
+            top: 15px;
+        }
+        .contact-card.has-unread .contact-last-msg {
+            color: #334155;
+            font-weight: 600;
+        }
+
+        .online-indicator {
+            position: absolute;
+            bottom: 5px;
+            left: 55px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+        .online-indicator.online {
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        .online-indicator.offline {
+            background: #94a3b8;
+        }
+
+        .incoming-call-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+        }
+
+        .incoming-call-content {
+            text-align: center;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .incoming-call-bg-circle {
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
+            animation: call-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes call-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.15); opacity: 0.7; }
+        }
+
+        .incoming-call-avatar-wrapper {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .incoming-call-avatar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 56px;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.3);
+        }
+
+        .incoming-call-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .incoming-call-avatar-ring {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            right: -15px;
+            bottom: -15px;
+            border: 4px solid #2563EB;
+            border-radius: 50%;
+            opacity: 0;
+            animation: avatar-ring-expand 1.5s ease-out infinite;
+        }
+
+        .incoming-call-avatar-ring:nth-child(2) { animation-delay: 0.5s; }
+        .incoming-call-avatar-ring:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes avatar-ring-expand {
+            0% { transform: scale(1); opacity: 0.7; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .incoming-call-name {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .incoming-call-type {
+            font-size: 22px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .incoming-call-type i {
+            font-size: 20px;
+        }
+
+        .incoming-call-status {
+            font-size: 20px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 80px;
+        }
+
+        .incoming-call-actions {
+            display: flex;
+            gap: 100px;
+            justify-content: center;
+        }
+
+        .incoming-call-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .incoming-call-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 36px;
+            transition: transform 0.15s;
+        }
+
+        .incoming-call-btn:active {
+            transform: scale(0.9);
+        }
+
+        .incoming-call-btn.reject {
+            background: #FA5151;
+            color: white;
+        }
+
+        .incoming-call-btn.accept {
+            background: #2563EB;
+            color: white;
+        }
+
+        .incoming-call-btn.accept.emergency {
+            background: linear-gradient(135deg, #F72585, #FF6B6B);
+            box-shadow: 0 0 30px rgba(247, 37, 133, 0.5);
+            animation: emergency-pulse 1s infinite;
+        }
+
+        .incoming-call-avatar.emergency {
+            background: linear-gradient(135deg, #F72585, #FF6B6B);
+            box-shadow: 0 0 40px rgba(247, 37, 133, 0.6);
+        }
+
+        .incoming-call-modal.emergency-call {
+            background: rgba(247, 37, 133, 0.25);
+            animation: emergency-bg-pulse 2s infinite;
+        }
+
+        @keyframes emergency-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes emergency-bg-pulse {
+            0%, 100% { background-color: rgba(247, 37, 133, 0.25); }
+            50% { background-color: rgba(247, 37, 133, 0.15); }
+        }
+
+        .incoming-call-btn-label {
+            font-size: 20px;
+            color: rgba(255,255,255,0.8);
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <header class="top-bar">
+        <a href="javascript:void(0)" @click="goBackHome" style="text-decoration: none; color: #1E3A8A; font-weight: bold; font-size: 42px;">
+            <i class="fa fa-angle-left" style="margin-right: 10px;"></i>返回
+        </a>
+        <h1 style="color: #1E3A8A; font-size: 44px; font-weight: 900; margin: 0; letter-spacing: 2px;">
+            {{ currentTargetName || '子女留言' }}
+        </h1>
+        <div style="display: flex; align-items: center;">
+            <div :class="['connection-status', connectionStatus]">
+                <span class="status-dot"></span>
+                {{ connectionStatusText }}
+            </div>
+            <div style="text-align: right; margin-left: 20px;">
+                <div style="font-size: 48px; font-weight: 900; color: var(--primary);">{{ currentTime }}</div>
+                <div style="font-size: 20px; color: #64748b; font-weight: 800; margin-top: 5px;">{{ currentDate }}</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 在线提醒通知 -->
+    <transition name="fade">
+        <div v-if="showNotification" class="online-notification">
+            <img :src="notificationData.avatar" class="notification-avatar">
+            <div class="notification-content">
+                <div class="notification-sender">{{ notificationData.sender }}</div>
+                <div class="notification-message">{{ notificationData.message }}</div>
+            </div>
+            <button class="notification-close" @click="closeNotification">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    </transition>
+
+    <main class="main-container">
+        <section class="content-area" id="chat-box">
+            <div class="scroll-spacer"></div>
+
+            <div v-for="msg in messageList" :key="msg.id || (msg.createTime + '_' + msg.fromId + '_' + msg.content?.substring(0,20))"
+                 :class="['msg-row', String(msg.fromId) === String(currentUser?.id) ? 'msg-right' : 'msg-left']">
+                <div class="avatar-box"><img :src="getAvatar(msg.fromId)"></div>
+                <div class="msg-content">
+                    <template v-if="!msg.msgType || msg.msgType === 'text'">
+                        <div class="bubble" v-if="msg.content">{{ msg.content }}</div>
+                        <div class="bubble" v-else style="color: #999;">[空消息]</div>
+                        <button v-if="String(msg.fromId) !== String(currentUser?.id) && msg.content" @click="speak(msg.content)"
+                                style="margin-top:12px; background:white; border:none; color:var(--primary); padding:10px 24px; border-radius:18px; font-size:20px; font-weight:bold; cursor:pointer; align-self: flex-start; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                            🔊 朗读
+                        </button>
+                    </template>
+                    <template v-else-if="msg.msgType === 'health_config'">
+                        <div class="bubble health-config-bubble">
+                            <i class="fa fa-heartbeat" style="margin-right: 10px; color: #EF4444;"></i>
+                            {{ msg.content }}
+                        </div>
+                        <button v-if="String(msg.fromId) !== String(currentUser?.id)" @click="speak(msg.content)"
+                                style="margin-top:12px; background:white; border:none; color:var(--primary); padding:10px 24px; border-radius:18px; font-size:20px; font-weight:bold; cursor:pointer; align-self: flex-start; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                            🔊 朗读
+                        </button>
+                    </template>
+                    <template v-else-if="msg.msgType === 'call_event'">
+                        <div class="bubble call-event-bubble">
+                            <i class="fa fa-phone" style="margin-right: 10px;"></i>
+                            {{ msg.content }}
+                        </div>
+                    </template>
+                    <template v-else-if="msg.msgType === 'voice'">
+                        <div class="bubble" :class="String(msg.fromId) === String(currentUser?.id) ? 'voice-bubble' : 'voice-bubble voice-bubble-left'"
+                             @click="playVoice(msg.content, msg.fromId)"
+                             :style="{ width: (160 + (msg.duration ? Number(msg.duration) * 15 : 30)) + 'px' }">
+                            <div class="voice-info">
+                                <i class="fa fa-volume-up voice-icon"></i>
+                                <span class="voice-duration">{{ msg.duration || '2' }}''</span>
+                            </div>
+                            <div class="voice-wave-container">
+                                <div class="voice-wave">
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                    <span class="wave-bar"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else-if="msg.msgType === 'image'">
+                        <img :src="msg.content" class="media-obj" @click="openFull(msg.content)">
+                    </template>
+                    <template v-else-if="msg.msgType === 'video'">
+                        <video :src="msg.content" controls class="media-obj"></video>
+                    </template>
+                    <template v-else>
+                        <div class="bubble">{{ msg.content }}</div>
+                    </template>
+                </div>
+            </div>
+            
+            <div v-if="messageList.length === 0 && currentTargetId" style="text-align: center; padding: 50px; color: #999;">
+                暂无消息记录
+            </div>
+        </section>
+
+        <aside class="control-sidebar">
+            <div v-if="friendRequests.length > 0" class="req-panel">
+                <div style="font-weight: 900; color: var(--danger); font-size: 24px; margin-bottom: 15px;">新亲友申请：</div>
+                <div v-for="req in friendRequests" :key="req.id" class="req-item">
+                    <span style="font-weight:bold; font-size: 22px;">{{ req.fromNickname }}</span>
+                    <button @click="handleFriend(req.id, 1)" style="background:var(--success); color:white; border:none; padding:10px 20px; border-radius:12px; font-size: 20px; cursor: pointer;">同意</button>
+                </div>
+            </div>
+
+            <div style="font-size: 26px; font-weight: 900; color: #1E3A8A; margin-bottom: 35px; opacity: 0.8;">联系人列表</div>
+
+            <div v-for="user in contacts" :key="user.id" @click="selectContact(user)"
+                 :class="['contact-card', currentTargetId === user.id ? 'active' : '', user.unreadCount > 0 ? 'has-unread' : '']">
+                <div style="position: relative;">
+                    <img :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed='+user.id" style="width: 75px; height: 75px; border-radius: 50%;">
+                    <div :class="['online-indicator', onlineUsers[user.id] ? 'online' : 'offline']"></div>
+                </div>
+                <div style="flex:1">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="font-weight: 800; font-size: 28px; color: #334155;">{{ user.remark || user.nickname }}</div>
+                    </div>
+                    <div class="contact-last-msg">{{ getLastMessagePreview(user) }}</div>
+                </div>
+
+                <div class="contact-time" v-if="user.lastMsgTime">{{ formatLastMsgTime(user.lastMsgTime) }}</div>
+                <div v-if="user.unreadCount > 0" class="unread-badge">
+                    {{ user.unreadCount > 9 ? '9+' : user.unreadCount }}
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <div class="bottom-container">
+        <transition name="fade">
+            <div class="tool-panel" v-if="showTools">
+                <div class="tool-item" @click="triggerFile('image')">
+                    <div class="tool-icon" style="color:#f59e0b"><i class="fa fa-image"></i></div>
+                    <div class="tool-label">发照片</div>
+                </div>
+                <div class="tool-item" @click="triggerFile('video')">
+                    <div class="tool-icon" style="color:#10b981"><i class="fa fa-video-camera"></i></div>
+                    <div class="tool-label">发视频</div>
+                </div>
+                <div class="tool-item" @click="openAddFriendModal">
+                    <div class="tool-icon" style="color:var(--primary)"><i class="fa fa-user-plus"></i></div>
+                    <div class="tool-label">加好友</div>
+                </div>
+                <div class="tool-item" @click="openRemark">
+                    <div class="tool-icon" style="color:#8b5cf6"><i class="fa fa-edit"></i></div>
+                    <div class="tool-label">改备注</div>
+                </div>
+                <div class="tool-item" @click="openClearHistoryModal">
+                    <div class="tool-icon" style="color:#64748b"><i class="fa fa-trash"></i></div>
+                    <div class="tool-label">清记录</div>
+                </div>
+                <div class="tool-item" @click="openDeleteFriendModal">
+                    <div class="tool-icon" style="color:var(--danger)"><i class="fa fa-user-times"></i></div>
+                    <div class="tool-label">删好友</div>
+                </div>
+                <div class="tool-item" @click="goArchive">
+                    <div class="tool-icon" style="color:#8b5cf6"><i class="fa fa-archive"></i></div>
+                    <div class="tool-label">归档消息</div>
+                </div>
+                <div class="tool-item" @click="handleVoiceCall" :class="{ 'disabled': !currentTargetId }">
+                    <div class="tool-icon" style="color:#22c55e"><i class="fa fa-phone"></i></div>
+                    <div class="tool-label">语音通话</div>
+                </div>
+                <div class="tool-item" @click="handleVideoCall" :class="{ 'disabled': !currentTargetId }">
+                    <div class="tool-icon" style="color:#3b82f6"><i class="fa fa-video-camera"></i></div>
+                    <div class="tool-label">视频通话</div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 隐藏的文件输入 -->
+        <input type="file" accept="image/*" class="hidden-input" ref="imgInp" @change="e => uploadFile(e, 'image')">
+        <input type="file" accept="video/*" class="hidden-input" ref="vidInp" @change="e => uploadFile(e, 'video')">
+
+        <div class="input-box-glass">
+            <button class="tool-btn" @click="showTools = !showTools">
+                <i :class="['fa', showTools ? 'fa-times' : 'fa-plus']"></i>
+            </button>
+
+            <!-- 模式切换按钮 -->
+            <button class="mode-toggle-btn" @click="toggleVoiceMode">
+                <!-- 语音模式时显示键盘图标，文本模式时显示麦克风图标 -->
+                <i :class="['fa', isVoiceMode ? 'fa-keyboard-o' : 'fa-microphone']"></i>
+            </button>
+
+            <!-- 文本输入模式 -->
+            <template v-if="!isVoiceMode">
+                <input v-model="inputMsg" @keyup.enter="sendMsg" placeholder="点击这里给家人留言...">
+                <button class="send-btn" @click="sendMsg" :disabled="!inputMsg.trim()">发送</button>
+            </template>
+
+            <!-- 语音输入模式 -->
+            <template v-else>
+                <button class="voice-input-btn"
+                        :class="{recording: isRecording}"
+                        @mousedown="startRecord"
+                        @mouseup="stopRecord"
+                        @touchstart.prevent="startRecord"
+                        @touchend.prevent="stopRecord">
+                    {{ isRecording ? '松开 结束' : '按住 说话' }}
+                </button>
+                <button class="send-btn" disabled>发送</button>
+            </template>
+        </div>
+    </div>
+
+    <!-- 来电铃声 -->
+    <audio ref="ringAudio" loop preload="auto" style="display:none;">
+        <source src="http://t9se9imi4.hn-bkt.clouddn.com/ring.mp3" type="audio/mpeg">
+    </audio>
+    <audio ref="emergencyRingAudio" loop preload="auto" style="display:none;">
+        <source src="http://t9se9imi4.hn-bkt.clouddn.com/warning.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- 来电弹窗 -->
+    <div class="incoming-call-modal" v-if="showIncomingCall" :class="{ 'emergency-call': incomingCallData.isEmergency }">
+        <div class="incoming-call-content">
+            <div class="incoming-call-bg-circle"></div>
+            <div class="incoming-call-avatar-wrapper">
+                <div class="incoming-call-avatar-ring"></div>
+                <div class="incoming-call-avatar-ring"></div>
+                <div class="incoming-call-avatar-ring"></div>
+                <div class="incoming-call-avatar" :class="{ 'emergency': incomingCallData.isEmergency }">
+                    <img v-if="incomingCallData.fromUserAvatar" :src="incomingCallData.fromUserAvatar" :alt="incomingCallData.fromUserName">
+                    <i v-else class="fa fa-user"></i>
+                </div>
+            </div>
+            <div class="incoming-call-name">{{ incomingCallData.fromUserName }}</div>
+            <div class="incoming-call-type">
+                <i :class="incomingCallData.callType === 'video' ? 'fa fa-video-camera' : 'fa fa-phone'"></i>
+                <span v-if="incomingCallData.isEmergency" style="color: #F72585; font-weight: bold;">
+                    🔥 紧急呼叫 🔥
+                </span>
+                <span v-else>{{ incomingCallData.callType === 'video' ? '视频通话' : '语音通话' }}</span>
+            </div>
+            <div class="incoming-call-status" v-if="incomingCallData.isEmergency" style="color: #F72585; font-size: 22px; font-weight: bold;">
+                ⚠️ 长辈发起紧急呼叫，请立即接听！
+                <div v-if="incomingCallData.alertType" style="font-size: 20px; margin-top: 8px;">
+                    异常类型：{{ getAlertTypeName(incomingCallData.alertType) }}，当前值：{{ incomingCallData.alertValue }}
+                </div>
+            </div>
+            <div class="incoming-call-status" v-else>来电...</div>
+            <div class="incoming-call-actions">
+                <div class="incoming-call-action">
+                    <button class="incoming-call-btn reject" @click="rejectIncomingCall">
+                        <i class="fa fa-phone"></i>
+                    </button>
+                    <span class="incoming-call-btn-label">拒绝</span>
+                </div>
+                <div class="incoming-call-action">
+                    <button class="incoming-call-btn accept" :class="{ 'emergency': incomingCallData.isEmergency }" @click="acceptIncomingCall">
+                        <i class="fa fa-phone"></i>
+                    </button>
+                    <span class="incoming-call-btn-label">接听</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加好友弹窗 -->
+    <div class="modal-mask" v-if="showAddModal" @click.self="showAddModal = false">
+        <div class="modal-box">
+            <h2><i class="fa fa-user-plus"></i>添加亲友</h2>
+            <input v-model="searchName" placeholder="输入对方账号">
+            <div class="modal-btns">
+                <button @click="showAddModal = false" style="background:#f1f5f9; color:#64748b">取消</button>
+                <button @click="addFriend" style="background:var(--primary); color:white">发送申请</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改备注弹窗 -->
+    <div class="modal-mask" v-if="showRemarkModal" @click.self="showRemarkModal = false">
+        <div class="modal-box">
+            <h2><i class="fa fa-edit"></i>修改备注</h2>
+            <input v-model="newRemark" placeholder="怎么称呼对方？">
+            <div class="modal-btns">
+                <button @click="showRemarkModal = false" style="background:#f1f5f9; color:#64748b">取消</button>
+                <button @click="saveRemark" style="background:var(--primary); color:white">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 清空聊天记录弹窗 -->
+    <div class="modal-mask" v-if="showClearHistoryModal" @click.self="showClearHistoryModal = false">
+        <div class="modal-box">
+            <h2><i class="fa fa-trash" style="color:#64748b"></i>清空聊天记录</h2>
+            <div class="modal-content">
+                确定要清空与 <span style="color:var(--primary); font-weight:bold">{{ currentTargetName }}</span> 的聊天记录吗？此操作不可恢复。
+            </div>
+            <div class="modal-btns">
+                <button @click="showClearHistoryModal = false" style="background:#f1f5f9; color:#64748b">取消</button>
+                <button @click="clearHistory" style="background:#64748b; color:white">确认清空</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除好友弹窗 -->
+    <div class="modal-mask" v-if="showDeleteFriendModal" @click.self="showDeleteFriendModal = false">
+        <div class="modal-box">
+            <h2><i class="fa fa-user-times" style="color:var(--danger)"></i>删除好友</h2>
+            <div class="modal-content">
+                确定要解除与 <span style="color:var(--primary); font-weight:bold">{{ currentTargetName }}</span> 的好友关系吗？删除后将无法接收对方消息。
+            </div>
+            <div class="modal-btns">
+                <button @click="showDeleteFriendModal = false" style="background:#f1f5f9; color:#64748b">取消</button>
+                <button @click="confirmDelete" style="background:var(--danger); color:white">确认删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const {createApp} = Vue;
+    createApp({
+        data() {
+            return {
+                currentUser: null, currentTargetId: null, contacts: [], messageList: [],
+                inputMsg: '', currentTime: '', currentDate: '',
+                isRecording: false, mediaRecorder: null, audioChunks: [], recStart: 0,
+                isVoiceMode: false,
+                showAddModal: false, searchName: '',
+                showRemarkModal: false, newRemark: '',
+                showClearHistoryModal: false,
+                showDeleteFriendModal: false,
+                friendRequests: [],
+                showTools: false,
+                currentPlayingVoice: null,
+                connectionStatus: 'connecting',
+                showNotification: false,
+                notificationData: { sender: '', message: '', avatar: '' },
+                notificationTimer: null,
+                onlineUsers: {},
+                signalingSocket: null,
+                showIncomingCall: false,
+                incomingCallData: { fromUserId: null, fromUserName: '', fromUserAvatar: '', callType: 'voice', callId: null },
+                ringtoneConfig: {},
+                messageCallbackBound: false
+            }
+        },
+        mounted() {
+            this.updateTime();
+            setInterval(this.updateTime, 1000);
+            this.loadRingtoneConfig();
+            this.checkLogin();
+
+            window.addEventListener('selectContact', (e) => {
+                const contactId = e.detail?.contactId;
+                if (contactId) {
+                    const contact = this.contacts.find(c => String(c.id) === String(contactId));
+                    if (contact) {
+                        this.selectContact(contact);
+                    } else {
+                        this.loadContacts();
+                    }
+                }
+            });
+
+            window.addEventListener('global-friend-delete', (e) => {
+                if (String(e.detail.fromId) === String(this.currentUser?.id)) {
+                    this.currentTargetId = null;
+                    this.messageList = [];
+                }
+                this.loadContacts();
+            });
+
+            window.addEventListener('global-friend-update', () => {
+                this.loadRequests();
+                this.loadContacts();
+            });
+        },
+        computed: {
+            currentTargetName() {
+                if (!this.currentTargetId) return '子女留言';
+                const contact = this.contacts.find(c => c.id === this.currentTargetId);
+                return contact ? (contact.remark || contact.nickname) : '子女留言';
+            },
+            connectionStatusText() {
+                const statusMap = {
+                    'connected': '已连接',
+                    'disconnected': '已断开',
+                    'connecting': '连接中...'
+                };
+                return statusMap[this.connectionStatus] || '未知';
+            }
+        },
+        methods: {
+            async loadRingtoneConfig() {
+                try {
+                    const res = await fetch('/api/qiniu/ringtones');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.items) {
+                            this.ringtoneConfig = {};
+                            data.items.forEach(item => {
+                                this.ringtoneConfig[item.type] = item.url;
+                            });
+                            this.updateAudioSources();
+                        }
+                    }
+                } catch (e) {
+                    console.log('加载铃声配置失败:', e);
+                }
+            },
+            updateAudioSources() {
+                const ringAudio = this.$refs.ringAudio;
+                const emergencyRingAudio = this.$refs.emergencyRingAudio;
+                if (ringAudio && this.ringtoneConfig.ring) {
+                    ringAudio.src = this.ringtoneConfig.ring;
+                }
+                if (emergencyRingAudio && this.ringtoneConfig.emergency) {
+                    emergencyRingAudio.src = this.ringtoneConfig.emergency;
+                }
+            },
+            updateTime() {
+                const d = new Date();
+                // 时分补零（原有逻辑不变）
+                this.currentTime = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+
+                // 月份和日期分别补零处理（核心修改点）
+                const month = (d.getMonth() + 1).toString().padStart(2, '0'); // 月份+1后补零
+                const date = d.getDate().toString().padStart(2, '0'); // 日期直接补零
+
+                // 拼接成补零后的日期格式
+                this.currentDate = `${month}月${date}日 ` + ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+            },
+            async checkLogin() {
+                const res = await axios.get('/api/user/info');
+                if (res.data.code === 200) {
+                    this.currentUser = res.data.data;
+                    this.setupMessageCallbacks();
+                    this.initSignaling(this.currentUser.id);
+                    this.loadContacts();
+                    this.loadRequests();
+                } else { window.location.href = 'login.html'; }
+            },
+            initSignaling(userId) {
+                const signalingUrl = window.location.origin;
+                
+                try {
+                    this.signalingSocket = io(signalingUrl, {
+                        path: '/socket.io',
+                        transports: ['websocket', 'polling'],
+                        reconnection: true,
+                        reconnectionAttempts: 5
+                    });
+
+                    this.signalingSocket.on('connect', () => {
+                        console.log('[信令] 已连接到信令服务器');
+                        this.signalingSocket.emit('login', {
+                            userId: userId,
+                            nickname: this.currentUser?.nickname || '用户',
+                            avatar: this.currentUser?.avatar || ''
+                        });
+                    });
+
+                    this.signalingSocket.on('calling', (data) => {
+                        console.log('[信令] 收到来电:', data);
+                        console.log('[信令] data.isEmergency 的值:', data.isEmergency, '类型:', typeof data.isEmergency);
+                        this.showIncomingCall = true;
+                        this.incomingCallData = {
+                            fromUserId: data.fromUserId,
+                            fromUserName: data.fromUserName || '用户',
+                            fromUserAvatar: data.fromUserAvatar || '',
+                            callType: data.type || 'voice',
+                            isEmergency: data.isEmergency === true || data.isEmergency === 'true',
+                            alertType: data.alertType || null,
+                            alertValue: data.alertValue || null,
+                            alertLevel: data.alertLevel || null,
+                            callId: Date.now()
+                        };
+                        console.log('[信令] 是否是紧急呼叫:', this.incomingCallData.isEmergency);
+                        console.log('[信令] incomingCallData:', this.incomingCallData);
+                        this.$nextTick(() => {
+                            console.log('[音频] $refs.emergencyRingAudio:', this.$refs.emergencyRingAudio);
+                            console.log('[音频] $refs.ringAudio:', this.$refs.ringAudio);
+                            
+                            if (this.incomingCallData.isEmergency && this.$refs.emergencyRingAudio) {
+                                console.log('[音频] 尝试播放紧急铃声');
+                                try {
+                                    this.$refs.emergencyRingAudio.currentTime = 0;
+                                    this.$refs.emergencyRingAudio.play().then(() => {
+                                        console.log('[音频] 紧急铃声播放成功');
+                                    }).catch(e => {
+                                        console.error('[音频] 紧急铃声播放失败:', e);
+                                    });
+                                } catch (e) {
+                                    console.error('[音频] 紧急铃声异常:', e);
+                                }
+                            } else if (this.$refs.ringAudio) {
+                                console.log('[音频] 尝试播放普通铃声');
+                                try {
+                                    this.$refs.ringAudio.currentTime = 0;
+                                    this.$refs.ringAudio.play().then(() => {
+                                        console.log('[音频] 普通铃声播放成功');
+                                    }).catch(e => {
+                                        console.error('[音频] 普通铃声播放失败:', e);
+                                    });
+                                } catch (e) {
+                                    console.error('[音频] 普通铃声异常:', e);
+                                }
+                            }
+                        });
+                    });
+
+                    this.signalingSocket.on('hangup', () => {
+                        this.showIncomingCall = false;
+                        if (this.$refs.ringAudio) {
+                            this.$refs.ringAudio.pause();
+                            this.$refs.ringAudio.currentTime = 0;
+                        }
+                        if (this.$refs.emergencyRingAudio) {
+                            this.$refs.emergencyRingAudio.pause();
+                            this.$refs.emergencyRingAudio.currentTime = 0;
+                        }
+                    });
+
+                    this.signalingSocket.on('emergencyCallEnded', (data) => {
+                        console.log('[紧急呼叫] 对方取消了呼叫:', data);
+                        this.showIncomingCall = false;
+                        if (this.$refs.ringAudio) {
+                            this.$refs.ringAudio.pause();
+                            this.$refs.ringAudio.currentTime = 0;
+                        }
+                        if (this.$refs.emergencyRingAudio) {
+                            this.$refs.emergencyRingAudio.pause();
+                            this.$refs.emergencyRingAudio.currentTime = 0;
+                        }
+                    });
+
+                 } catch (error) {
+                    console.error('[信令] 连接失败:', error);
+                }
+            },
+            startCall(peerId, callType, peerName) {
+                if (!this.currentUser) return;
+                
+                const myName = this.currentUser.nickname || '用户';
+                const myAvatar = this.currentUser.avatar || '';
+                
+                const url = `call.html?userId=${this.currentUser.id}&peerId=${peerId}&peerName=${encodeURIComponent(peerName)}&type=${callType}&incoming=false&myName=${encodeURIComponent(myName)}&myAvatar=${encodeURIComponent(myAvatar)}`;
+                window.location.href = url;
+            },
+            acceptIncomingCall() {
+                const data = this.incomingCallData;
+                console.log('[长辈端] 接听呼叫:', data);
+                this.showIncomingCall = false;
+                if (this.$refs.ringAudio) {
+                    this.$refs.ringAudio.pause();
+                    this.$refs.ringAudio.currentTime = 0;
+                }
+                if (this.$refs.emergencyRingAudio) {
+                    this.$refs.emergencyRingAudio.pause();
+                    this.$refs.emergencyRingAudio.currentTime = 0;
+                }
+                
+                if (this.signalingSocket) {
+                    console.log('[长辈端] 发送answerCall事件, toUserId:', data.fromUserId);
+                    this.signalingSocket.emit('answerCall', {
+                        toUserId: data.fromUserId,
+                        fromUserId: this.currentUser.id
+                    });
+                } else {
+                    console.error('[长辈端] signalingSocket未连接!');
+                }
+                
+                const myName = this.currentUser.nickname || '用户';
+                const myAvatar = this.currentUser.avatar || '';
+                const peerAvatar = data.fromUserAvatar || '';
+                
+                const url = `call.html?userId=${this.currentUser.id}&peerId=${data.fromUserId}&peerName=${encodeURIComponent(data.fromUserName)}&peerAvatar=${encodeURIComponent(peerAvatar)}&type=${data.callType}&incoming=true&answered=true&myName=${encodeURIComponent(myName)}&myAvatar=${encodeURIComponent(myAvatar)}`;
+                console.log('[长辈端] 跳转到通话页面:', url);
+                window.location.href = url;
+            },
+            getAlertTypeName(alertType) {
+                const typeNames = {
+                    'BP': '血压',
+                    'HR': '心率',
+                    'BO': '血氧',
+                    'BG': '血糖'
+                };
+                return typeNames[alertType] || alertType || '未知';
+            },
+            rejectIncomingCall() {
+                if (this.$refs.ringAudio) {
+                    this.$refs.ringAudio.pause();
+                    this.$refs.ringAudio.currentTime = 0;
+                }
+                if (this.$refs.emergencyRingAudio) {
+                    this.$refs.emergencyRingAudio.pause();
+                    this.$refs.emergencyRingAudio.currentTime = 0;
+                }
+                if (this.signalingSocket && this.incomingCallData.fromUserId) {
+                    this.signalingSocket.emit('rejectCall', {
+                        toUserId: this.incomingCallData.fromUserId
+                    });
+                }
+                this.showIncomingCall = false;
+            },
+            setupMessageCallbacks() {
+                if (!window.GlobalMessageCenter) {
+                    console.warn('[msg] GlobalMessageCenter 未初始化，1秒后重试');
+                    setTimeout(() => this.setupMessageCallbacks(), 1000);
+                    return;
+                }
+
+                if (this.messageCallbackBound) {
+                    return;
+                }
+
+                if (GlobalMessageCenter.signalingSocket) {
+                    GlobalMessageCenter.signalingSocket.disconnect();
+                    GlobalMessageCenter.signalingSocket = null;
+                }
+
+                GlobalMessageCenter.suppressInAppNotification = true;
+
+                GlobalMessageCenter.onOnlineStatus((userId, online) => {
+                    this.onlineUsers[userId] = online;
+                });
+
+                GlobalMessageCenter.onMessage((m, contact) => {
+                    const isMyMessage = String(m.fromId) === String(this.currentUser?.id);
+                    const otherId = isMyMessage ? m.toId : m.fromId;
+
+                    if (!isMyMessage) {
+                        this.playNotice();
+                        this.showOnlineNotification(m);
+                    }
+
+                    if (String(otherId) === String(this.currentTargetId)) {
+                        const exists = this.messageList.some(existingMsg => {
+                            if (existingMsg.id && m.id) {
+                                return String(existingMsg.id) === String(m.id);
+                            }
+                            return existingMsg.createTime && m.createTime && 
+                                   String(existingMsg.createTime) === String(m.createTime) &&
+                                   String(existingMsg.fromId) === String(m.fromId);
+                        });
+                        if (!exists) {
+                            this.messageList.push(m);
+                            this.goBottom();
+                        }
+                        if (!isMyMessage) {
+                            axios.post(`/api/msg/read?fromId=${m.fromId}`);
+                        }
+                    } else if (!isMyMessage) {
+                        const contactIndex = this.contacts.findIndex(c => String(c.id) === String(otherId));
+                        if (contactIndex !== -1) {
+                            const updatedContact = {
+                                ...this.contacts[contactIndex],
+                                unreadCount: (this.contacts[contactIndex].unreadCount || 0) + 1,
+                                lastMessage: m.content,
+                                lastMsgType: m.msgType,
+                                lastMsgTime: new Date().toISOString()
+                            };
+                            this.contacts.splice(contactIndex, 1, updatedContact);
+                            this.$nextTick(() => {
+                                if (typeof localStorage !== 'undefined') {
+                                    localStorage.setItem('messageUnreadUpdated', Date.now());
+                                }
+                            });
+                        } else {
+                            this.loadContacts();
+                        }
+                        this.sortContactsByLastMessage();
+                    }
+                });
+
+                this.messageCallbackBound = true;
+
+                this.connectionStatus = GlobalMessageCenter.isConnected ? 'connected' : 'connecting';
+                setInterval(() => {
+                    if (window.GlobalMessageCenter) {
+                        this.connectionStatus = GlobalMessageCenter.isConnected ? 'connected' : 'disconnected';
+                    }
+                }, 3000);
+            },
+            showOnlineNotification(msg) {
+                const contact = this.contacts.find(c => c.id == msg.fromId);
+                if (!contact) return;
+                
+                if (this.notificationTimer) {
+                    clearTimeout(this.notificationTimer);
+                }
+                
+                let messagePreview = msg.content;
+                if (msg.msgType === 'voice') {
+                    messagePreview = `[语音] ${msg.duration || ''}秒`;
+                } else if (msg.msgType === 'image') {
+                    messagePreview = '[图片]';
+                } else if (msg.msgType === 'video') {
+                    messagePreview = '[视频]';
+                }
+                
+                this.notificationData = {
+                    sender: contact.remark || contact.nickname,
+                    message: messagePreview,
+                    avatar: contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.fromId}`
+                };
+                this.showNotification = true;
+                
+                this.notificationTimer = setTimeout(() => {
+                    this.showNotification = false;
+                }, 5000);
+            },
+            closeNotification() {
+                this.showNotification = false;
+                if (this.notificationTimer) {
+                    clearTimeout(this.notificationTimer);
+                }
+            },
+            // 提示音播放
+            playNotice() {
+                const noticeAudio = new Audio('http://192.168.10.151/music/notice.wav');
+                noticeAudio.volume = 1;
+                noticeAudio.play().catch(e => console.log("需交互后播放声音"));
+            },
+            playNewFriend() {
+                const noticeAudio = new Audio('http://192.168.10.151/music/new Friend.wav');
+                noticeAudio.volume = 1;
+                noticeAudio.play().catch(e => console.log("需交互后播放声音"));
+            },
+            // 加载联系人和好友申请
+            loadContacts() {
+                axios.get('/api/friend/list/ordered').then(res => {
+                    if (res.data.code === 200) {
+                        const list = res.data.data;
+                        axios.get('/api/msg/unread/detail').then(detailRes => {
+                            const detail = detailRes.data.data || [];
+                            this.contacts = list.map(c => {
+                                const d = detail.find(x => x.senderId === c.id || x.from_id === c.id);
+                                c.unreadCount = d ? (d.count || d['count(*)']) : 0;
+                                return c;
+                            });
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const targetUserId = urlParams.get('targetUserId');
+                            if (targetUserId) {
+                                const targetContact = this.contacts.find(c => String(c.id) === targetUserId);
+                                if (targetContact) {
+                                    this.selectContact(targetContact);
+                                } else if (this.contacts.length) {
+                                    this.selectContact(this.contacts[0]);
+                                }
+                            } else if (this.contacts.length && !this.currentTargetId) {
+                                this.selectContact(this.contacts[0]);
+                            }
+                            this.loadOnlineStatus();
+                        });
+                    }
+                });
+            },
+            loadOnlineStatus() {
+                axios.get('/api/friend/online-status').then(res => {
+                    if (res.data.code === 200) {
+                        this.onlineUsers = res.data.data || {};
+                    }
+                });
+            },
+            sortContactsByLastMessage() {
+                this.contacts.sort((a, b) => {
+                    const timeA = a.lastMsgTime ? new Date(a.lastMsgTime).getTime() : 0;
+                    const timeB = b.lastMsgTime ? new Date(b.lastMsgTime).getTime() : 0;
+                    return timeB - timeA;
+                });
+            },
+            getLastMessagePreview(user) {
+                if (!user.lastMessage) return '';
+                if (user.lastMsgType === 'voice') {
+                    return '[语音消息]';
+                } else if (user.lastMsgType === 'image') {
+                    return '[图片]';
+                } else if (user.lastMsgType === 'video') {
+                    return '[视频]';
+                }
+                return user.lastMessage.length > 15 ? user.lastMessage.substring(0, 15) + '...' : user.lastMessage;
+            },
+            formatLastMsgTime(timeStr) {
+                if (!timeStr) return '';
+                const date = new Date(timeStr);
+                const now = new Date();
+                const isToday = date.toDateString() === now.toDateString();
+                
+                if (isToday) {
+                    return date.getHours().toString().padStart(2, '0') + ':' + 
+                           date.getMinutes().toString().padStart(2, '0');
+                } else {
+                    return (date.getMonth() + 1) + '/' + date.getDate();
+                }
+            },
+            loadRequests() {
+                axios.get('/api/friend/pending').then(res => {
+                    if(res.data.code === 200) this.friendRequests = res.data.data;
+                });
+            },
+            // 好友操作
+            openAddFriendModal() {
+                this.showAddModal = true;
+                this.showTools = false;
+            },
+
+            addFriend() {
+                axios.post('/api/friend/request', { username: this.searchName }).then(res => {
+                    alert(res.data.msg);
+                    this.showAddModal = false;
+                    this.searchName = '';
+                });
+            },
+            handleFriend(requestId, status) {
+                axios.post('/api/friend/handle', { requestId, status }).then(() => {
+                    this.loadRequests();
+                    this.loadContacts();
+                });
+            },
+            openRemark() {
+                if (!this.currentTargetId) {
+                    alert("请先选择联系人");
+                    return;
+                }
+                const u = this.contacts.find(x => x.id == this.currentTargetId);
+                this.newRemark = u.remark || '';
+                this.showRemarkModal = true;
+                this.showTools = false;
+            },
+            saveRemark() {
+                axios.post('/api/friend/updateRemark', { friendId: this.currentTargetId, remark: this.newRemark }).then(() => {
+                    this.showRemarkModal = false;
+                    this.loadContacts();
+                });
+            },
+            // 清空聊天记录弹窗
+            openClearHistoryModal() {
+                if(!this.currentTargetId) {
+                    alert("请先选择要清空记录的联系人！");
+                    return;
+                }
+                this.showClearHistoryModal = true;
+                this.showTools = false;
+            },
+            // 清空聊天记录
+            clearHistory() {
+                axios.post('/api/msg/clearSpecific', null, { params: { otherId: this.currentTargetId } }).then(() => {
+                    this.messageList = [];
+                    this.showClearHistoryModal = false;
+                    this.showTools = false;
+                });
+            },
+            // 删除联系人弹窗
+            openDeleteFriendModal() {
+                if(!this.currentTargetId) {
+                    alert("请先选择联系人");
+                    return;
+                }
+                this.showDeleteFriendModal = true;
+                this.showTools = false;
+            },
+            // 删除联系人
+            confirmDelete() {
+                axios.post('/api/friend/delete', { friendId: this.currentTargetId }).then(() => {
+                    this.currentTargetId = null;
+                    this.messageList = [];
+                    this.loadContacts();
+                    this.showDeleteFriendModal = false;
+                    this.showTools = false;
+                });
+            },
+            // 切换语音/文本模式
+            toggleVoiceMode() {
+                this.isVoiceMode = !this.isVoiceMode;
+                // 如果切换到文本模式，停止录音
+                if (!this.isVoiceMode && this.isRecording) {
+                    this.stopRecord();
+                }
+            },
+            // 多媒体与消息
+            async uploadFile(e, type) {
+                const file = e.target.files[0]; if (!file) return;
+                
+                let processedFile = file;
+                if (type === 'image' && typeof compressImage === 'function' && file.size > 100 * 1024) {
+                    try {
+                        processedFile = await compressImage(file, { targetSize: 800 * 1024 });
+                        console.log(`[图片上传] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                    } catch (err) {
+                        console.warn('[图片上传] 压缩失败，使用原图:', err);
+                    }
+                }
+                
+                const fd = new FormData(); fd.append('file', processedFile);
+                const res = await axios.post('/api/common/upload', fd);
+                if (res.data.code === 200) this.emitMessage(res.data.url, type);
+                e.target.value = '';
+                this.showTools = false;
+            },
+            triggerFile(type) {
+                if (type === 'image') {
+                    this.$refs.imgInp.click();
+                } else if (type === 'video') {
+                    this.$refs.vidInp.click();
+                }
+            },
+            async startRecord() {
+                // 如果没有选择联系人，不能发送
+                if (!this.currentTargetId) {
+                    alert("请先选择联系人");
+                    return;
+                }
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+                    this.mediaRecorder = new MediaRecorder(stream);
+                    this.audioChunks = []; this.isRecording = true; this.recStart = Date.now();
+                    this.mediaRecorder.ondataavailable = (e) => this.audioChunks.push(e.data);
+                    this.mediaRecorder.onstop = async () => {
+                        const dur = Math.round((Date.now() - this.recStart) / 1000);
+                        if (dur < 1) {
+                            alert("录音时间太短");
+                            return;
+                        }
+                        const blob = new Blob(this.audioChunks, {type: 'audio/webm'});
+                        const fd = new FormData(); fd.append('file', blob, 'voice.webm');
+                        const res = await axios.post('/api/common/upload', fd);
+                        if (res.data.code === 200) {
+                            this.emitMessage(res.data.url, 'voice', dur);
+                            // 发送后自动切换回文本模式
+                            this.isVoiceMode = false;
+                        }
+                        stream.getTracks().forEach(t => t.stop());
+                    };
+                    this.mediaRecorder.start();
+                } catch(e) {
+                    alert("麦克风异常，请检查麦克风权限");
+                    console.error(e);
+                }
+            },
+            stopRecord() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                }
+            },
+            emitMessage(content, type, dur = 0) {
+                const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const msg = { 
+                    id: tempId,
+                    fromId: Number(this.currentUser.id), 
+                    toId: Number(this.currentTargetId), 
+                    content, 
+                    msgType: type, 
+                    duration: dur,
+                    createTime: new Date().toISOString()
+                };
+                if (window.GlobalMessageCenter && GlobalMessageCenter.isConnected) {
+                    const sendMsg = { ...msg };
+                    delete sendMsg.id;
+                    GlobalMessageCenter.sendMessage(sendMsg);
+                    this.messageList.push(msg);
+                    this.goBottom();
+                    
+                    const contact = this.contacts.find(c => String(c.id) === String(this.currentTargetId));
+                    if (contact) {
+                        contact.lastMessage = content;
+                        contact.lastMsgType = type;
+                        contact.lastMsgTime = new Date().toISOString();
+                        this.sortContactsByLastMessage();
+                    }
+                } else {
+                    alert('连接已断开，正在重连...');
+                }
+            },
+            sendMsg() {
+                if (this.inputMsg.trim()) {
+                    this.emitMessage(this.inputMsg, 'text');
+                    this.inputMsg = '';
+                }
+            },
+            selectContact(contact) {
+                this.currentTargetId = contact.id;
+                axios.get(`/api/msg/history?otherId=${contact.id}`).then(res => {
+                    console.log('[API] 历史消息响应:', res.data);
+                    if (res.data.code === 200) {
+                        this.messageList = res.data.data || [];
+                        console.log('[API] 消息列表:', this.messageList);
+                        console.log('[API] 消息数量:', this.messageList.length);
+                        if (this.messageList.length > 0) {
+                            console.log('[API] 第一条消息:', this.messageList[0]);
+                        }
+                        this.goBottom(300);
+                    }
+                });
+                axios.post(`/api/msg/read?fromId=${contact.id}`).then(() => { contact.unreadCount = 0; });
+            },
+            goBottom(delay = 50) {
+                setTimeout(() => {
+                    const el = document.getElementById('chat-box');
+                    if (el) el.scrollTop = el.scrollHeight;
+                }, delay);
+            },
+            playVoice(url, fromId) {
+                // 停止当前播放的语音
+                if (this.currentPlayingVoice) {
+                    this.currentPlayingVoice.pause();
+                    this.currentPlayingVoice = null;
+                }
+
+                const audio = new Audio(url);
+                // 应用用户音量设置
+                const settingsManager = window.userSettingsManager;
+                const volume = settingsManager ? settingsManager.getVolume() : 0.8;
+                audio.volume = volume;
+                audio.play();
+                this.currentPlayingVoice = audio;
+
+                // 播放结束后的清理
+                audio.onended = () => {
+                    this.currentPlayingVoice = null;
+                };
+
+                audio.onerror = () => {
+                    this.currentPlayingVoice = null;
+                    console.error("语音播放失败");
+                };
+            },
+            speak(txt) {
+                // 检查语音模式设置 - 手动触发模式不允许自动播放，只允许手动点击
+                const settingsManager = window.userSettingsManager;
+                if (settingsManager && settingsManager.settings.voiceMode === 1) {
+                    // 语音模式开启时，不自动播放
+                    return;
+                }
+
+                // 1. 停止当前正在播放的音频
+                const oldAudio = document.getElementById('baidu-tts-player');
+                if (oldAudio) {
+                    oldAudio.pause();
+                    oldAudio.remove();
+                }
+
+                // 2. 构造指向你后端的百度TTS接口地址
+                const url = `/api/tts/speak?text=${encodeURIComponent(txt)}&t=${Date.now()}`;
+
+                // 3. 创建播放器并播放
+                const audio = new Audio(url);
+                audio.id = 'baidu-tts-player';
+                // 应用用户音量设置
+                const volume = settingsManager ? settingsManager.getVolume() : 0.8;
+                audio.volume = volume;
+                audio.play().catch(err => {
+                    console.error("百度语音播报失败:", err);
+                });
+            },
+            openFull(url) { window.open(url, '_blank'); },
+            getAvatar(id) {
+                if (this.currentUser && String(id) === String(this.currentUser.id)) return this.currentUser.avatar;
+                const u = this.contacts.find(c => String(c.id) === String(id));
+                return u ? (u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`) : 'https://api.dicebear.com/7.x/avataaars/svg?seed=family';
+            },
+            goBackHome() { window.location.href = 'index.html'; },
+            goArchive() {
+                window.location.href = 'archived.html';
+            },
+            handleVoiceCall() {
+                if (!this.currentTargetId) {
+                    alert("请先选择联系人");
+                    return;
+                }
+                const contact = this.contacts.find(c => c.id === this.currentTargetId);
+                const peerName = contact ? (contact.remark || contact.nickname) : '用户';
+                this.startCall(this.currentTargetId, 'voice', peerName);
+                this.showTools = false;
+            },
+            handleVideoCall() {
+                if (!this.currentTargetId) {
+                    alert("请先选择联系人");
+                    return;
+                }
+                const contact = this.contacts.find(c => c.id === this.currentTargetId);
+                const peerName = contact ? (contact.remark || contact.nickname) : '用户';
+                this.startCall(this.currentTargetId, 'video', peerName);
+                this.showTools = false;
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+

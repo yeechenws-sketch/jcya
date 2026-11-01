@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社区管理看板 · 解尘颐安智慧社区</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="lib/js/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f7ff 0%, #f5f9ff 100%);
+            min-height: 100vh;
+            color: #1f2a3f;
+            padding: 24px 32px;
+            line-height: 1.5;
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, rgba(11, 42, 65, 0.95) 0%, rgba(16, 58, 88, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            box-shadow: 0 15px 35px -12px rgba(0, 30, 60, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-link {
+            color: #a8ceff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: white;
+        }
+
+        .navbar-title {
+            font-weight: 600;
+            font-size: 1.7rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.3px;
+        }
+
+        .navbar-title i {
+            color: #60a5fa;
+        }
+
+        .time-panel {
+            background: rgba(21, 62, 90, 0.8);
+            padding: 10px 28px;
+            border-radius: 40px;
+            color: #cbd5e1;
+            text-align: right;
+            border: 1px solid rgba(47, 85, 117, 0.5);
+        }
+
+        .time-panel .date {
+            font-size: 0.9rem;
+            color: #b0c9e0;
+        }
+
+        .time-panel .clock {
+            font-size: 1.7rem;
+            font-weight: 500;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 20px;
+            box-shadow: 0 12px 30px -10px rgba(0, 32, 64, 0.1);
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(224, 235, 247, 0.8);
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -12px rgba(18, 52, 77, 0.2);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .stat-card.highlight {
+            background: linear-gradient(135deg, #1677FF 0%, #4096ff 100%);
+            color: #fff;
+            border: none;
+        }
+
+        .stat-card.highlight:hover {
+            box-shadow: 0 20px 40px -12px rgba(22, 119, 255, 0.4);
+        }
+
+        .stat-card.warning {
+            border-left: 4px solid #FAAD14;
+        }
+
+        .stat-card.danger {
+            border-left: 4px solid #F5222D;
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            font-size: 26px;
+        }
+
+        .stat-card:not(.highlight) .stat-icon {
+            background: linear-gradient(135deg, #E6F4FF 0%, #dbeafe 100%);
+            color: #1677FF;
+        }
+
+        .stat-card.highlight .stat-icon {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .stat-card.warning .stat-icon {
+            background: linear-gradient(135deg, #FFF7E6 0%, #fef3c7 100%);
+            color: #FAAD14;
+        }
+
+        .stat-card.danger .stat-icon {
+            background: linear-gradient(135deg, #FFF1F0 0%, #fee2e2 100%);
+            color: #F5222D;
+        }
+
+        .stat-value {
+            font-size: 34px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-card:not(.highlight) .stat-value {
+            color: #1e3a5f;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        .stat-card:not(.highlight) .stat-label {
+            color: #64748b;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr 340px;
+            gap: 24px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 15px 35px -12px rgba(0, 32, 64, 0.12);
+            overflow: hidden;
+            border: 1px solid rgba(224, 235, 247, 0.8);
+        }
+
+        .panel-header {
+            padding: 20px 28px;
+            border-bottom: 1px solid #f0f5fb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(180deg, #fafcff 0%, #ffffff 100%);
+        }
+
+        .panel-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #0d4e7c;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-title i {
+            color: #1677FF;
+        }
+
+        .panel-body {
+            padding: 24px 28px;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .health-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .health-item {
+            background: linear-gradient(135deg, #f5f9ff 0%, #f0f7ff 100%);
+            border-radius: 18px;
+            padding: 20px 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid #e0ebf7;
+            cursor: pointer;
+        }
+
+        .health-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -8px rgba(22, 119, 255, 0.2);
+            border-color: #60a5fa;
+            background: linear-gradient(135deg, #e6f4ff 0%, #dbeafe 100%);
+        }
+
+        .health-item.abnormal {
+            background: linear-gradient(135deg, #fff1f0 0%, #fee2e2 100%);
+            border-color: #fecaca;
+        }
+
+        .health-item.abnormal:hover {
+            box-shadow: 0 10px 25px -8px rgba(245, 34, 45, 0.2);
+            border-color: #f5222d;
+        }
+
+        .health-item-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .health-item-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .health-item-value.normal {
+            color: #52C41A;
+        }
+
+        .health-item-value.warning {
+            color: #FAAD14;
+        }
+
+        .health-item-value.danger {
+            color: #F5222D;
+        }
+
+        .health-item-unit {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .recent-health-list {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .health-record {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f5fb;
+            transition: background 0.2s;
+        }
+
+        .health-record:last-child {
+            border-bottom: none;
+        }
+
+        .health-record:hover {
+            background: #f8fcff;
+            margin: 0 -10px;
+            padding: 14px 10px;
+            border-radius: 10px;
+        }
+
+        .health-record-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            font-size: 18px;
+        }
+
+        .health-record-icon.bp {
+            background: #E6F4FF;
+            color: #1677FF;
+        }
+
+        .health-record-icon.hr {
+            background: #FFF7E6;
+            color: #FAAD14;
+        }
+
+        .health-record-icon.bo {
+            background: #F6FFED;
+            color: #52C41A;
+        }
+
+        .health-record-icon.bg {
+            background: #FFF0F6;
+            color: #EB2F96;
+        }
+
+        .health-record-info {
+            flex: 1;
+        }
+
+        .health-record-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        .health-record-value {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .health-record-time {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .chart-container {
+            height: 300px;
+        }
+
+        .medication-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .low-stock-list {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .low-stock-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #fff7e6 0%, #fef3c7 100%);
+            border-radius: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #fed7aa;
+            transition: all 0.3s ease;
+        }
+
+        .low-stock-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -8px rgba(250, 173, 20, 0.3);
+        }
+
+        .low-stock-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .low-stock-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .low-stock-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FAAD14 0%, #d97706 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .low-stock-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        .low-stock-medicine {
+            font-size: 13px;
+            color: #78350f;
+            margin-top: 4px;
+        }
+
+        .low-stock-count {
+            text-align: right;
+        }
+
+        .low-stock-count-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #b45309;
+        }
+
+        .low-stock-count-unit {
+            font-size: 12px;
+            color: #92400e;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .emergency-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .emergency-stat {
+            flex: 1;
+            background: linear-gradient(135deg, #fff1f0 0%, #fee2e2 100%);
+            border-radius: 18px;
+            padding: 18px 14px;
+            text-align: center;
+            border: 1px solid #fecaca;
+        }
+
+        .emergency-stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #F5222D;
+        }
+
+        .emergency-stat-label {
+            font-size: 13px;
+            color: #991b1b;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .emergency-list {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .emergency-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f5fb;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .emergency-item:last-child {
+            border-bottom: none;
+        }
+
+        .emergency-item:hover {
+            background: #fef2f2;
+            margin: 0 -10px;
+            padding: 14px 10px;
+            border-radius: 10px;
+        }
+
+        .emergency-item-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #F5222D 0%, #dc2626 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            font-size: 18px;
+        }
+
+        .emergency-item-info {
+            flex: 1;
+        }
+
+        .emergency-item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+
+        .emergency-item-time {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .emergency-item-status {
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .emergency-item-status.answered {
+            background: #F6FFED;
+            color: #52C41A;
+        }
+
+        .emergency-item-status.calling {
+            background: #FFF7E6;
+            color: #FAAD14;
+        }
+
+        .emergency-item-status.cancelled {
+            background: #F0F0F0;
+            color: #666;
+        }
+
+        .emergency-item-status.timeout,
+        .emergency-item-status.no_answer {
+            background: #FFF1F0;
+            color: #F5222D;
+        }
+
+        .news-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .news-stat-item {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f4ff 100%);
+            border-radius: 18px;
+            padding: 18px 14px;
+            text-align: center;
+            border: 1px solid #dbeafe;
+        }
+
+        .news-stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1677FF;
+        }
+
+        .news-stat-label {
+            font-size: 13px;
+            color: #1e40af;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .news-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 18px;
+        }
+
+        .news-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f5fb;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+        }
+
+        .news-item:hover {
+            background: #f0f7ff;
+            margin: 0 -10px;
+            padding: 12px 10px;
+            border-radius: 10px;
+        }
+
+        .news-item-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1677FF 0%, #4096ff 100%);
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .news-item-title {
+            flex: 1;
+            font-size: 14px;
+            color: #1e3a5f;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .news-item-time {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-left: 12px;
+            flex-shrink: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 52px;
+            margin-bottom: 18px;
+            opacity: 0.4;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 28px;
+            width: 92%;
+            max-width: 850px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 25px 60px -15px rgba(0, 20, 40, 0.4);
+            animation: modalSlideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-25px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 22px 32px;
+            border-bottom: 1px solid #f0f5fb;
+            background: linear-gradient(135deg, #1677FF 0%, #4096ff 100%);
+            color: #fff;
+        }
+
+        .modal-title {
+            font-size: 19px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.18);
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        .modal-body {
+            padding: 28px 32px;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+
+        .modal-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .modal-table th,
+        .modal-table td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid #f0f5fb;
+        }
+
+        .modal-table th {
+            background: linear-gradient(180deg, #f5f9ff 0%, #f0f7ff 100%);
+            font-weight: 600;
+            color: #0d4e7c;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-table td {
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .modal-table tr:hover td {
+            background: #f8fcff;
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-tag.danger {
+            background: #FFF1F0;
+            color: #F5222D;
+        }
+
+        .status-tag.warning {
+            background: #FFF7E6;
+            color: #FAAD14;
+        }
+
+        .status-tag.success {
+            background: #F6FFED;
+            color: #52C41A;
+        }
+
+        .status-tag.info {
+            background: #E6F4FF;
+            color: #1677FF;
+        }
+
+        .modal-empty {
+            text-align: center;
+            padding: 48px;
+            color: #94a3b8;
+        }
+
+        .modal-empty i {
+            font-size: 52px;
+            margin-bottom: 18px;
+            opacity: 0.4;
+        }
+
+        .news-tab-btn {
+            padding: 10px 20px;
+            border: 2px solid #dbeafe;
+            background: white;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #64748b;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .news-tab-btn:hover {
+            border-color: #60a5fa;
+            color: #1677FF;
+            background: #f0f7ff;
+        }
+
+        .news-tab-btn.active {
+            background: linear-gradient(135deg, #1677FF 0%, #4096ff 100%);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        @media screen and (max-width: 1400px) {
+            .stats-row {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+
+            .medication-charts {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar {
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px;
+            }
+
+            .navbar-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .time-panel {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+        }
+
+        .ws-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #a8ceff;
+            margin-left: 12px;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ws-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            animation: wsPulse 1.5s infinite;
+        }
+
+        .ws-dot.connected { 
+            background: #22c55e; 
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+        
+        .ws-dot.disconnected { 
+            background: #ef4444; 
+            animation: none; 
+        }
+        
+        .ws-dot.connecting { 
+            background: #f59e0b; 
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+        }
+
+        @keyframes wsPulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.5; } 
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="navbar">
+            <div class="navbar-left">
+                <a href="admin_index.html" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    返回工作台
+                </a>
+                <h1 class="navbar-title">
+                    <i class="fas fa-chart-line"></i>
+                    社区管理看板
+                    <span id="wsStatus" class="ws-status">
+                        <span class="ws-dot disconnected"></span>
+                        <span class="ws-text">已断开</span>
+                    </span>
+                </h1>
+            </div>
+            <div class="time-panel">
+                <div class="date" id="currentDate"></div>
+                <div class="clock" id="currentTime"></div>
+            </div>
+        </header>
+
+        <div class="stats-row">
+            <div class="stat-card highlight" onclick="showModal('elders')">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-value" id="elderTotal">0</div>
+                <div class="stat-label">老人总数</div>
+            </div>
+            <div class="stat-card" onclick="showModal('medication')">
+                <div class="stat-icon"><i class="fas fa-pills"></i></div>
+                <div class="stat-value"><span id="todayTaken">0</span>/<span id="todayShouldTake">0</span></div>
+                <div class="stat-label">今日应服/已服</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                <div class="stat-value" id="medicationRate">0%</div>
+                <div class="stat-label">服药率</div>
+            </div>
+            <div class="stat-card warning" onclick="showModal('missed')">
+                <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-value" id="missedCount">0</div>
+                <div class="stat-label">漏服人数</div>
+            </div>
+            <div class="stat-card warning" onclick="showModal('lowStock')">
+                <div class="stat-icon"><i class="fas fa-box-open"></i></div>
+                <div class="stat-value" id="lowStockCount">0</div>
+                <div class="stat-label">用药不足预警</div>
+            </div>
+            <div class="stat-card danger" onclick="showModal('healthAbnormal')">
+                <div class="stat-icon"><i class="fas fa-heartbeat"></i></div>
+                <div class="stat-value" id="healthAbnormalCount">0</div>
+                <div class="stat-label">健康异常</div>
+            </div>
+            <div class="stat-card danger" onclick="showModal('emergency')">
+                <div class="stat-icon"><i class="fas fa-phone-volume"></i></div>
+                <div class="stat-value" id="emergencyCallCount">0</div>
+                <div class="stat-label">紧急呼叫</div>
+            </div>
+            <div class="stat-card warning" onclick="showModal('thresholdRisk')">
+                <div class="stat-icon"><i class="fas fa-sliders-h"></i></div>
+                <div class="stat-value" id="thresholdRiskCount">0</div>
+                <div class="stat-label">阈值风险预警</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-heartbeat"></i> 健康数据</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="health-stats">
+                            <div class="health-item" onclick="loadHealthAbnormalDetail('BP')">
+                                <div class="health-item-label">血压异常</div>
+                                <div class="health-item-value" id="bpAbnormal">0</div>
+                                <div class="health-item-unit">人</div>
+                            </div>
+                            <div class="health-item" onclick="loadHealthAbnormalDetail('HR')">
+                                <div class="health-item-label">心率异常</div>
+                                <div class="health-item-value" id="hrAbnormal">0</div>
+                                <div class="health-item-unit">人</div>
+                            </div>
+                            <div class="health-item" onclick="loadHealthAbnormalDetail('BO')">
+                                <div class="health-item-label">血氧异常</div>
+                                <div class="health-item-value" id="boAbnormal">0</div>
+                                <div class="health-item-unit">人</div>
+                            </div>
+                            <div class="health-item" onclick="loadHealthAbnormalDetail('BG')">
+                                <div class="health-item-label">血糖异常</div>
+                                <div class="health-item-value" id="bgAbnormal">0</div>
+                                <div class="health-item-unit">人</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-history"></i> 最近健康数据</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="recent-health-list" id="recentHealthList">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <div class="empty-state-text">暂无数据</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="center-panel">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-chart-bar"></i> 用药统计</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="medication-charts">
+                            <div class="chart-container" id="trendChart"></div>
+                            <div class="chart-container" id="pieChart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-exclamation-circle"></i> 用药不足预警</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="low-stock-list" id="lowStockList">
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle" style="color: #52C41A;"></i>
+                                <div class="empty-state-text">暂无用药不足预警</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-phone-alt"></i> 紧急呼叫</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="emergency-stats">
+                            <div class="emergency-stat">
+                                <div class="emergency-stat-value" id="emergencyCallCount2">0</div>
+                                <div class="emergency-stat-label">今日呼叫</div>
+                            </div>
+                            <div class="emergency-stat">
+                                <div class="emergency-stat-value" id="emergencyAnswered">0</div>
+                                <div class="emergency-stat-label">已接听</div>
+                            </div>
+                        </div>
+                        <div class="emergency-list" id="emergencyList">
+                            <div class="empty-state">
+                                <i class="fas fa-phone-slash"></i>
+                                <div class="empty-state-text">暂无紧急呼叫记录</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-bullhorn"></i> 社区公告</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="news-stats-grid">
+                            <div class="news-stat-item">
+                                <div class="news-stat-value" id="todayPublished">0</div>
+                                <div class="news-stat-label">今日发布</div>
+                            </div>
+                            <div class="news-stat-item">
+                                <div class="news-stat-value" id="totalNews">0</div>
+                                <div class="news-stat-label">公告总数</div>
+                            </div>
+                            <div class="news-stat-item">
+                                <div class="news-stat-value" id="readCount">0</div>
+                                <div class="news-stat-label">已读人数</div>
+                            </div>
+                            <div class="news-stat-item">
+                                <div class="news-stat-value" id="unreadCount">0</div>
+                                <div class="news-stat-label">未读人数</div>
+                            </div>
+                        </div>
+                        <div class="news-list" id="newsList">
+                            <div class="empty-state">
+                                <i class="fas fa-newspaper"></i>
+                                <div class="empty-state-text">暂无公告</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-history"></i> 阈值修改日志</div>
+                        <span style="font-size: 12px; color: #64748b;">最近修改</span>
+                    </div>
+                    <div class="panel-body" style="padding: 16px;">
+                        <div class="config-log-list" id="configLogList" style="max-height: 200px; overflow-y: auto;">
+                            <div class="empty-state" style="padding: 24px;">
+                                <i class="fas fa-clipboard-list" style="font-size: 32px;"></i>
+                                <div class="empty-state-text">暂无修改记录</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">
+                    <i class="fas fa-info-circle"></i>
+                    <span>详细信息</span>
+                </div>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/js/axios.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+    <script>
+        let trendChart, pieChart;
+
+        function updateDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            const weekday = weekdays[now.getDay()];
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('currentDate').textContent = year + '年' + month + '月' + day + '日 ' + weekday;
+            document.getElementById('currentTime').textContent = hours + ':' + minutes + ':' + seconds;
+        }
+
+        function initCharts() {
+            trendChart = echarts.init(document.getElementById('trendChart'));
+            pieChart = echarts.init(document.getElementById('pieChart'));
+
+            const trendOption = {
+                title: {
+                    text: '近7日服药趋势',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: '#0d4e7c'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#e0ebf7',
+                    borderWidth: 1,
+                    textStyle: {
+                        color: '#1e3a5f'
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    top: '55px',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: [],
+                    axisLine: {
+                        lineStyle: {
+                            color: '#e0ebf7'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#64748b'
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '服药次数',
+                    axisLine: {
+                        lineStyle: {
+                            color: '#e0ebf7'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#64748b'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: '#f0f5fb',
+                            type: 'dashed'
+                        }
+                    }
+                },
+                series: [{
+                    name: '服药次数',
+                    type: 'line',
+                    smooth: true,
+                    lineStyle: {
+                        color: '#1677FF',
+                        width: 4
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(22, 119, 255, 0.35)' },
+                                { offset: 1, color: 'rgba(22, 119, 255, 0.05)' }
+                            ]
+                        }
+                    },
+                    itemStyle: {
+                        color: '#1677FF'
+                    },
+                    data: []
+                }]
+            };
+
+            const pieOption = {
+                title: {
+                    text: '今日服药情况',
+                    left: 'center',
+                    textStyle: {
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: '#0d4e7c'
+                    }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#e0ebf7',
+                    borderWidth: 1,
+                    textStyle: {
+                        color: '#1e3a5f'
+                    }
+                },
+                legend: {
+                    orient: 'horizontal',
+                    bottom: '10px',
+                    itemWidth: 14,
+                    itemHeight: 14,
+                    textStyle: {
+                        color: '#64748b'
+                    }
+                },
+                series: [{
+                    name: '服药情况',
+                    type: 'pie',
+                    radius: ['42%', '68%'],
+                    center: ['50%', '45%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#fff',
+                        borderWidth: 3
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: '{b}\n{c}次',
+                        color: '#475569'
+                    },
+                    labelLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#cbd5e1'
+                        }
+                    },
+                    data: [
+                        { value: 0, name: '按时服药', itemStyle: { color: '#52C41A' } },
+                        { value: 0, name: '提前/补服', itemStyle: { color: '#1677FF' } },
+                        { value: 0, name: '漏服', itemStyle: { color: '#F5222D' } }
+                    ]
+                }]
+            };
+
+            trendChart.setOption(trendOption);
+            pieChart.setOption(pieOption);
+        }
+
+        async function loadOverview() {
+            try {
+                const res = await fetch('/api/admin/dashboard/overview');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const d = data.data;
+                    document.getElementById('elderTotal').textContent = d.elderTotal || 0;
+                    document.getElementById('todayTaken').textContent = d.todayTaken || 0;
+                    document.getElementById('todayShouldTake').textContent = d.todayShouldTake || 0;
+                    document.getElementById('medicationRate').textContent = (d.medicationRate || 0) + '%';
+                    document.getElementById('missedCount').textContent = d.missedCount || 0;
+                    document.getElementById('lowStockCount').textContent = d.lowStockCount || 0;
+                    document.getElementById('healthAbnormalCount').textContent = d.healthAbnormalCount || 0;
+                    document.getElementById('emergencyCallCount').textContent = d.emergencyCallCount || 0;
+                    document.getElementById('emergencyCallCount2').textContent = d.emergencyCallCount || 0;
+                }
+            } catch (e) {
+                console.error('加载概览数据失败', e);
+            }
+        }
+
+        async function loadMedicationTrend() {
+            try {
+                const res = await fetch('/api/admin/dashboard/medication/trend');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const dates = data.data.map(item => item.date);
+                    const values = data.data.map(item => item.taken);
+                    trendChart.setOption({
+                        xAxis: { data: dates },
+                        series: [{ data: values }]
+                    });
+                }
+            } catch (e) {
+                console.error('加载服药趋势失败', e);
+            }
+        }
+
+        async function loadMedicationPie() {
+            try {
+                const res = await fetch('/api/admin/dashboard/medication/pie');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const d = data.data;
+                    pieChart.setOption({
+                        series: [{
+                            data: [
+                                { value: d.onTime || 0, name: '按时服药', itemStyle: { color: '#52C41A' } },
+                                { value: d.early || 0, name: '提前/补服', itemStyle: { color: '#1677FF' } },
+                                { value: d.missed || 0, name: '漏服', itemStyle: { color: '#F5222D' } }
+                            ]
+                        }]
+                    });
+                }
+            } catch (e) {
+                console.error('加载服药饼图失败', e);
+            }
+        }
+
+        async function loadLowStock() {
+            try {
+                const res = await fetch('/api/admin/dashboard/medication/low-stock');
+                const data = await res.json();
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = data.data.map(item => {
+                        let medicineName = item.medicineName || '';
+                        if (!medicineName || medicineName.length < 2 || /^\d+$/.test(medicineName)) {
+                            medicineName = '药品';
+                        }
+                        const daysRemaining = item.daysRemaining;
+                        let daysText = '';
+                        if (daysRemaining !== null && daysRemaining !== undefined) {
+                            daysText = daysRemaining <= 0 ? '已不足' : `可服用${daysRemaining}天`;
+                        } else {
+                            daysText = '库存不足';
+                        }
+                        return `
+                            <div class="low-stock-item">
+                                <div class="low-stock-info">
+                                    <div class="low-stock-avatar"><i class="fas fa-user"></i></div>
+                                    <div>
+                                        <div class="low-stock-name">${item.elderName || '未知'}</div>
+                                        <div class="low-stock-medicine">${medicineName}</div>
+                                    </div>
+                                </div>
+                                <div class="low-stock-count">
+                                    <div class="low-stock-count-value">${daysText}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('lowStockList').innerHTML = html;
+                }
+            } catch (e) {
+                console.error('加载用药不足预警失败', e);
+            }
+        }
+
+        async function loadHealthAbnormal() {
+            try {
+                const res = await fetch('/api/admin/dashboard/health/abnormal');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const d = data.data;
+                    document.getElementById('bpAbnormal').textContent = d.bpAbnormal || 0;
+                    document.getElementById('hrAbnormal').textContent = d.hrAbnormal || 0;
+                    document.getElementById('boAbnormal').textContent = d.boAbnormal || 0;
+                    document.getElementById('bgAbnormal').textContent = d.bgAbnormal || 0;
+
+                    const bpItem = document.getElementById('bpAbnormal').parentElement;
+                    const hrItem = document.getElementById('hrAbnormal').parentElement;
+                    const boItem = document.getElementById('boAbnormal').parentElement;
+                    const bgItem = document.getElementById('bgAbnormal').parentElement;
+
+                    if (d.bpAbnormal > 0) {
+                        document.getElementById('bpAbnormal').classList.add('warning');
+                        bpItem.classList.add('abnormal');
+                    }
+                    if (d.hrAbnormal > 0) {
+                        document.getElementById('hrAbnormal').classList.add('warning');
+                        hrItem.classList.add('abnormal');
+                    }
+                    if (d.boAbnormal > 0) {
+                        document.getElementById('boAbnormal').classList.add('warning');
+                        boItem.classList.add('abnormal');
+                    }
+                    if (d.bgAbnormal > 0) {
+                        document.getElementById('bgAbnormal').classList.add('warning');
+                        bgItem.classList.add('abnormal');
+                    }
+                }
+            } catch (e) {
+                console.error('加载健康异常数据失败', e);
+            }
+        }
+
+        async function loadRecentHealth() {
+            try {
+                const res = await fetch('/api/admin/dashboard/health/recent');
+                const data = await res.json();
+                if (data.code === 200 && data.data.length > 0) {
+                    const typeNames = { 'BP': '血压', 'HR': '心率', 'BO': '血氧', 'BG': '血糖' };
+                    const typeIcons = { 'BP': 'bp', 'HR': 'hr', 'BO': 'bo', 'BG': 'bg' };
+                    const html = data.data.map(item => {
+                        let valueStr = item.value1 || '';
+                        if (item.value2) valueStr += '/' + item.value2;
+                        const date = parseDateTime(item.recordTime);
+                        const time = date ? date.toLocaleString('zh-CN', {
+                            month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        }) : '';
+                        return `
+                            <div class="health-record">
+                                <div class="health-record-icon ${typeIcons[item.dataType] || 'bp'}">
+                                    <i class="fas fa-heartbeat"></i>
+                                </div>
+                                <div class="health-record-info">
+                                    <div class="health-record-name">${item.elderName || '未知'}</div>
+                                    <div class="health-record-value">${typeNames[item.dataType] || '未知'}: ${valueStr}</div>
+                                </div>
+                                <div class="health-record-time">${time}</div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('recentHealthList').innerHTML = html;
+                }
+            } catch (e) {
+                console.error('加载最近健康数据失败', e);
+            }
+        }
+
+        async function loadEmergencyCalls() {
+            try {
+                const res = await fetch('/api/admin/dashboard/emergency/recent');
+                const data = await res.json();
+                if (data.code === 200 && data.data.length > 0) {
+                    const statusNames = { 'answered': '已接听', 'calling': '呼叫中', 'cancelled': '已取消', 'timeout': '超时', 'no_answer': '无人接听' };
+                    const callTypeNames = { 'manual': '手动呼叫', 'auto': '自动呼叫' };
+                    const html = data.data.map(item => {
+                        const date = parseDateTime(item.callTime);
+                        const time = date ? date.toLocaleString('zh-CN', {
+                            month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        }) : '';
+                        return `
+                            <div class="emergency-item" onclick="showModal('emergency')">
+                                <div class="emergency-item-icon"><i class="fas fa-phone-alt"></i></div>
+                                <div class="emergency-item-info">
+                                    <div class="emergency-item-name">${item.elderName || '未知'} - ${callTypeNames[item.callType] || '呼叫'}</div>
+                                    <div class="emergency-item-time">${time}</div>
+                                </div>
+                                <div class="emergency-item-status ${item.status}">${statusNames[item.status] || item.status}</div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('emergencyList').innerHTML = html;
+                } else {
+                    document.getElementById('emergencyList').innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-phone-slash"></i>
+                            <div class="empty-state-text">暂无紧急呼叫记录</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('加载紧急呼叫记录失败', e);
+                document.getElementById('emergencyList').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-phone-slash"></i>
+                        <div class="empty-state-text">暂无紧急呼叫记录</div>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadEmergencyStats() {
+            try {
+                const res = await fetch('/api/admin/dashboard/emergency/stats');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const d = data.data;
+                    document.getElementById('emergencyCallCount2').textContent = d.todayTotal || 0;
+                    document.getElementById('emergencyAnswered').textContent = d.todayAnswered || 0;
+                }
+            } catch (e) {
+                console.error('加载紧急呼叫统计失败', e);
+            }
+        }
+
+        async function loadNewsStats() {
+            try {
+                const res = await fetch('/api/admin/dashboard/news/stats');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const d = data.data;
+                    document.getElementById('todayPublished').textContent = d.todayPublished || 0;
+                    document.getElementById('totalNews').textContent = d.totalNews || 0;
+                    document.getElementById('readCount').textContent = d.readCount || 0;
+                    document.getElementById('unreadCount').textContent = d.unreadCount || 0;
+                }
+            } catch (e) {
+                console.error('加载公告统计失败', e);
+            }
+        }
+
+        async function loadNewsList() {
+            try {
+                const res = await fetch('/api/admin/dashboard/news/list?limit=5');
+                const data = await res.json();
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = data.data.map(item => {
+                        let time = '';
+                        if (item.publishTime) {
+                            const date = parseDateTime(item.publishTime);
+                            if (date) {
+                                time = date.toLocaleDateString('zh-CN', {
+                                    month: '2-digit', day: '2-digit'
+                                });
+                            }
+                        }
+                        return `
+                            <div class="news-item" onclick="showNewsDetail(${item.id})">
+                                <div class="news-item-dot"></div>
+                                <div class="news-item-title">${item.title || ''}</div>
+                                <div class="news-item-time">${time}</div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('newsList').innerHTML = html;
+                }
+            } catch (e) {
+                console.error('加载公告列表失败', e);
+            }
+        }
+
+        async function loadThresholdRiskAlerts() {
+            try {
+                const res = await fetch('/api/community/health/alerts');
+                const data = await res.json();
+                if (data.code === 200) {
+                    const alerts = data.data || [];
+                    const riskCount = alerts.filter(a => a.riskLevel === 'high' || a.riskLevel === 'critical').length;
+                    document.getElementById('thresholdRiskCount').textContent = riskCount;
+                }
+            } catch (e) {
+                console.error('加载阈值风险预警失败', e);
+            }
+        }
+
+        async function loadConfigLogs() {
+            try {
+                const res = await fetch('/api/community/health/logs?page=1&pageSize=10');
+                const data = await res.json();
+                if (data.code === 200 && data.data.list && data.data.list.length > 0) {
+                    const fieldNames = {
+                        'hrMin': '心率下限', 'hrMax': '心率上限',
+                        'boMin': '血氧下限', 
+                        'bpSysMax': '收缩压上限', 'bpDiaMax': '舒张压上限',
+                        'bgFastingMax': '空腹血糖上限',
+                        'stepTarget': '步数目标', 'sleepTarget': '睡眠目标'
+                    };
+                    const operatorTypeNames = { 'elder': '长辈', 'family': '家属' };
+                    
+                    const html = data.data.list.map(item => {
+                        const date = parseDateTime(item.createTime);
+                        const time = date ? date.toLocaleString('zh-CN', {
+                            month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        }) : '';
+                        return `
+                            <div class="config-log-item" style="padding: 10px 0; border-bottom: 1px solid #f0f5fb; font-size: 13px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span style="font-weight: 600; color: #1e3a5f;">${item.userName || '用户'}</span>
+                                    <span style="color: #94a3b8; font-size: 12px;">${time}</span>
+                                </div>
+                                <div style="color: #64748b;">
+                                    <span style="color: #1677FF;">${item.operatorName}</span>(${operatorTypeNames[item.operatorType] || item.operatorType})
+                                    修改 <strong>${fieldNames[item.configField] || item.configField}</strong>:
+                                    <span style="color: #ef4444; text-decoration: line-through;">${item.oldValue || '-'}</span> → 
+                                    <span style="color: #10b981;">${item.newValue || '-'}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('configLogList').innerHTML = html;
+                }
+            } catch (e) {
+                console.error('加载阈值修改日志失败', e);
+            }
+        }
+
+        function parseDateTime(dateStr) {
+            if (!dateStr) return null;
+            if (typeof dateStr === 'string') {
+                dateStr = dateStr.replace(' ', 'T');
+                if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+                    dateStr = dateStr + '+08:00';
+                }
+            }
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        function formatDateTime(dateStr) {
+            const date = parseDateTime(dateStr);
+            if (!date) return '-';
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDate(dateStr) {
+            const date = parseDateTime(dateStr);
+            if (!date) return '-';
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        function showNewsDetail(newsId) {
+            const overlay = document.getElementById('modalOverlay');
+            const titleEl = document.getElementById('modalTitle');
+            const bodyEl = document.getElementById('modalBody');
+
+            titleEl.innerHTML = '<i class="fas fa-newspaper"></i><span>公告详情</span>';
+            bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>';
+            overlay.classList.add('active');
+
+            loadNewsDetailModal(newsId);
+        }
+
+        async function loadNewsDetailModal(newsId) {
+            try {
+                const res = await fetch(`/api/admin/dashboard/news/detail?newsId=${newsId}`);
+                const data = await res.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                if (data.code === 200 && data.data) {
+                    const news = data.data;
+                    const publishTimeStr = news.publishTime ? formatDateTime(news.publishTime) : '-';
+                    const html = `
+                        <div style="margin-bottom: 24px;">
+                            <h3 style="margin-bottom: 16px; color: #1e3a5f; font-size: 22px;">${news.title || ''}</h3>
+                            <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;">
+                                <span class="status-tag info">${news.category || '公告'}</span>
+                                <span style="color: #64748b; font-size: 14px;">
+                                    发布时间: ${publishTimeStr}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 24px; padding: 20px; background: #f5f9ff; border-radius: 16px; border: 1px solid #e0ebf7;">
+                            <h4 style="margin-bottom: 16px; color: #0d4e7c; font-size: 16px;">阅读统计</h4>
+                            <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #1677FF;">${news.totalElders || 0}</div>
+                                    <div style="font-size: 13px; color: #64748b;">社区老人总数</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #52C41A;">${news.readCount || 0}</div>
+                                    <div style="font-size: 13px; color: #64748b;">已读人数</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #FAAD14;">${news.unreadCount || 0}</div>
+                                    <div style="font-size: 13px; color: #64748b;">未读人数</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                                <button onclick="loadNewsReadUsers(${newsId})" class="news-tab-btn active" id="readTab">
+                                    已读名单 (${news.readCount || 0})
+                                </button>
+                                <button onclick="loadNewsUnreadUsers(${newsId})" class="news-tab-btn" id="unreadTab">
+                                    未读名单 (${news.unreadCount || 0})
+                                </button>
+                            </div>
+                            <div id="newsUserList" style="max-height: 240px; overflow-y: auto;">
+                                <div class="modal-empty"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>
+                            </div>
+                        </div>
+                    `;
+                    bodyEl.innerHTML = html;
+                    loadNewsReadUsers(newsId);
+                } else {
+                    bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadNewsReadUsers(newsId) {
+            document.getElementById('readTab').classList.add('active');
+            document.getElementById('unreadTab').classList.remove('active');
+            
+            try {
+                const res = await fetch(`/api/admin/dashboard/news/read-users?newsId=${newsId}`);
+                const data = await res.json();
+                const listEl = document.getElementById('newsUserList');
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>电话</th>
+                                    <th>阅读时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => `
+                                    <tr>
+                                        <td>${item.userName || '-'}</td>
+                                        <td>${item.phone || '-'}</td>
+                                        <td>${item.readTime ? formatDateTime(item.readTime) : '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = '<div class="modal-empty"><i class="fas fa-info-circle" style="color: #FAAD14;"></i><div>暂无已读用户</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('newsUserList').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadNewsUnreadUsers(newsId) {
+            document.getElementById('unreadTab').classList.add('active');
+            document.getElementById('readTab').classList.remove('active');
+            
+            try {
+                const res = await fetch(`/api/admin/dashboard/news/unread-users?newsId=${newsId}`);
+                const data = await res.json();
+                const listEl = document.getElementById('newsUserList');
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>电话</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => `
+                                    <tr>
+                                        <td>${item.userName || '-'}</td>
+                                        <td>${item.phone || '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = '<div class="modal-empty"><i class="fas fa-check-circle" style="color: #52C41A;"></i><div>全部已读</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('newsUserList').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        function showModal(type) {
+            const overlay = document.getElementById('modalOverlay');
+            const titleEl = document.getElementById('modalTitle');
+            const bodyEl = document.getElementById('modalBody');
+
+            const titles = {
+                'elders': '<i class="fas fa-users"></i><span>社区老人名单</span>',
+                'medication': '<i class="fas fa-pills"></i><span>今日服药详情</span>',
+                'missed': '<i class="fas fa-exclamation-triangle"></i><span>漏服人员名单</span>',
+                'lowStock': '<i class="fas fa-box-open"></i><span>用药不足预警详情</span>',
+                'healthAbnormal': '<i class="fas fa-heartbeat"></i><span>健康异常人员名单</span>',
+                'emergency': '<i class="fas fa-phone-volume"></i><span>紧急呼叫记录</span>',
+                'thresholdRisk': '<i class="fas fa-sliders-h"></i><span>阈值风险预警</span>'
+            };
+
+            titleEl.innerHTML = titles[type] || '<i class="fas fa-info-circle"></i><span>详细信息</span>';
+            bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>';
+            overlay.classList.add('active');
+
+            switch(type) {
+                case 'elders':
+                    loadEldersModal();
+                    break;
+                case 'medication':
+                    loadMedicationModal();
+                    break;
+                case 'missed':
+                    loadMissedModal();
+                    break;
+                case 'lowStock':
+                    loadLowStockModal();
+                    break;
+                case 'healthAbnormal':
+                    loadHealthAbnormalModal();
+                    break;
+                case 'emergency':
+                    loadEmergencyModal();
+                    break;
+                case 'thresholdRisk':
+                    loadThresholdRiskModal();
+                    break;
+            }
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        async function loadEldersModal() {
+            try {
+                const res = await fetch('/api/admin/dashboard/detail/elders');
+                const data = await res.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>性别</th>
+                                    <th>年龄</th>
+                                    <th>联系电话</th>
+                                    <th>住址</th>
+                                    <th>入住时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => {
+                                    const neighborhoodName = item.neighborhoodName || '';
+                                    const address = item.address || '';
+                                    const fullAddress = neighborhoodName ? neighborhoodName + (address ? ' ' + address : '') : address;
+                                    return `
+                                        <tr>
+                                            <td>${item.elderName || '-'}</td>
+                                            <td>${item.gender || '-'}</td>
+                                            <td>${item.age || '-'}</td>
+                                            <td>${item.phone || '-'}</td>
+                                            <td>${fullAddress || '-'}</td>
+                                            <td>${item.moveInTime ? formatDate(item.moveInTime) : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-users"></i><div>暂无老人数据</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadMedicationModal() {
+            try {
+                const [takenRes, missedRes] = await Promise.all([
+                    fetch('/api/admin/dashboard/medication/trend'),
+                    fetch('/api/admin/dashboard/medication/pie')
+                ]);
+                const takenData = await takenRes.json();
+                const missedData = await missedRes.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                if (takenData.code === 200 || missedData.code === 200) {
+                    const pie = missedData.data || {};
+                    const html = `
+                        <div style="margin-bottom: 24px;">
+                            <h4 style="margin-bottom: 16px; color: #0d4e7c; font-size: 18px;">今日服药统计</h4>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <div class="status-tag success" style="font-size: 15px; padding: 10px 20px;">
+                                    按时服药: ${pie.onTime || 0} 次
+                                </div>
+                                <div class="status-tag info" style="font-size: 15px; padding: 10px 20px;">
+                                    提前/补服: ${pie.early || 0} 次
+                                </div>
+                                <div class="status-tag danger" style="font-size: 15px; padding: 10px 20px;">
+                                    漏服: ${pie.missed || 0} 次
+                                </div>
+                            </div>
+                        </div>
+                        <h4 style="margin-bottom: 16px; color: #0d4e7c; font-size: 18px;">近7日服药趋势</h4>
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>服药次数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(takenData.data || []).map(item => `
+                                    <tr>
+                                        <td>${item.date}</td>
+                                        <td>${item.taken} 次</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-pills"></i><div>暂无服药数据</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadMissedModal() {
+            try {
+                const res = await fetch('/api/admin/dashboard/detail/missed-medication');
+                const data = await res.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>药品名称</th>
+                                    <th>计划服药时间</th>
+                                    <th>剂量</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => `
+                                    <tr>
+                                        <td>${item.elderName || '-'}</td>
+                                        <td>${item.medicineName || '-'}</td>
+                                        <td>${item.scheduledTime ? formatDateTime(item.scheduledTime) : '-'}</td>
+                                        <td>${item.dosage || '-'} ${item.unit || ''}</td>
+                                        <td><span class="status-tag danger">漏服</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-check-circle" style="color: #52C41A;"></i><div>今日无漏服记录</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadLowStockModal() {
+            try {
+                const res = await fetch('/api/admin/dashboard/detail/low-stock');
+                const data = await res.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>药品名称</th>
+                                    <th>当前库存</th>
+                                    <th>每次剂量</th>
+                                    <th>每日次数</th>
+                                    <th>可服用天数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => {
+                                    let daysText = '';
+                                    if (item.daysRemaining !== null && item.daysRemaining !== undefined) {
+                                        daysText = item.daysRemaining <= 0 ? '已不足' : `${item.daysRemaining} 天`;
+                                    } else {
+                                        daysText = '库存不足';
+                                    }
+                                    return `
+                                        <tr>
+                                            <td>${item.elderName || '-'}</td>
+                                            <td>${item.medicineName || '-'}</td>
+                                            <td>${item.currentStock || 0}</td>
+                                            <td>${item.dosagePerTime || '-'} ${item.unit || ''}</td>
+                                            <td>${item.frequencyPerDay || '-'} 次/日</td>
+                                            <td><span class="status-tag warning">${daysText}</span></td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-check-circle" style="color: #52C41A;"></i><div>暂无用药不足预警</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        function loadHealthAbnormalDetail(type) {
+            const overlay = document.getElementById('modalOverlay');
+            const titleEl = document.getElementById('modalTitle');
+            const bodyEl = document.getElementById('modalBody');
+
+            const typeNames = { 'BP': '血压异常', 'HR': '心率异常', 'BO': '血氧异常', 'BG': '血糖异常' };
+            const iconNames = { 'BP': 'tint', 'HR': 'heartbeat', 'BO': 'lungs', 'BG': 'temperature-half' };
+
+            titleEl.innerHTML = `<i class="fas fa-${iconNames[type] || 'heartbeat'}"></i><span>${typeNames[type] || '健康异常'}</span>`;
+            bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>';
+            overlay.classList.add('active');
+
+            loadHealthAbnormalModalByType(type);
+        }
+
+        async function loadHealthAbnormalModalByType(type) {
+            try {
+                const url = type ? `/api/admin/dashboard/detail/health-abnormal?type=${type}` : '/api/admin/dashboard/detail/health-abnormal';
+                const res = await fetch(url);
+                const data = await res.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                const typeNames = { 'BP': '血压', 'HR': '心率', 'BO': '血氧', 'BG': '血糖' };
+                const levelNames = { 1: '轻度', 2: '中度', 3: '重度' };
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>异常类型</th>
+                                    <th>异常等级</th>
+                                    <th>当前值</th>
+                                    <th>阈值</th>
+                                    <th>检测时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => {
+                                    const levelClass = item.alertLevel >= 3 ? 'danger' : item.alertLevel >= 2 ? 'warning' : 'info';
+                                    return `
+                                        <tr>
+                                            <td>${item.elderName || '-'}</td>
+                                            <td>${typeNames[item.alertType] || item.alertType}</td>
+                                            <td><span class="status-tag ${levelClass}">${levelNames[item.alertLevel] || '异常'}</span></td>
+                                            <td>${item.currentValue || '-'}</td>
+                                            <td>${item.thresholdValue || '-'}</td>
+                                            <td>${item.alertTime ? formatDateTime(item.alertTime) : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = '<div class="modal-empty"><i class="fas fa-check-circle" style="color: #52C41A;"></i><div>暂无该类异常记录</div></div>';
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadHealthAbnormalModal() {
+            loadHealthAbnormalModalByType(null);
+        }
+
+        async function loadEmergencyModal() {
+            try {
+                const [listRes, statsRes] = await Promise.all([
+                    fetch('/api/admin/dashboard/detail/emergency-calls'),
+                    fetch('/api/admin/dashboard/emergency/stats')
+                ]);
+                const data = await listRes.json();
+                const statsData = await statsRes.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                const statusNames = { 'answered': '已接听', 'calling': '呼叫中', 'cancelled': '已取消', 'no_answer': '无人接听', 'timeout': '超时' };
+                const callTypeNames = { 'manual': '手动呼叫', 'auto': '自动呼叫' };
+
+                const stats = statsData.data || {};
+                const totalCount = stats.todayTotal || 0;
+                const answeredCount = stats.todayAnswered || 0;
+                const cancelledCount = stats.todayCancelled || 0;
+                const noAnswerCount = totalCount - answeredCount - cancelledCount;
+
+                let statsHtml = `
+                    <div style="margin-bottom: 24px; padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 16px; border: 1px solid #fecaca;">
+                        <h4 style="margin-bottom: 16px; color: #991b1b; font-size: 18px;"><i class="fas fa-phone-volume"></i> 今日紧急呼叫统计</h4>
+                        <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700; color: #dc2626;">${totalCount}</div>
+                                <div style="font-size: 13px; color: #7f1d1d;">呼叫次数</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700; color: #059669;">${answeredCount}</div>
+                                <div style="font-size: 13px; color: #166534;">已接听</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700; color: #d97706;">${cancelledCount}</div>
+                                <div style="font-size: 13px; color: #78350f;">已取消</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700; color: #b45309;">${Math.max(0, noAnswerCount)}</div>
+                                <div style="font-size: 13px; color: #78350f;">无人接听</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                if (data.code === 200 && data.data.length > 0) {
+                    const html = `
+                        ${statsHtml}
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>呼叫类型</th>
+                                    <th>呼叫时间</th>
+                                    <th>状态</th>
+                                    <th>接听人</th>
+                                    <th>通话时长</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => {
+                                    const statusClass = item.status === 'answered' ? 'success' : 
+                                                       item.status === 'cancelled' ? 'info' : 
+                                                       item.status === 'calling' ? 'warning' : 'danger';
+                                    return `
+                                        <tr>
+                                            <td>${item.elderName || '-'}</td>
+                                            <td>${callTypeNames[item.callType] || '-'}</td>
+                                            <td>${item.callTime ? formatDateTime(item.callTime) : '-'}</td>
+                                            <td><span class="status-tag ${statusClass}">${statusNames[item.status] || item.status}</span></td>
+                                            <td>${item.answeredBy || '-'}</td>
+                                            <td>${item.duration ? item.duration + '秒' : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = `
+                        ${statsHtml}
+                        <div class="modal-empty"><i class="fas fa-check-circle" style="color: #52C41A;"></i><div>今日暂无呼叫记录详情</div></div>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        async function loadThresholdRiskModal() {
+            try {
+                const res = await fetch('/api/community/health/alerts');
+                const data = await res.json();
+                const bodyEl = document.getElementById('modalBody');
+
+                if (data.code === 200 && data.data && data.data.length > 0) {
+                    const html = `
+                        <div style="margin-bottom: 20px; padding: 16px; background: #fff7ed; border-radius: 12px; border: 1px solid #fed7aa;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #c2410c; font-weight: 600;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>以下长辈的健康阈值设置存在风险，建议联系家属确认</span>
+                            </div>
+                        </div>
+                        <table class="modal-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>风险等级</th>
+                                    <th>风险说明</th>
+                                    <th>建议</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.map(item => {
+                                    const levelClass = item.riskLevel === 'critical' ? 'danger' : 'warning';
+                                    const levelText = item.riskLevel === 'critical' ? '高危' : '风险';
+                                    return `
+                                        <tr>
+                                            <td><strong>${item.userName || '-'}</strong></td>
+                                            <td><span class="status-tag ${levelClass}">${levelText}</span></td>
+                                            <td style="font-size: 13px; color: #64748b;">${(item.warnings || []).join('<br>')}</td>
+                                            <td style="font-size: 13px; color: #059669;">${(item.suggestions || []).join('<br>')}</td>
+                                            <td>
+                                                <button onclick="sendAdviceToElder(${item.userId}, '${item.userName}')" 
+                                                        style="padding: 6px 12px; background: #1677FF; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                                    <i class="fas fa-paper-plane"></i> 发送建议
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    bodyEl.innerHTML = html;
+                } else {
+                    bodyEl.innerHTML = `
+                        <div class="modal-empty">
+                            <i class="fas fa-check-circle" style="color: #52C41A;"></i>
+                            <div>暂无阈值风险预警</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-empty"><i class="fas fa-exclamation-circle"></i><div>加载失败</div></div>';
+            }
+        }
+
+        function sendAdviceToElder(userId, userName) {
+            const advice = prompt(`请输入发送给 ${userName} 的健康阈值建议：\n例如：建议您将心率阈值调整为55-100bpm，更符合老年人安全标准`);
+            if (advice && advice.trim()) {
+                axios.post('/api/community/health/advice/send', {
+                    userId: userId,
+                    adviceType: 'threshold_suggestion',
+                    adviceContent: advice.trim()
+                }).then(res => {
+                    if (res.data.code === 200) {
+                        alert('建议已发送');
+                    } else {
+                        alert('发送失败：' + res.data.msg);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('发送失败');
+                });
+            }
+        }
+
+        async function loadCommunityInfo() {
+            try {
+                const res = await fetch('/api/admin/community/info');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    const navbarTitle = document.querySelector('.navbar-title');
+                    const wsStatus = document.getElementById('wsStatus');
+                    navbarTitle.innerHTML = 
+                        '<i class="fas fa-chart-line"></i> ' + data.data.communityName + ' - 数据监控中心';
+                    if (wsStatus) {
+                        navbarTitle.appendChild(wsStatus);
+                    }
+                }
+            } catch (e) {
+                console.error('加载社区信息失败', e);
+            }
+        }
+
+        function handleResize() {
+            if (trendChart) trendChart.resize();
+            if (pieChart) pieChart.resize();
+        }
+
+        function setupWebSocketStatusMonitor() {
+            const wsStatusEl = document.getElementById('wsStatus');
+            const wsDot = wsStatusEl ? wsStatusEl.querySelector('.ws-dot') : null;
+            const wsText = wsStatusEl ? wsStatusEl.querySelector('.ws-text') : null;
+
+            const updateStatus = () => {
+                if (!window.AdminMessageCenter) {
+                    console.log('[Dashboard] AdminMessageCenter 还未加载');
+                    return;
+                }
+
+                const status = window.AdminMessageCenter.getConnectionStatus();
+                if (wsDot && wsText) {
+                    wsDot.className = 'ws-dot ' + status;
+                    const statusMap = {
+                        'connected': '已连接',
+                        'disconnected': '已断开',
+                        'connecting': '连接中'
+                    };
+                    wsText.textContent = statusMap[status] || '未知';
+                    console.log('[Dashboard] WebSocket 状态:', status);
+                }
+            };
+
+            // 立即执行一次
+            updateStatus();
+            
+            // 等待 AdminMessageCenter 初始化
+            let initAttempts = 0;
+            const initCheck = setInterval(() => {
+                initAttempts++;
+                if (window.AdminMessageCenter && window.AdminMessageCenter.isConnected !== undefined) {
+                    updateStatus();
+                    console.log('[Dashboard] AdminMessageCenter 已就绪');
+                    
+                    if (window.AdminMessageCenter.onOnlineStatus) {
+                        window.AdminMessageCenter.onOnlineStatus((userId, online) => {
+                            console.log('[Dashboard] 用户在线状态变化:', userId, online);
+                            updateStatus();
+                        });
+                    }
+                    
+                    clearInterval(initCheck);
+                } else if (initAttempts > 20) {
+                    console.warn('[Dashboard] AdminMessageCenter 初始化超时');
+                    clearInterval(initCheck);
+                }
+            }, 500);
+
+            // 持续监控状态
+            setInterval(updateStatus, 2000);
+
+            console.log('[Dashboard] WebSocket 状态监控已启动');
+        }
+
+        async function init() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            initCharts();
+
+            await Promise.all([
+                loadCommunityInfo(),
+                loadOverview(),
+                loadMedicationTrend(),
+                loadMedicationPie(),
+                loadLowStock(),
+                loadHealthAbnormal(),
+                loadRecentHealth(),
+                loadEmergencyCalls(),
+                loadEmergencyStats(),
+                loadNewsStats(),
+                loadNewsList(),
+                loadThresholdRiskAlerts(),
+                loadConfigLogs()
+            ]);
+
+            // 等待 AdminMessageCenter 初始化
+            setTimeout(() => {
+                setupWebSocketStatusMonitor();
+            }, 1000);
+
+            window.addEventListener('resize', handleResize);
+
+            setInterval(() => {
+                loadOverview();
+                loadMedicationTrend();
+                loadMedicationPie();
+                loadLowStock();
+                loadHealthAbnormal();
+                loadRecentHealth();
+                loadEmergencyCalls();
+                loadEmergencyStats();
+                loadNewsStats();
+                loadNewsList();
+                loadThresholdRiskAlerts();
+                loadConfigLogs();
+            }, 5000);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+
+

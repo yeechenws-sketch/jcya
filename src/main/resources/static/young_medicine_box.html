@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能药盒监看 - 子女端 - 解尘颐安</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+    <script src="/js/medicine-form-utils.js"></script>
+    <style>
+            :root {
+                --primary: #2563EB;
+                --primary-dark: #1D4ED8;
+                --primary-light: #3B82F6;
+                --primary-lighter: #60A5FA;
+                --danger: #EF4444;
+                --success: #10B981;
+                --warning: #F59E0B;
+                --text: #1E293B;
+                --text-secondary: #64748B;
+                --bg-light: #EFF6FF;
+                --bg-card: rgba(255, 255, 255, 0.95);
+                --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+            }
+
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+
+            html, body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                background: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+                min-height: 100vh;
+                color: var(--text);
+            }
+
+            [v-cloak] { display: none; }
+
+            .app-container {
+                width: 100%;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 16px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                color: white;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                box-shadow: var(--shadow);
+            }
+
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .back-btn {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.2);
+                border: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .back-btn:hover {
+                background: rgba(255,255,255,0.3);
+                transform: scale(1.05);
+            }
+
+            .back-btn i {
+                font-size: 18px;
+                color: white;
+            }
+
+            .header h1 { font-size: 17px; font-weight: 600; }
+
+            .header-right { display: flex; gap: 10px; align-items: center; }
+
+            .icon-btn {
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.2);
+                border: none;
+                color: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 16px;
+                transition: all 0.2s;
+            }
+
+            .icon-btn:active { transform: scale(0.95); }
+
+            .main-content {
+                flex: 1;
+                padding: 16px;
+                padding-bottom: 80px;
+            }
+
+            .elder-selector {
+                margin-bottom: 16px;
+            }
+
+            .elder-selector select {
+                width: 100%;
+                padding: 14px 16px;
+                border: 2px solid #E2E8F0;
+                border-radius: 14px;
+                font-size: 15px;
+                background: white;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .elder-selector select:focus {
+                border-color: var(--primary);
+                outline: none;
+            }
+
+            .status-card {
+                background: var(--bg-card);
+                border-radius: 18px;
+                padding: 18px;
+                margin-bottom: 16px;
+                box-shadow: var(--shadow);
+            }
+
+            .status-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 14px;
+            }
+
+            .status-title {
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--text);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .status-title i { color: var(--primary); }
+
+            .status-badge {
+                padding: 5px 14px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .status-badge.online { background: #D1FAE5; color: #059669; }
+            .status-badge.offline { background: #FEE2E2; color: #DC2626; }
+
+            .box-info {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .info-item {
+                background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+                padding: 14px;
+                border-radius: 12px;
+                border: 1px solid #E2E8F0;
+            }
+
+            .info-label {
+                font-size: 11px;
+                color: var(--text-secondary);
+                margin-bottom: 4px;
+            }
+
+            .info-value {
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .section-title {
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--text);
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .section-title i { color: var(--primary); }
+
+            .slot-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .slot-card {
+                background: white;
+                border-radius: 16px;
+                padding: 14px;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                border: 2px solid transparent;
+                transition: all 0.2s;
+            }
+
+            .slot-card.has-medicine { border-color: var(--primary-light); }
+            .slot-card.empty { opacity: 0.7; }
+
+            .slot-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 10px;
+            }
+
+            .slot-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .slot-status {
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 10px;
+                font-weight: 600;
+            }
+
+            .slot-status.normal { background: #D1FAE5; color: #059669; }
+            .slot-status.low { background: #FEF3C7; color: #D97706; }
+            .slot-status.empty { background: #FEE2E2; color: #DC2626; }
+
+            .slot-info {
+                font-size: 12px;
+                color: var(--text-secondary);
+                margin-bottom: 6px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .slot-info i { width: 14px; color: var(--primary-light); }
+
+            .time-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: 8px;
+            }
+
+            .time-tag {
+                padding: 3px 8px;
+                background: linear-gradient(135deg, #DBEAFE 0%, #E0F2FE 100%);
+                border-radius: 6px;
+                font-size: 10px;
+                color: #1E40AF;
+                font-weight: 500;
+            }
+
+            .summary-card {
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                color: white;
+                border-radius: 18px;
+                padding: 18px;
+                margin-bottom: 16px;
+                box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
+            }
+
+            .summary-title {
+                font-size: 14px;
+                opacity: 0.9;
+                margin-bottom: 14px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .summary-stats {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                text-align: center;
+            }
+
+            .stat-item {
+                background: rgba(255,255,255,0.15);
+                padding: 12px 8px;
+                border-radius: 12px;
+            }
+
+            .stat-value {
+                font-size: 22px;
+                font-weight: 700;
+            }
+
+            .stat-label {
+                font-size: 10px;
+                opacity: 0.85;
+                margin-top: 3px;
+            }
+
+            .alert-card {
+                background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+                border: 1px solid #FCD34D;
+                border-radius: 14px;
+                padding: 14px;
+                margin-bottom: 12px;
+            }
+
+            .alert-card.danger {
+                background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+                border-color: #FCA5A5;
+            }
+
+            .alert-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 6px;
+            }
+
+            .alert-icon { color: #D97706; font-size: 16px; }
+            .alert-card.danger .alert-icon { color: #DC2626; }
+
+            .alert-title {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text);
+            }
+
+            .alert-content {
+                font-size: 12px;
+                color: var(--text-secondary);
+            }
+
+            .logs-section { margin-top: 20px; }
+
+            .log-item {
+                background: white;
+                border-radius: 14px;
+                padding: 14px;
+                margin-bottom: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                border: none;
+            }
+
+            .log-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+
+            .log-time {
+                font-size: 12px;
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .log-time i { color: var(--primary-light); }
+
+            .log-result {
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+
+            .log-result.normal { background: #D1FAE5; color: #059669; }
+            .log-result.underdose { background: #FEF3C7; color: #D97706; }
+            .log-result.overdose { background: #FEE2E2; color: #DC2626; }
+
+            .log-detail {
+                font-size: 12px;
+                color: var(--text-secondary);
+                line-height: 1.6;
+            }
+
+            .log-detail strong { color: var(--text); }
+
+            .date-picker {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 14px;
+                overflow-x: auto;
+                padding-bottom: 6px;
+            }
+
+            .date-item {
+                padding: 8px 16px;
+                background: white;
+                border: 2px solid #E2E8F0;
+                border-radius: 20px;
+                font-size: 13px;
+                white-space: nowrap;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .date-item.active {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+            }
+
+            .hardware-info {
+                background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+                border-radius: 12px;
+                padding: 14px;
+                margin-top: 14px;
+                border: 1px solid #E2E8F0;
+            }
+
+            .hardware-item {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                padding: 6px 0;
+                border-bottom: 1px solid #E2E8F0;
+            }
+
+            .hardware-item:last-child { border-bottom: none; }
+
+            .hardware-label { color: var(--text-secondary); }
+            .hardware-value { color: var(--text); font-weight: 500; }
+
+            .hardware-note {
+                font-size: 11px;
+                color: #92400E;
+                margin-top: 10px;
+                padding: 8px 10px;
+                background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .hardware-note i { color: #D97706; }
+
+            .medicine-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: flex-end;
+                justify-content: center;
+                z-index: 1000;
+                animation: fadeIn 0.2s ease;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            .medicine-modal-content {
+                background: white;
+                border-radius: 24px 24px 0 0;
+                width: 100%;
+                max-width: 500px;
+                padding: 24px;
+                padding-bottom: calc(24px + env(safe-area-inset-bottom));
+                animation: slideUp 0.3s ease;
+            }
+
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+
+            .medicine-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+
+            .medicine-modal-header h3 {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--text);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .medicine-modal-header h3 i {
+                color: var(--primary);
+            }
+
+            .medicine-modal-close {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: none;
+                background: var(--bg-light);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+
+            .medicine-modal-close:hover {
+                background: #E0E7FF;
+            }
+
+            .medicine-modal-close i {
+                font-size: 16px;
+                color: var(--text-secondary);
+            }
+
+            .medicine-options {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .medicine-option {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 16px;
+                background: var(--bg-light);
+                border-radius: 16px;
+                cursor: pointer;
+                transition: all 0.2s;
+                border: 2px solid transparent;
+            }
+
+            .medicine-option:hover {
+                background: #E0E7FF;
+                border-color: var(--primary-light);
+            }
+
+            .medicine-option.active {
+                background: #DBEAFE;
+                border-color: var(--primary);
+            }
+
+            .medicine-option-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .medicine-option-icon.review {
+                background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            }
+
+            .medicine-option-icon.monitor {
+                background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            }
+
+            .medicine-option-icon.box {
+                background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+            }
+
+            .medicine-option-icon i {
+                font-size: 22px;
+                color: white;
+            }
+
+            .medicine-option-info {
+                flex: 1;
+            }
+
+            .medicine-option-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: var(--text);
+                margin-bottom: 4px;
+            }
+
+            .medicine-option-desc {
+                font-size: 13px;
+                color: var(--text-secondary);
+            }
+
+            .current-badge {
+                display: inline-block;
+                background: var(--primary);
+                color: white;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin-left: 6px;
+                font-weight: 500;
+            }
+
+            .medicine-option-arrow {
+                color: var(--text-secondary);
+                font-size: 16px;
+            }
+
+            .medicine-option-check {
+                color: var(--primary);
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .bottom-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-top: 1px solid #E2E8F0;
+                display: flex;
+                justify-content: space-around;
+                padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+                z-index: 100;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            }
+
+            .nav-item {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 6px 16px;
+                cursor: pointer;
+                color: var(--text-secondary);
+                transition: all 0.2s;
+            }
+
+            .nav-item i { font-size: 20px; margin-bottom: 4px; }
+            .nav-item span { font-size: 11px; }
+            .nav-item.active { color: var(--primary); }
+
+            .nav-item .nav-badge {
+                position: absolute;
+                top: 0;
+                right: 8px;
+                min-width: 16px;
+                height: 16px;
+                background: var(--danger);
+                color: white;
+                border-radius: 8px;
+                font-size: 9px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 4px;
+            }
+
+            .loading {
+                text-align: center;
+                padding: 40px;
+                color: var(--text-secondary);
+            }
+
+            .loading i { font-size: 24px; margin-right: 8px; }
+
+            .empty-state {
+                text-align: center;
+                padding: 40px;
+                color: var(--text-secondary);
+            }
+
+            .empty-state i {
+                font-size: 48px;
+                color: #CBD5E1;
+                margin-bottom: 12px;
+                display: block;
+            }
+
+            @media (min-width: 768px) {
+                .app-container {
+                    max-width: 100%;
+                }
+
+                .main-content {
+                    max-width: 100%;
+                    width: 100%;
+                    margin: 0;
+                    padding: 24px;
+                    padding-bottom: 100px;
+                }
+
+                .elder-selector,
+                .status-card,
+                .summary-card,
+                .alert-card,
+                .logs-section,
+                .section-title,
+                .slot-grid,
+                .empty-state,
+                .hardware-info,
+                .date-picker {
+                    max-width: 1400px;
+                    margin: 0 auto 16px;
+                }
+
+                .slot-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 16px;
+                }
+
+                .status-card {
+                    padding: 24px;
+                }
+
+                .slot-card {
+                    padding: 18px;
+                }
+
+                .bottom-nav {
+                    max-width: 700px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    border-radius: 24px 24px 0 0;
+                    box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+                }
+
+                .nav-item {
+                    position: relative;
+                    padding: 10px 24px;
+                }
+
+                .nav-item i {
+                    font-size: 26px;
+                }
+
+                .nav-item span {
+                    font-size: 12px;
+                }
+            }
+
+            @media (min-width: 1024px) {
+                .app-container {
+                    max-width: 100%;
+                }
+
+                .slot-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            /* 横屏优化 - 让内容区域自适应宽度，避免窄条 */
+            @media (orientation: landscape) {
+                .app-container {
+                    flex-direction: column;
+                }
+
+                .header {
+                    padding: 12px 24px;
+                    max-width: 100%;
+                    width: 100%;
+                }
+
+                .main-content {
+                    max-width: 100%;
+                    width: 100%;
+                    margin: 0;
+                    padding: 20px 32px;
+                    padding-bottom: 100px;
+                }
+
+                /* 内部所有区块最大宽度1400px并居中 */
+                .elder-selector,
+                .status-card,
+                .summary-card,
+                .alert-card,
+                .logs-section,
+                .section-title,
+                .slot-grid,
+                .empty-state,
+                .hardware-info,
+                .date-picker {
+                    max-width: 1400px;
+                    margin: 0 auto 16px;
+                }
+
+                /* 药仓网格保持3列，宽度自适应 */
+                .slot-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 16px;
+                }
+
+                .bottom-nav {
+                    display: flex !important;
+                }
+            }
+
+            /* 横屏且高度较小时，进一步压缩元素 */
+            @media (orientation: landscape) and (max-height: 600px) {
+                .header {
+                    padding: 10px 20px;
+                }
+
+                .main-content {
+                    padding: 16px 16px;     /* 左右边距不变 */
+                    padding-bottom: 100px;
+                }
+
+                .slot-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 12px;
+                }
+
+                .status-card,
+                .slot-card {
+                    padding: 16px;
+                }
+
+                .bottom-nav {
+                    display: flex !important;
+                }
+            }
+
+
+            @media (orientation: landscape) and (max-height: 500px) {
+                .header {
+                    padding: 8px 16px;
+                }
+
+                .header h1 {
+                    font-size: 16px;
+                }
+
+                .main-content {
+                    padding: 12px 16px;     /* 左右边距保持16px */
+                    padding-bottom: 80px;
+                }
+
+                .elder-selector {
+                    margin-bottom: 12px;
+                }
+
+                .elder-selector select {
+                    padding: 8px 12px;
+                    font-size: 13px;
+                }
+
+                .slot-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                }
+
+                .status-card,
+                .slot-card {
+                    padding: 12px;
+                }
+
+                .slot-name {
+                    font-size: 13px;
+                }
+
+                .slot-medicine {
+                    font-size: 11px;
+                }
+
+                .log-item {
+                    padding: 10px 12px;
+                }
+
+                .modal {
+                    max-height: 85vh;
+                }
+
+                .bottom-nav {
+                    padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
+                }
+
+                .nav-item {
+                    position: relative;
+                }
+
+                .nav-item i {
+                    font-size: 16px;
+                }
+
+                .nav-item span {
+                    font-size: 8px;
+                }
+            }
+
+            @media (orientation: landscape) and (min-width: 1200px) and (max-height: 500px) {
+                .slot-grid {
+                    grid-template-columns: repeat(4, 1fr);
+                }
+            }
+        </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="back-btn" @click="goBack">
+                        <i class="fa fa-angle-left"></i>
+                    </button>
+                    <h1>智能药盒</h1>
+                </div>
+                <div class="header-right">
+                    <button class="icon-btn" @click="refreshData" title="刷新">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="elder-selector">
+                    <select v-model="selectedElderId" @change="loadBoxStatus">
+                        <option :value="null">-- 请选择长辈 --</option>
+                        <option v-for="elder in elders" :key="elder.id" :value="elder.id">
+                            {{ elder.nickname || elder.username }}
+                        </option>
+                    </select>
+                </div>
+
+                <div v-if="loading" class="loading">
+                    <i class="fa fa-spinner fa-spin"></i> 加载中...
+                </div>
+
+                <div v-else-if="!selectedElderId" class="empty-state">
+                    <i class="fa fa-user-circle"></i>
+                    <p>请选择要监看的长辈</p>
+                </div>
+
+                <template v-else>
+                    <div class="status-card">
+                        <div class="status-header">
+                            <span class="status-title">
+                                <i class="fa fa-wifi"></i> 设备状态
+                            </span>
+                            <span :class="['status-badge', 'online']">
+                                在线
+                            </span>
+                        </div>
+                        <div class="box-info">
+                            <div class="info-item">
+                                <div class="info-label">设备ID</div>
+                                <div class="info-value">{{ boxStatus.deviceId || '--' }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">最后上报</div>
+                                <div class="info-value">{{ boxStatus.lastReport || '--' }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">电池电量</div>
+                                <div class="info-value">{{ boxStatus.battery || '--' }}%</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">药仓数量</div>
+                                <div class="info-value">{{ slots.length }} 个</div>
+                            </div>
+                        </div>
+                        
+                        <div class="hardware-info">
+                            <div class="hardware-item">
+                                <span class="hardware-label">称重精度</span>
+                                <span class="hardware-value">±0.1g</span>
+                            </div>
+                            <div class="hardware-item">
+                                <span class="hardware-label">服药判定阈值</span>
+                                <span class="hardware-value">±0.3g</span>
+                            </div>
+                            <div class="hardware-item">
+                                <span class="hardware-label">通信协议</span>
+                                <span class="hardware-value">MQTT</span>
+                            </div>
+                            <div class="hardware-note">
+                                <i class="fa fa-lock"></i> 硬件参数为安全红线，不可修改
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="alerts.length > 0">
+                        <div v-for="alert in alerts" :key="alert.id" 
+                             :class="['alert-card', alert.alert_level >= 3 ? 'danger' : '']">
+                            <div class="alert-header">
+                                <i class="fa fa-exclamation-triangle alert-icon"></i>
+                                <span class="alert-title">{{ alert.medicine_name }} - 库存预警</span>
+                            </div>
+                            <div class="alert-content">{{ alert.message }}</div>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-title">
+                            <i class="fa fa-bar-chart"></i> 今日服药统计
+                        </div>
+                        <div class="summary-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ summary.total }}</div>
+                                <div class="stat-label">总次数</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ summary.normal }}</div>
+                                <div class="stat-label">正常</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ summary.underdose }}</div>
+                                <div class="stat-label">漏服</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ summary.overdose }}</div>
+                                <div class="stat-label">多服</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">
+                        <i class="fa fa-cubes"></i> 药仓状态（只读）
+                    </div>
+                    <div class="slot-grid">
+                        <div v-for="slot in slots" :key="slot.id" 
+                             :class="['slot-card', slot.user_medicine_id ? 'has-medicine' : 'empty']">
+                            <div class="slot-header">
+                                <span class="slot-name">{{ slot.slot_name || '药仓' + slot.slot_number }}</span>
+                                <span :class="['slot-status', slot.stock_status || 'normal']">
+                                    {{ getStockStatusText(slot.stock_status) }}
+                                </span>
+                            </div>
+                            
+                            <template v-if="slot.user_medicine_id">
+                                <div class="slot-info">
+                                    <i class="fa fa-medkit"></i> {{ slot.custom_name || '未命名' }}
+                                </div>
+                                <div class="slot-info">
+                                    <i class="fa fa-cubes"></i> 剩余: {{ slot.current_weight || 0 }}粒
+                                </div>
+                                <div class="slot-info">
+                                    <i class="fa fa-balance-scale"></i> 每次: {{ slot.dosage_weight || 1 }}粒
+                                </div>
+                                <div v-if="slot.timeDosages && slot.timeDosages.length > 0" class="time-tags">
+                                    <span v-for="td in slot.timeDosages" :key="td.period" class="time-tag">
+                                        {{ td.period }} {{ td.time }}
+                                    </span>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="slot-info" style="color: #9CA3AF;">
+                                    <i class="fa fa-minus-circle"></i> 未绑定药品
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="logs-section">
+                        <div class="section-title">
+                            <i class="fa fa-history"></i> 服药记录
+                        </div>
+                        
+                        <div class="date-picker">
+                            <div v-for="d in dateOptions" :key="d.value" 
+                                 :class="['date-item', selectedDate === d.value ? 'active' : '']"
+                                 @click="selectDate(d.value)">
+                                {{ d.label }}
+                            </div>
+                        </div>
+
+                        <div v-if="logs.length === 0" class="empty-state">
+                            <i class="fa fa-clipboard"></i>
+                            <p>暂无服药记录</p>
+                        </div>
+                        <div v-else>
+                            <div v-for="log in logs" :key="log.id" class="log-item">
+                                <div class="log-header">
+                                    <span class="log-time">
+                                        <i class="fa fa-clock-o"></i> 
+                                        {{ formatTime(log.taken_time) }}
+                                    </span>
+                                    <span :class="['log-result', log.take_result]">
+                                        {{ getTakeResultText(log.take_result) }}
+                                    </span>
+                                </div>
+                                <div class="log-detail">
+                                    <strong>{{ log.medicine_name || '药品' }}</strong>
+                                    | 服药前: {{ log.weight_before }}粒
+                                    | 服药后: {{ log.weight_after }}粒
+                                </div>
+                                <div v-if="log.take_result !== 'normal'" class="log-detail" style="color: #DC2626; margin-top: 4px;">
+                                    <i class="fa fa-exclamation-circle"></i>
+                                    预期: {{ log.expected_dosage }}粒，
+                                    实际: {{ log.weight_diff }}粒
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </main>
+
+            <nav class="bottom-nav">
+                <div class="nav-item" @click="goToPage('home')">
+                    <i class="fa fa-home"></i>
+                    <span>首页</span>
+                </div>
+                <div class="nav-item active" @click="showMedicineModal = true">
+                    <i class="fa fa-medkit"></i>
+                    <span>用药</span>
+                </div>
+                <div class="nav-item" @click="goToPage('health')">
+                    <i class="fa fa-heartbeat"></i>
+                    <span>健康</span>
+                </div>
+                <div class="nav-item" @click="goToPage('msg')">
+                    <i class="fa fa-commenting-o"></i>
+                    <span>消息</span>
+                    <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                </div>
+                <div class="nav-item" @click="goToPage('profile')">
+                    <i class="fa fa-user"></i>
+                    <span>我的</span>
+                </div>
+            </nav>
+        </div>
+
+        <div v-if="showMedicineModal" class="medicine-modal" @click.self="showMedicineModal = false">
+            <div class="medicine-modal-content">
+                <div class="medicine-modal-header">
+                    <h3><i class="fa fa-medkit"></i> 用药功能</h3>
+                    <button class="medicine-modal-close" @click="showMedicineModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="medicine-options">
+                    <div class="medicine-option" @click="selectMedicineOption('review')">
+                        <div class="medicine-option-icon review">
+                            <i class="fa fa-check-square-o"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药审核</div>
+                            <div class="medicine-option-desc">审核长辈用药草稿</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('monitor')">
+                        <div class="medicine-option-icon monitor">
+                            <i class="fa fa-medkit"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药监控</div>
+                            <div class="medicine-option-desc">查看长辈用药记录</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option active" @click="selectMedicineOption('box')">
+                        <div class="medicine-option-icon box">
+                            <i class="fa fa-cube"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">智能药盒 <span class="current-badge">当前</span></div>
+                            <div class="medicine-option-desc">监看长辈服药情况</div>
+                        </div>
+                        <i class="fa fa-check medicine-option-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentUser: null,
+                    elders: [],
+                    selectedElderId: null,
+                    loading: false,
+                    showMedicineModal: false,
+                    boxStatus: {
+                        connected: true,
+                        deviceId: null,
+                        lastReport: null,
+                        battery: null
+                    },
+                    slots: [],
+                    logs: [],
+                    alerts: [],
+                    summary: { total: 0, normal: 0, underdose: 0, overdose: 0 },
+                    selectedDate: 'today',
+                    dateOptions: [
+                        { label: '今天', value: 'today' },
+                        { label: '昨天', value: 'yesterday' },
+                        { label: '近7天', value: 'week' }
+                    ],
+                    totalUnread: 0
+                };
+            },
+            mounted() {
+                this.checkLogin();
+            },
+            methods: {
+                setupMessageCallbacks() {
+                    if (window.YoungMessageCenter) {
+                        YoungMessageCenter.onMessage((msg, contact) => {
+                            if (msg.fromId) {
+                                this.totalUnread++;
+                            }
+                        });
+                    }
+                },
+
+                async loadUnreadCount() {
+                    try {
+                        const res = await axios.get('/api/msg/unread/detail');
+                        if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                            let total = 0;
+                            res.data.data.forEach(item => {
+                                total += item.count || item.unreadCount || item.unread_count || 0;
+                            });
+                            this.totalUnread = total;
+                        }
+                    } catch (e) {
+                        console.error('加载未读消息数失败', e);
+                    }
+                },
+
+                async checkLogin() {
+                    try {
+                        const res = await axios.get('/api/user/info');
+                        if (res.data.code === 200) {
+                            this.currentUser = res.data.data;
+                            this.loadElders();
+                            this.loadUnreadCount();
+                            this.setupMessageCallbacks();
+                        } else {
+                            window.location.href = 'login.html';
+                        }
+                    } catch (e) {
+                        window.location.href = 'login.html';
+                    }
+                },
+
+                async loadElders() {
+                    try {
+                        const res = await axios.get('/api/friend/list/ordered');
+                        if (res.data.code === 200) {
+                            this.elders = res.data.data || [];
+                            if (this.elders.length > 0) {
+                                this.selectedElderId = this.elders[0].id;
+                                this.loadBoxStatus();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载长辈列表失败', e);
+                    }
+                },
+
+                async loadBoxStatus() {
+                    if (!this.selectedElderId) return;
+                    
+                    this.loading = true;
+                    try {
+                        const res = await axios.get(`/api/mqtt/box/status/${this.selectedElderId}`);
+                        if (res.data.code === 200) {
+                            const data = res.data.data;
+                            this.slots = data.slots || [];
+                            this.alerts = data.alerts || [];
+                            
+                            if (data.box) {
+                                this.boxStatus = {
+                                    connected: true,
+                                    deviceId: data.box.deviceId,
+                                    lastReport: this.formatDateTime(data.box.lastSyncTime),
+                                    battery: data.box.batteryLevel
+                                };
+                            }
+                        }
+                        
+                        await this.loadMedicationLogs();
+                    } catch (e) {
+                        console.error('加载药盒状态失败', e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadMedicationLogs() {
+                    if (!this.selectedElderId) return;
+                    
+                    try {
+                        let dateParam = null;
+                        if (this.selectedDate === 'today') {
+                            dateParam = new Date().toISOString().split('T')[0];
+                        } else if (this.selectedDate === 'yesterday') {
+                            const yesterday = new Date();
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            dateParam = yesterday.toISOString().split('T')[0];
+                        }
+                        
+                        const res = await axios.get(`/api/mqtt/box/medication-logs/${this.selectedElderId}`, {
+                            params: { date: dateParam }
+                        });
+                        
+                        if (res.data.code === 200) {
+                            const data = res.data.data;
+                            this.logs = data.logs || [];
+                            this.summary = data.summary || { total: 0, normal: 0, underdose: 0, overdose: 0 };
+                        }
+                    } catch (e) {
+                        console.error('加载服药记录失败', e);
+                    }
+                },
+
+                selectDate(date) {
+                    this.selectedDate = date;
+                    this.loadMedicationLogs();
+                },
+
+                refreshData() {
+                    this.loadBoxStatus();
+                },
+
+                getStockStatusText(status) {
+                    const map = { normal: '正常', low: '不足', empty: '已空' };
+                    return map[status] || '正常';
+                },
+
+                getTakeResultText(result) {
+                    const map = { normal: '正常', underdose: '漏服', overdose: '多服' };
+                    return map[result] || '未知';
+                },
+
+                formatTime(time) {
+                    if (!time) return '--';
+                    const d = new Date(time);
+                    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                },
+
+                formatDateTime(time) {
+                    if (!time) return '--';
+                    const d = new Date(time);
+                    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                },
+
+                goBack() {
+                    window.history.back();
+                },
+
+                goToPage(page) {
+                    const pages = {
+                        'home': 'young_index.html',
+                        'health': 'young_health.html',
+                        'msg': 'young_msg.html',
+                        'profile': 'young_settings.html'
+                    };
+                    if (pages[page]) {
+                        window.location.href = pages[page];
+                    }
+                },
+
+                selectMedicineOption(option) {
+                    this.showMedicineModal = false;
+                    if (option === 'review') {
+                        window.location.href = 'young_draft_review.html';
+                    } else if (option === 'monitor') {
+                        if (this.elders.length > 0) {
+                            window.location.href = `young_medicine.html?elderId=${this.elders[0].id}`;
+                        } else {
+                            window.location.href = 'young_medicine.html';
+                        }
+                    } else if (option === 'box') {
+                        // 当前页面，不做跳转
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

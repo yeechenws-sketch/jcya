@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>登录 - 解尘颐安养老平台</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: "Inter", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at 0% 0%, #E0EAFC 0%, #CFDEF3 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 30px;
+            width: 350px;
+            border: 1.5px solid rgba(255, 255, 255, 0.7);
+            /* 新增：细腻的阴影提升层次感 */
+            box-shadow: 0 8px 32px rgba(30, 58, 138, 0.1);
+            /* 新增：轻微的缩放，视觉更舒适 */
+            transform: translateY(0);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 40px rgba(30, 58, 138, 0.15);
+            transform: translateY(-2px);
+        }
+
+        input {
+            width: 100%;
+            margin: 15px 0;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-sizing: border-box;
+            /* 新增：输入框样式优化 */
+            background: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            color: #1e3a8a;
+            /* 新增：过渡效果 */
+            transition: all 0.2s ease;
+            /* 新增：去除输入框外轮廓 */
+            outline: none;
+        }
+
+        /* 新增：输入框聚焦样式 */
+        input:focus {
+            border-color: rgba(67, 97, 238, 0.5);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        /* 新增：输入框placeholder样式 */
+        input::placeholder {
+            color: rgba(30, 58, 138, 0.5);
+            font-size: 13px;
+        }
+
+        /* 新增：输入框hover样式 */
+        input:hover {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #4361EE;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            /* 新增：按钮过渡效果 */
+            transition: all 0.2s ease;
+            /* 新增：按钮阴影 */
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+            /* 新增：禁止文字选中 */
+            user-select: none;
+        }
+
+        /* 新增：按钮hover效果 */
+        button:hover:not(:disabled) {
+            background: #3a56d4;
+            box-shadow: 0 6px 16px rgba(67, 97, 238, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* 新增：按钮点击效果 */
+        button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+        }
+
+        /* 新增：禁用状态样式优化 */
+        button:disabled {
+            background: #8fa0f0;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            /* 新增：错误提示轻微动画 */
+            animation: fadeIn 0.3s ease;
+            /* 新增：轻微的内边距 */
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        /* 新增：标题样式优化 */
+        h2 {
+            color: #1e3a8a;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+            /* 新增：文字渐变（浅） */
+            background: linear-gradient(to right, #1e3a8a, #4361EE);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        /* 新增：注册链接样式 */
+        a {
+            color: #4361EE;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: #3a56d4;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        /* 新增：注册提示文字样式 */
+        p:not(.error-msg) {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            color: rgba(30, 58, 138, 0.7);
+        }
+
+        /* 新增：淡入动画 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 关于链接样式 */
+        .about-link {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(67, 97, 238, 0.1);
+        }
+
+        .about-link a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 13px;
+            color: rgba(30, 58, 138, 0.6);
+        }
+
+        .about-link a:hover {
+            color: #4361EE;
+        }
+
+        .about-link a::before {
+            content: '\f05a';
+            font-family: FontAwesome;
+            font-size: 14px;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 16px;
+            font-size: 13px;
+            color: rgba(30, 58, 138, 0.5);
+        }
+
+        .footer-brand {
+            font-weight: 700;
+            color: rgba(30, 58, 138, 0.7);
+        }
+
+        .logo-container {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        .logo-container img {
+            height: 50px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="logo-container">
+    <img src="/images/logo/logo-xiechen.png" alt="懈尘颐安" onerror="this.style.display='none'">
+</div>
+<div id="app">
+    <div class="card">
+        <h2>欢迎回来</h2>
+        <input type="text" v-model="form.username" placeholder="请输入账号">
+        <input type="password" v-model="form.password" placeholder="请输入密码">
+        <button @click="doLogin" :disabled="loading">{{ loading ? '登录中...' : '进入系统' }}</button>
+        <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+        <p>
+            没有账号？<a href="register.html">去注册</a>
+        </p>
+        <p class="about-link">
+            <a href="about.html">关于此项目</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    const {createApp} = Vue;
+    createApp({
+        data() {
+            return {
+                form: {username: '', password: ''},
+                loading: false,
+                errorMsg: ''
+            }
+        },
+        methods: {
+            doLogin() {
+                this.errorMsg = '';
+                if (!this.form.username || !this.form.password) {
+                    this.errorMsg = '请输入账号和密码';
+                    return;
+                }
+                this.loading = true;
+                axios.post('/api/user/login', this.form)
+                    .then(res => {
+                        if (res.data && res.data.code === 200 && res.data.data) {
+                            const user = res.data.data;
+                            localStorage.setItem('nickname', user.nickname || '');
+                            localStorage.setItem('user_role', user.role || '');
+                            localStorage.setItem('user_id', user.id || '');
+                            
+                            if (user.role === 'admin') {
+                                window.location.href = 'admin_index.html';
+                            } else if (user.role === 'older') {
+                                window.location.href = 'index.html';
+                            } else {
+                                window.location.href = 'young_index.html';
+                            }
+                        } else {
+                            this.errorMsg = res.data ? res.data.msg : '登录失败，请重试';
+                        }
+                    })
+                    .catch(err => {
+                        console.error('登录请求失败:', err);
+                        this.errorMsg = '网络错误，请稍后重试';
+                    })
+                    .finally(() => {
+                        this.loading = false;
+                    });
+            }
+        }
+    }).mount('#app');
+</script>
+
+<footer class="footer">
+    2026 Powered by <span class="footer-brand">𝙓𝙄𝙀𝘾𝙃𝙀𝙉</span> · 解尘颐安养老平台
+</footer>
+</body>
+</html>
+
+

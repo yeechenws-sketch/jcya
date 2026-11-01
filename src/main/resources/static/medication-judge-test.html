@@ -1,0 +1,342 @@
+<!-- <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用药时间判断测试</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1E40AF;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #64748B;
+        }
+        .test-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+        .test-section h2 {
+            color: #1E40AF;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 30px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-item input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+        .result-card {
+            margin-top: 20px;
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .result-card.success {
+            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+            border: 2px solid #10B981;
+        }
+        .result-card.warning {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+            border: 2px solid #F59E0B;
+        }
+        .result-card.danger {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%);
+            border: 2px solid #EF4444;
+        }
+        .result-card.info {
+            background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+            border: 2px solid #3B82F6;
+        }
+        .result-action {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .result-message {
+            font-size: 20px;
+            color: #1F2937;
+            line-height: 1.6;
+        }
+        .test-cases {
+            display: grid;
+            gap: 12px;
+        }
+        .test-case {
+            background: #F8FAFC;
+            border-radius: 12px;
+            padding: 16px;
+            border: 2px solid #E5E7EB;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .test-case:hover {
+            border-color: #3B82F6;
+            background: #EFF6FF;
+        }
+        .test-case-title {
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+        .test-case-desc {
+            font-size: 14px;
+            color: #64748B;
+        }
+        .action-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .action-badge.ontime { background: #10B981; color: white; }
+        .action-badge.early { background: #3B82F6; color: white; }
+        .action-badge.makeup { background: #F59E0B; color: white; }
+        .action-badge.missed { background: #EF4444; color: white; }
+        .action-badge.too_early { background: #6B7280; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fa fa-medkit"></i> 用药时间判断测试</h1>
+            <p>验证 judgeMedicationAction 函数的功能</p>
+        </div>
+
+        <div class="test-section">
+            <h2><i class="fa fa-sliders"></i> 手动测试</h2>
+            <div class="form-group">
+                <label>实际服药时间 (HH:mm)</label>
+                <input type="time" id="actualTime" value="14:00">
+            </div>
+            <div class="form-group">
+                <label>计划服药时间 (HH:mm)</label>
+                <input type="time" id="plannedTime" value="14:00">
+            </div>
+            <div class="form-group">
+                <label>用药间隔 (小时)</label>
+                <select id="interval">
+                    <option value="4">4 小时</option>
+                    <option value="6" selected>6 小时</option>
+                    <option value="8">8 小时</option>
+                    <option value="12">12 小时</option>
+                    <option value="24">24 小时</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>边界情况</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="isFirstDose">
+                        <label for="isFirstDose">当天首次用药</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="isLastDose">
+                        <label for="isLastDose">当天末次用药</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="runTest()">
+                <i class="fa fa-play"></i> 运行测试
+            </button>
+            <div id="testResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h2><i class="fa fa-flask"></i> 预设测试用例</h2>
+            <div class="test-cases">
+                <div class="test-case" onclick="loadTestCase(0)">
+                    <div class="test-case-title">正常服药（计划时间）</div>
+                    <div class="test-case-desc">计划 14:00，实际 14:00，间隔 6 小时</div>
+                    <span class="action-badge ontime">ontime</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(1)">
+                    <div class="test-case-title">提前服药（提前窗口内）</div>
+                    <div class="test-case-desc">计划 14:00，实际 13:00，间隔 6 小时（提前 1 小时）</div>
+                    <span class="action-badge early">early</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(2)">
+                    <div class="test-case-title">补服（补服窗口内）</div>
+                    <div class="test-case-desc">计划 14:00，实际 15:30，间隔 6 小时（延迟 1.5 小时）</div>
+                    <span class="action-badge makeup">makeup</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(3)">
+                    <div class="test-case-title">漏服（超过补服窗口）</div>
+                    <div class="test-case-desc">计划 14:00，实际 17:30，间隔 6 小时（延迟 3.5 小时）</div>
+                    <span class="action-badge missed">missed</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(4)">
+                    <div class="test-case-title">过早拦截（非首次）</div>
+                    <div class="test-case-desc">计划 14:00，实际 12:00，间隔 6 小时（提前 2 小时）</div>
+                    <span class="action-badge too_early">too_early</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(5)">
+                    <div class="test-case-title">首次用药过早</div>
+                    <div class="test-case-desc">计划 8:00，实际 7:30，间隔 6 小时（首次用药）</div>
+                    <span class="action-badge too_early">too_early</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(6)">
+                    <div class="test-case-title">首次用药按时</div>
+                    <div class="test-case-desc">计划 8:00，实际 8:00，间隔 6 小时（首次用药）</div>
+                    <span class="action-badge ontime">ontime</span>
+                </div>
+                <div class="test-case" onclick="loadTestCase(7)">
+                    <div class="test-case-title">末次用药补服</div>
+                    <div class="test-case-desc">计划 20:00，实际 21:30，间隔 6 小时（末次用药）</div>
+                    <span class="action-badge makeup">makeup</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/medication-judge.js"></script>
+    <script>
+        const testCases = [
+            { actual: '14:00', planned: '14:00', interval: 6, first: false, last: false },
+            { actual: '13:00', planned: '14:00', interval: 6, first: false, last: false },
+            { actual: '15:30', planned: '14:00', interval: 6, first: false, last: false },
+            { actual: '17:30', planned: '14:00', interval: 6, first: false, last: false },
+            { actual: '12:00', planned: '14:00', interval: 6, first: false, last: false },
+            { actual: '07:30', planned: '08:00', interval: 6, first: true, last: false },
+            { actual: '08:00', planned: '08:00', interval: 6, first: true, last: false },
+            { actual: '21:30', planned: '20:00', interval: 6, first: false, last: true }
+        ];
+
+        function loadTestCase(index) {
+            const tc = testCases[index];
+            document.getElementById('actualTime').value = tc.actual;
+            document.getElementById('plannedTime').value = tc.planned;
+            document.getElementById('interval').value = tc.interval;
+            document.getElementById('isFirstDose').checked = tc.first;
+            document.getElementById('isLastDose').checked = tc.last;
+            runTest();
+        }
+
+        function getResultClass(action) {
+            switch(action) {
+                case 'ontime': return 'success';
+                case 'early': return 'info';
+                case 'makeup': return 'warning';
+                case 'missed': return 'danger';
+                case 'too_early': return 'danger';
+                default: return 'info';
+            }
+        }
+
+        function getActionLabel(action) {
+            const labels = {
+                ontime: '✓ 按时服药',
+                early: '⏰ 提前服药',
+                makeup: '🔔 补服',
+                missed: '⚠️ 漏服',
+                too_early: '🚫 过早拦截'
+            };
+            return labels[action] || action;
+        }
+
+        function runTest() {
+            const actualTime = document.getElementById('actualTime').value;
+            const plannedTime = document.getElementById('plannedTime').value;
+            const interval = parseFloat(document.getElementById('interval').value);
+            const isFirstDose = document.getElementById('isFirstDose').checked;
+            const isLastDose = document.getElementById('isLastDose').checked;
+
+            const result = judgeMedicationAction(
+                actualTime,
+                plannedTime,
+                interval,
+                isFirstDose,
+                isLastDose
+            );
+
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = `
+                <div class="result-card ${getResultClass(result.action)}">
+                    <div class="result-action">${getActionLabel(result.action)}</div>
+                    <div class="result-message">${result.message}</div>
+                </div>
+            `;
+        }
+
+        window.onload = function() {
+            loadTestCase(0);
+        };
+    </script>
+</body>
+</html> -->
+
+
+

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.MqttSimulationConfigMapper">
+    
+    <resultMap id="BaseResultMap" type="com.chat.older.xiechen.model.MqttSimulationConfig">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="config_name" property="configName"/>
+        <result column="data_type" property="dataType"/>
+        <result column="value1" property="value1"/>
+        <result column="value2" property="value2"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="auto_send" property="autoSend"/>
+        <result column="send_interval" property="sendInterval"/>
+        <result column="is_enabled" property="isEnabled"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+    
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.MqttSimulationConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mqtt_simulation_config (user_id, config_name, data_type, value1, value2, device_id, auto_send, send_interval, is_enabled)
+        VALUES (#{userId}, #{configName}, #{dataType}, #{value1}, #{value2}, #{deviceId}, #{autoSend}, #{sendInterval}, #{isEnabled})
+    </insert>
+    
+    <update id="update" parameterType="com.chat.older.xiechen.model.MqttSimulationConfig">
+        UPDATE mqtt_simulation_config 
+        SET config_name = #{configName}, data_type = #{dataType}, value1 = #{value1}, value2 = #{value2}, 
+            device_id = #{deviceId}, auto_send = #{autoSend}, send_interval = #{sendInterval}, is_enabled = #{isEnabled}
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="delete">
+        DELETE FROM mqtt_simulation_config WHERE id = #{id}
+    </delete>
+    
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM mqtt_simulation_config WHERE id = #{id}
+    </select>
+    
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT * FROM mqtt_simulation_config WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+    
+    <update id="updateAutoSend">
+        UPDATE mqtt_simulation_config SET auto_send = #{autoSend} WHERE id = #{id}
+    </update>
+    
+    <update id="updateEnabled">
+        UPDATE mqtt_simulation_config SET is_enabled = #{isEnabled} WHERE id = #{id}
+    </update>
+    
+</mapper>

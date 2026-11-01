@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>健康监测 - 子女端- 解尘颐安</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+    <script src="lib/js/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --primary-light: #3B82F6;
+            --primary-lighter: #60A5FA;
+            --danger: #EF4444;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --bg-light: #EFF6FF;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .back-btn i {
+            font-size: 18px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 17px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-time {
+            text-align: right;
+        }
+
+        .header-time .time {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-time .date {
+            font-size: 11px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .elder-selector {
+            background: white;
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .elder-selector label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-right: 10px;
+        }
+
+        .elder-selector select {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text);
+            background: white;
+            cursor: pointer;
+        }
+
+        .view-switcher {
+            display: flex;
+            background: white;
+            padding: 6px;
+            border-radius: 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .switch-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            text-align: center;
+            border: none;
+            background: transparent;
+        }
+
+        .switch-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .health-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+        }
+
+        .health-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        .health-card .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .health-card .icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .health-card .card-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .health-card .card-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text);
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .health-card .card-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .health-card .card-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .status-normal { background: rgba(16, 185, 129, 0.15); color: #059669; }
+        .status-warning { background: rgba(245, 158, 11, 0.15); color: #D97706; }
+        .status-danger { background: rgba(239, 68, 68, 0.15); color: #DC2626; }
+
+        .chart-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-top: 16px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .chart-filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            background: #F1F5F9;
+            color: var(--text-secondary);
+        }
+
+        .filter-item[data-type="bp"] { border-color: #4361EE; color: #4361EE; }
+        .filter-item[data-type="hr"] { border-color: #F72585; color: #F72585; }
+        .filter-item[data-type="sugar"] { border-color: #FF9F1C; color: #FF9F1C; }
+        .filter-item[data-type="spo2"] { border-color: #06D6A0; color: #06D6A0; }
+        .filter-item[data-type="steps"] { border-color: #7209B7; color: #7209B7; }
+        .filter-item[data-type="sleep"] { border-color: #4895EF; color: #4895EF; }
+
+        .filter-item[data-type="bp"].active { background: #4361EE; color: white; }
+        .filter-item[data-type="hr"].active { background: #F72585; color: white; }
+        .filter-item[data-type="sugar"].active { background: #FF9F1C; color: white; }
+        .filter-item[data-type="spo2"].active { background: #06D6A0; color: white; }
+        .filter-item[data-type="steps"].active { background: #7209B7; color: white; }
+        .filter-item[data-type="sleep"].active { background: #4895EF; color: white; }
+
+        #trendChart {
+            width: 100%;
+            height: 250px;
+        }
+
+        .ai-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-top: 16px;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #E2E8F0;
+            margin-bottom: 16px;
+        }
+
+        .ai-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .ai-info h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .ai-info .status {
+            font-size: 12px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .ai-content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #334155;
+        }
+
+        .ai-content .summary-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .ai-content .advice-box {
+            margin-top: 16px;
+            padding: 14px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 12px;
+        }
+
+        .ai-content .advice-box h4 {
+            color: var(--success);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ai-content .advice-box ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .ai-content .advice-box li {
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .ai-content .trend-box {
+            margin-top: 16px;
+            padding: 14px;
+            background: rgba(37, 99, 235, 0.08);
+            border-radius: 12px;
+        }
+
+        .ai-content .trend-box h4 {
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading-indicator .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: loading 1.4s infinite ease-in-out;
+        }
+
+        .loading-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes loading {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 16px;
+            transition: all 0.2s;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active i,
+        .nav-item.active span {
+            color: var(--primary);
+        }
+
+        .nav-item:hover i,
+        .nav-item:hover span {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--danger);
+            color: white;
+            border-radius: 8px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            color: #CBD5E1;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            color: #666666;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #000000;
+        }
+
+        .medicine-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .medicine-modal-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .medicine-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .medicine-modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .medicine-modal-header h3 i {
+            color: var(--primary);
+        }
+
+        .medicine-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .medicine-modal-close:hover {
+            background: #E0E7FF;
+        }
+
+        .medicine-modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .medicine-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .medicine-option:hover {
+            background: #E0E7FF;
+            border-color: var(--primary-light);
+        }
+
+        .medicine-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .medicine-option-icon.review {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        .medicine-option-icon.monitor {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        }
+
+        .medicine-option-icon.box {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .medicine-option-icon i {
+            font-size: 22px;
+            color: white;
+        }
+
+        .medicine-option-info {
+            flex: 1;
+        }
+
+        .medicine-option-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .medicine-option-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-option-arrow {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 24px;
+                padding-bottom: 100px;
+            }
+
+            .health-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+
+            .health-card {
+                padding: 24px;
+            }
+
+            .health-card .icon-box {
+                width: 56px;
+                height: 56px;
+                border-radius: 16px;
+            }
+
+            .health-card .card-label {
+                font-size: 15px;
+            }
+
+            .health-card .card-value {
+                font-size: 32px;
+            }
+
+            .health-card .card-unit {
+                font-size: 14px;
+            }
+
+            .health-card .card-status {
+                padding: 6px 14px;
+                font-size: 13px;
+            }
+
+            .chart-section,
+            .ai-section {
+                padding: 28px;
+                margin-top: 24px;
+            }
+
+            .chart-title {
+                font-size: 18px;
+            }
+
+            .filter-item {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+
+            #trendChart {
+                height: 350px;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+
+            .elder-selector {
+                padding: 16px 20px;
+                margin-bottom: 20px;
+            }
+
+            .view-switcher {
+                margin-bottom: 20px;
+            }
+
+            .switch-btn {
+                padding: 16px;
+                font-size: 16px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 12px 24px;
+                max-width: 1400px;
+                margin: 0 auto;
+                width: 100%;
+            }
+
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 20px 32px;
+                padding-bottom: 100px;
+            }
+
+            .elder-selector {
+                max-width: 400px;
+                margin: 0 auto 16px;
+            }
+
+            .view-switcher {
+                max-width: 400px;
+                margin: 0 auto 16px;
+            }
+
+            .health-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .chart-section,
+            .ai-section,
+            .section-title,
+            .empty-state {
+                max-width: 1400px;
+                margin: 16px auto 0;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .header {
+                padding: 10px 20px;
+            }
+
+            .main-content {
+                padding: 16px 24px;
+                padding-bottom: 100px;
+            }
+
+            .health-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 16px;
+            }
+
+            .health-card {
+                padding: 16px;
+            }
+
+            #trendChart {
+                height: 280px;
+            }
+
+            .bottom-nav {
+                padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+            }
+
+            .nav-item i {
+                font-size: 18px;
+            }
+
+            .nav-item span {
+                font-size: 9px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .main-content {
+                padding: 12px 16px;
+                padding-bottom: 80px;
+            }
+
+            .elder-selector {
+                margin-bottom: 10px;
+            }
+
+            .elder-selector select {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .view-switcher {
+                margin-bottom: 10px;
+            }
+
+            .switch-btn {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .health-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+
+            .health-card {
+                padding: 12px;
+            }
+
+            .health-card .icon-box {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
+
+            .health-card .card-value {
+                font-size: 18px;
+            }
+
+            .chart-section,
+            .ai-section {
+                padding: 14px;
+                margin-top: 12px;
+            }
+
+            .chart-title {
+                font-size: 14px;
+            }
+
+            #trendChart {
+                height: 220px;
+            }
+
+            .ai-header {
+                padding-bottom: 10px;
+                margin-bottom: 10px;
+            }
+
+            .ai-avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+
+            .ai-info h3 {
+                font-size: 14px;
+            }
+
+            .ai-content {
+                font-size: 13px;
+            }
+
+            .bottom-nav {
+                padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item i {
+                font-size: 16px;
+            }
+
+            .nav-item span {
+                font-size: 8px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .health-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-filters {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="back-btn" @click="goBack">
+                        <i class="fa fa-angle-left"></i>
+                    </button>
+                    <h1>健康监测</h1>
+                </div>
+                <div class="header-right">
+                    <div class="header-time">
+                        <div class="time">{{ currentTime }}</div>
+                        <div class="date">{{ currentDate }}</div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="elder-selector">
+                    <select v-model="selectedElderId" @change="loadHealthData">
+                        <option :value="null">-- 请选择长辈 --</option>
+                        <option v-for="elder in elders" :key="elder.id" :value="elder.id">
+                            {{ elder.nickname || elder.username }}
+                        </option>
+                    </select>
+                </div>
+
+                <div v-if="!selectedElderId" class="empty-state">
+                    <i class="fa fa-user-circle"></i>
+                    <h3>请选择长辈</h3>
+                    <p>选择长辈后查看其健康数据</p>
+                </div>
+
+                <template v-else>
+                    <div class="view-switcher">
+                        <button class="switch-btn" :class="{active: activeTab === 'realtime'}" @click="activeTab = 'realtime'">
+                            实时数据
+                        </button>
+                        <button class="switch-btn" :class="{active: activeTab === 'trend'}" @click="switchToTrend">
+                            趋势统计
+                        </button>
+                    </div>
+
+                    <div v-if="activeTab === 'realtime'">
+                        <div class="health-grid">
+                            <div v-for="item in healthCards" :key="item.id" class="health-card">
+                                <div class="card-header">
+                                    <div class="icon-box" :style="{background: item.color + '15', color: item.color}">
+                                        <i :class="'fa ' + (item.icon ? item.icon.replace('.png', '').replace('.svg', '') : 'fa-heartbeat')"></i>
+                                    </div>
+                                    <div class="card-label">{{ item.label }}</div>
+                                </div>
+                                <div class="card-value">
+                                    {{ item.value }}
+                                    <span class="card-unit">{{ item.unit }}</span>
+                                </div>
+                                <span class="card-status" :class="getStatusClass(item.status)">{{ item.status }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="activeTab === 'trend'" class="chart-section">
+                        <div class="chart-header">
+                            <div class="chart-title">健康趋势分析</div>
+                            <div class="chart-filters">
+                                <div v-for="(val, key) in filters" :key="key"
+                                     class="filter-item" :class="{active: val}"
+                                     :data-type="key"
+                                     @click="toggleFilter(key)">
+                                    {{ filterNames[key] }}
+                                </div>
+                            </div>
+                        </div>
+                        <div id="trendChart"></div>
+                    </div>
+
+                    <div class="ai-section">
+                        <div class="ai-header">
+                            <div class="ai-avatar">
+                                <i class="fa fa-heartbeat"></i>
+                            </div>
+                            <div class="ai-info">
+                                <h3>小智健康助手</h3>
+                                <div class="status">● 实时在线</div>
+                            </div>
+                        </div>
+
+                        <div class="ai-content">
+                            <div v-if="isAnalyzing" class="loading-indicator">
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <span>正在分析健康数据...</span>
+                            </div>
+
+                            <template v-else>
+                                <div class="summary-title">健康报告 - {{ currentDate }}</div>
+                                
+                                <p style="margin-bottom: 12px;"><strong>{{ elderInfo.remark || elderInfo.nickname || '长辈' }}：</strong></p>
+                                <p style="margin-bottom: 16px;">{{ aiSummary }}</p>
+
+                                <div class="advice-box">
+                                    <h4><i class="fa fa-lightbulb-o"></i> 今日健康建议</h4>
+                                    <ul>
+                                        <li v-for="advice in healthAdvices" :key="advice">{{ advice }}</li>
+                                    </ul>
+                                </div>
+
+                                <div class="trend-box">
+                                    <h4><i class="fa fa-line-chart"></i> 健康趋势</h4>
+                                    <p>{{ trendAnalysis }}</p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </main>
+
+            <nav class="bottom-nav">
+                <div class="nav-item" @click="goToPage('home')">
+                    <i class="fa fa-home"></i>
+                    <span>首页</span>
+                </div>
+                <div class="nav-item" @click="showMedicineModal = true">
+                    <i class="fa fa-medkit"></i>
+                    <span>用药</span>
+                </div>
+                <div class="nav-item active">
+                    <i class="fa fa-heartbeat"></i>
+                    <span>健康</span>
+                </div>
+                <div class="nav-item" @click="goToPage('msg')">
+                    <i class="fa fa-commenting-o"></i>
+                    <span>消息</span>
+                    <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                </div>
+                <div class="nav-item" @click="goToPage('profile')">
+                    <i class="fa fa-user"></i>
+                    <span>我的</span>
+                </div>
+            </nav>
+        </div>
+
+        <div v-if="showMedicineModal" class="medicine-modal" @click.self="showMedicineModal = false">
+            <div class="medicine-modal-content">
+                <div class="medicine-modal-header">
+                    <h3><i class="fa fa-medkit"></i> 用药功能</h3>
+                    <button class="medicine-modal-close" @click="showMedicineModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="medicine-options">
+                    <div class="medicine-option" @click="selectMedicineOption('review')">
+                        <div class="medicine-option-icon review">
+                            <i class="fa fa-check-square-o"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药审核</div>
+                            <div class="medicine-option-desc">审核长辈用药草稿</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('monitor')">
+                        <div class="medicine-option-icon monitor">
+                            <i class="fa fa-medkit"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药监控</div>
+                            <div class="medicine-option-desc">查看长辈用药记录</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('box')">
+                        <div class="medicine-option-icon box">
+                            <i class="fa fa-cube"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">智能药盒</div>
+                            <div class="medicine-option-desc">监看长辈服药情况</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentTime: '',
+                    currentDate: '',
+                    elders: [],
+                    selectedElderId: null,
+                    elderInfo: {},
+                    activeTab: 'realtime',
+                    healthCards: [],
+                    aiSummary: '',
+                    healthAdvices: [],
+                    trendAnalysis: '',
+                    isAnalyzing: false,
+                    chart: null,
+                    filters: { bp: true, hr: true, sugar: true, spo2: true, steps: true, sleep: true },
+                    filterNames: { bp: '血压', hr: '心率', sugar: '血糖', spo2: '血氧', steps: '步数', sleep: '睡眠' },
+                    cachedTrendData: null,
+                    showMedicineModal: false,
+                    totalUnread: 0
+                };
+            },
+            mounted() {
+                this.initClock();
+                this.loadElders();
+                this.loadUnreadCount();
+                this.setupMessageCallbacks();
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const elderId = urlParams.get('elderId');
+                if (elderId) {
+                    this.selectedElderId = parseInt(elderId);
+                    this.loadHealthData();
+                }
+
+                window.addEventListener('resize', () => {
+                    if (this.chart) {
+                        this.chart.resize();
+                    }
+                });
+            },
+            methods: {
+                setupMessageCallbacks() {
+                    if (window.YoungMessageCenter) {
+                        YoungMessageCenter.onMessage((msg, contact) => {
+                            if (msg.fromId) {
+                                this.totalUnread++;
+                            }
+                        });
+                    }
+                },
+
+                async loadUnreadCount() {
+                    try {
+                        const res = await axios.get('/api/msg/unread/detail');
+                        if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                            let total = 0;
+                            res.data.data.forEach(item => {
+                                total += item.count || item.unreadCount || item.unread_count || 0;
+                            });
+                            this.totalUnread = total;
+                        }
+                    } catch (e) {
+                        console.error('加载未读消息数失败', e);
+                    }
+                },
+
+                initClock() {
+                    const update = () => {
+                        const d = new Date();
+                        this.currentTime = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                        this.currentDate = (d.getMonth() + 1).toString().padStart(2, '0') + '月' + 
+                                          d.getDate().toString().padStart(2, '0') + '日 ' + 
+                                          ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+                    };
+                    update();
+                    setInterval(update, 1000);
+                },
+
+                async loadElders() {
+                    try {
+                        const res = await axios.get('/api/friend/list/ordered');
+                        if (res.data.code === 200) {
+                            this.elders = res.data.data || [];
+                            if (!this.selectedElderId && this.elders.length > 0) {
+                                this.selectedElderId = this.elders[0].id;
+                                this.loadHealthData();
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载长辈列表失败', e);
+                    }
+                },
+
+                async loadHealthData() {
+                    if (!this.selectedElderId) return;
+
+                    const elder = this.elders.find(e => e.id === this.selectedElderId);
+                    if (elder) {
+                        this.elderInfo = elder;
+                    }
+
+                    await Promise.all([
+                        this.fetchHealthCards(),
+                        this.fetchAISummary()
+                    ]);
+
+                    if (this.activeTab === 'trend') {
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                this.renderChart();
+                            }, 100);
+                        });
+                    }
+                },
+
+                async fetchHealthCards() {
+                    try {
+                        const res = await axios.get(`/api/health/cards?userId=${this.selectedElderId}`);
+                        if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                            this.healthCards = res.data.data;
+                        } else {
+                            this.showDefaultCards();
+                        }
+                    } catch (e) {
+                        console.error('获取健康数据失败', e);
+                        this.showDefaultCards();
+                    }
+                },
+
+                showDefaultCards() {
+                    this.healthCards = [
+                        { id: 1, label: '血压', value: '125/82', unit: 'mmHg', status: '正常', icon: 'fa-heartbeat', color: '#4361EE' },
+                        { id: 2, label: '心率', value: '75', unit: '次/分', status: '正常', icon: 'fa-tachometer', color: '#F72585' },
+                        { id: 3, label: '血糖', value: '7.1', unit: 'mmol/L', status: '稍高', icon: 'fa-tint', color: '#FF9F1C' },
+                        { id: 4, label: '血氧', value: '98', unit: '%', status: '正常', icon: 'fa-leaf', color: '#06D6A0' },
+                        { id: 5, label: '步数', value: '5420', unit: '步', status: '达标', icon: 'fa-blind', color: '#7209B7' },
+                        { id: 6, label: '睡眠', value: '7.5', unit: '小时', status: '正常', icon: 'fa-moon-o', color: '#4895EF' }
+                    ];
+                },
+
+                async fetchAISummary() {
+                    this.isAnalyzing = true;
+                    try {
+                        const [summaryRes, adviceRes, trendRes] = await Promise.all([
+                            axios.get(`/api/health/ai/summary?userId=${this.selectedElderId}`),
+                            axios.get(`/api/health/ai/daily-advices?userId=${this.selectedElderId}`),
+                            axios.get(`/api/health/ai/trend?userId=${this.selectedElderId}&days=7`)
+                        ]);
+
+                        if (summaryRes.data.code === 200) {
+                            this.aiSummary = summaryRes.data.data;
+                        }
+
+                        if (adviceRes.data.code === 200 && adviceRes.data.data) {
+                            this.healthAdvices = adviceRes.data.data;
+                        } else {
+                            this.healthAdvices = ['各项指标正常，继续保持健康的生活方式'];
+                        }
+
+                        if (trendRes.data.code === 200) {
+                            this.trendAnalysis = trendRes.data.data;
+                        } else {
+                            this.trendAnalysis = '近期健康指标保持稳定，各项数据都在正常范围内波动。';
+                        }
+                    } catch (e) {
+                        console.error('获取AI摘要失败', e);
+                        this.aiSummary = '您的各项身体指标非常平稳。血压125/82mmHg处于健康范围，心率75次/分钟正常。';
+                        this.healthAdvices = ['各项指标正常，继续保持健康的生活方式'];
+                        this.trendAnalysis = '近期健康指标保持稳定，各项数据都在正常范围内波动。';
+                    } finally {
+                        this.isAnalyzing = false;
+                    }
+                },
+
+                generateDefaultAdvices() {
+                    this.healthAdvices = ['各项指标正常，继续保持健康的生活方式'];
+                },
+
+                getStatusClass(status) {
+                    const map = {
+                        '正常': 'status-normal',
+                        '达标': 'status-normal',
+                        '优': 'status-normal',
+                        '稍高': 'status-warning',
+                        '偏低': 'status-warning',
+                        '警告': 'status-danger'
+                    };
+                    return map[status] || 'status-normal';
+                },
+
+                switchToTrend() {
+                    this.activeTab = 'trend';
+                    this.$nextTick(() => {
+                        setTimeout(this.renderChart, 300);
+                    });
+                },
+
+                toggleFilter(key) {
+                    this.filters[key] = !this.filters[key];
+                    if (this.cachedTrendData) {
+                        this.renderTrendCharts(this.cachedTrendData);
+                    } else {
+                        this.renderChart();
+                    }
+                },
+
+                async renderChart() {
+                    const container = document.getElementById('trendChart');
+                    if (!container || typeof echarts === 'undefined') return;
+
+                    if (!this.chart) {
+                        this.chart = echarts.init(container);
+                    } else {
+                        this.chart.dispose();
+                        this.chart = echarts.init(container);
+                    }
+
+                    try {
+                        const res = await axios.get(`/api/health/trend?userId=${this.selectedElderId}&days=7&t=${Date.now()}`);
+                        if (res.data.code === 200 && res.data.data) {
+                            this.cachedTrendData = res.data.data;
+                            this.renderTrendCharts(this.cachedTrendData);
+                        }
+                    } catch (e) {
+                        console.error('获取趋势数据失败', e);
+                    }
+                },
+
+                renderTrendCharts(trendData) {
+                    if (!trendData || !this.chart) return;
+
+                    const dates = trendData.dates || [];
+                    const bloodPressure = trendData.bloodPressure || [];
+                    const heartRate = trendData.heartRate || [];
+                    const bloodOxygen = trendData.bloodOxygen || [];
+                    const bloodGlucose = trendData.bloodGlucose || [];
+                    const steps = trendData.steps || [];
+                    const sleepHours = trendData.sleepHours || [];
+
+                    const series = [];
+                    const colorMap = {
+                        hr: '#F72585',
+                        bp_systolic: '#4361EE',
+                        bp_diastolic: '#3A0CA3',
+                        spo2: '#06D6A0',
+                        sugar: '#FF9F1C',
+                        steps: '#7209B7',
+                        sleep: '#4895EF'
+                    };
+
+                    if (this.filters.bp) {
+                        series.push({
+                            name: '血压(收缩压)',
+                            type: 'line',
+                            smooth: true,
+                            data: bloodPressure,
+                            lineStyle: { width: 2, color: colorMap.bp_systolic },
+                            itemStyle: { color: colorMap.bp_systolic },
+                            showSymbol: false
+                        });
+                    }
+
+                    if (this.filters.hr) {
+                        series.push({
+                            name: '心率',
+                            type: 'line',
+                            smooth: true,
+                            data: heartRate,
+                            lineStyle: { width: 2, color: colorMap.hr },
+                            itemStyle: { color: colorMap.hr },
+                            showSymbol: false
+                        });
+                    }
+
+                    if (this.filters.spo2) {
+                        series.push({
+                            name: '血氧',
+                            type: 'line',
+                            data: bloodOxygen,
+                            lineStyle: { width: 2, color: colorMap.spo2 },
+                            itemStyle: { color: colorMap.spo2 },
+                            showSymbol: false
+                        });
+                    }
+
+                    if (this.filters.sugar) {
+                        series.push({
+                            name: '血糖',
+                            type: 'line',
+                            smooth: true,
+                            data: bloodGlucose,
+                            lineStyle: { width: 2, color: colorMap.sugar },
+                            itemStyle: { color: colorMap.sugar },
+                            showSymbol: false
+                        });
+                    }
+
+                    if (this.filters.steps) {
+                        series.push({
+                            name: '步数',
+                            type: 'line',
+                            smooth: true,
+                            data: steps,
+                            lineStyle: { width: 2, color: colorMap.steps },
+                            itemStyle: { color: colorMap.steps },
+                            showSymbol: false
+                        });
+                    }
+
+                    if (this.filters.sleep) {
+                        series.push({
+                            name: '睡眠',
+                            type: 'line',
+                            smooth: true,
+                            data: sleepHours,
+                            lineStyle: { width: 2, color: colorMap.sleep },
+                            itemStyle: { color: colorMap.sleep },
+                            showSymbol: false
+                        });
+                    }
+
+                    const chartOption = {
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            borderColor: '#E2E8F0',
+                            textStyle: { color: '#1E293B', fontSize: 12 }
+                        },
+                        grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '3%',
+                            top: '10%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: dates,
+                            axisLine: { lineStyle: { color: '#CBD5E1' } },
+                            axisLabel: { color: '#64748B', fontSize: 11 }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLine: { lineStyle: { color: '#CBD5E1' } },
+                            axisLabel: { color: '#64748B', fontSize: 11 },
+                            splitLine: { lineStyle: { color: '#F1F5F9' } }
+                        },
+                        series: series
+                    };
+
+                    this.chart.setOption(chartOption, true);
+                    this.chart.resize();
+                },
+
+                goBack() {
+                    window.history.back();
+                },
+
+                goToPage(page) {
+                    const pages = {
+                        'home': 'young_index.html',
+                        'msg': 'young_msg.html',
+                        'profile': 'young_settings.html'
+                    };
+                    if (pages[page]) {
+                        window.location.href = pages[page];
+                    }
+                },
+
+                selectMedicineOption(option) {
+                    this.showMedicineModal = false;
+                    if (option === 'review') {
+                        window.location.href = 'young_draft_review.html';
+                    } else if (option === 'monitor') {
+                        if (this.elders.length >= 1) {
+                            window.location.href = `young_medicine.html?elderId=${this.elders[0].id}`;
+                        } else {
+                            window.location.href = 'young_medicine.html';
+                        }
+                    } else if (option === 'box') {
+                        window.location.href = 'young_medicine_box.html';
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+
+

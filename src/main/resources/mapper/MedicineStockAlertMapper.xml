@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.MedicineStockAlertMapper">
+    <resultMap id="MedicineStockAlertResultMap" type="com.chat.older.xiechen.model.MedicineStockAlert">
+        <id property="id" column="id"/>
+        <result property="userMedicineId" column="user_medicine_id"/>
+        <result property="alertType" column="alert_type"/>
+        <result property="alertLevel" column="alert_level"/>
+        <result property="message" column="message"/>
+        <result property="daysRemaining" column="days_remaining"/>
+        <result property="isRead" column="is_read"/>
+        <result property="isResolved" column="is_resolved"/>
+        <result property="createTime" column="create_time"/>
+        <result property="medicineName" column="medicine_name"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.MedicineStockAlert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO medicine_stock_alert (user_medicine_id, alert_type, alert_level, message, days_remaining, is_read, is_resolved, create_time)
+        VALUES (#{userMedicineId}, #{alertType}, #{alertLevel}, #{message}, #{daysRemaining}, 0, 0, NOW())
+    </insert>
+
+    <update id="update" parameterType="com.chat.older.xiechen.model.MedicineStockAlert">
+        UPDATE medicine_stock_alert SET
+            alert_level = #{alertLevel},
+            message = #{message},
+            days_remaining = #{daysRemaining},
+            is_read = #{isRead},
+            is_resolved = #{isResolved}
+        WHERE id = #{id}
+    </update>
+
+    <update id="markAsRead">
+        UPDATE medicine_stock_alert SET is_read = 1 WHERE id = #{id}
+    </update>
+
+    <update id="markAsResolved">
+        UPDATE medicine_stock_alert SET is_resolved = 1 WHERE id = #{id}
+    </update>
+
+    <select id="selectUnreadByUserId" resultMap="MedicineStockAlertResultMap">
+        SELECT a.*, COALESCE(um.custom_name, mi.name) as medicine_name
+        FROM medicine_stock_alert a
+        LEFT JOIN user_medicines um ON a.user_medicine_id = um.id
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.user_id = #{userId} AND a.is_read = 0 AND a.is_resolved = 0
+        ORDER BY a.alert_level DESC, a.create_time DESC
+    </select>
+
+    <select id="selectByUserMedicineId" resultMap="MedicineStockAlertResultMap">
+        SELECT a.*, COALESCE(um.custom_name, mi.name) as medicine_name
+        FROM medicine_stock_alert a
+        LEFT JOIN user_medicines um ON a.user_medicine_id = um.id
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE a.user_medicine_id = #{userMedicineId}
+        ORDER BY a.create_time DESC
+    </select>
+
+    <delete id="deleteByUserMedicineId">
+        DELETE FROM medicine_stock_alert WHERE user_medicine_id = #{userMedicineId}
+    </delete>
+</mapper>

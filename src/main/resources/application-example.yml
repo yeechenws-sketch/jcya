@@ -1,0 +1,86 @@
+# =============================================================
+# 解尘颐安 · 配置模板（不含任何真实密钥，可安全提交到 GitHub）
+# 使用方式：
+#   1. 复制本文件为同目录下的 application.yml
+#   2. 按注释把 xxx 替换成你自己的密钥 / 地址
+#   3. 切勿把填好密钥的 application.yml 提交到公开仓库
+# =============================================================
+spring:
+  main:
+    allow-circular-references: true
+
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/chat?serverTimezone=Asia/Shanghai&characterEncoding=utf-8
+      username: 你的数据库用户名
+      password: 你的数据库密码
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath:mapper/*.xml
+
+server:
+  port: 7410
+  error:
+    path: /error
+    whitelabel:
+      enabled: false
+
+# 七牛云对象存储（可选；storage.use-local=true 时可不配置）
+qiniu:
+  ak: 你的七牛 AccessKey
+  sk: 你的七牛 SecretKey
+  bucket: 你的空间名
+  domain: 你的外链域名（结尾带 /）
+
+# 百度语音合成 TTS（可选，语音播报新闻 / AI 语音回复需要）
+baidu:
+  tts:
+    appId: "你的 AppID"
+    apiKey: "你的 API Key"
+    secretKey: "你的 Secret Key"
+    cuid: "older_chat_client"
+
+# 大模型（AI 助手 / 健康分析 / 药品 OCR），兼容 OpenAI 接口
+ai-settings:
+  api-key: 你的大模型 API Key
+  base-url: https://api.siliconflow.cn/v1/
+  ocr-model: Qwen/Qwen3-VL-32B-Instruct
+  chat-model: Qwen/Qwen2.5-14B-Instruct
+
+# 豆包（火山方舟），新闻搜索增强，可选
+doubao:
+  api-key: 你的火山方舟 API Key
+  base-url: https://ark.cn-beijing.volces.com/api/v3
+  search-model: doubao-seed-1-6-251015
+
+# MQTT：智能药盒等 IoT 设备接入，可设为 false 禁用
+mqtt:
+  enabled: false
+  server:
+    uri: tcp://你的MQTT地址:1883
+  client:
+    id: medicine-server
+    username:
+    password:
+
+# LiveKit：视频通话，可选
+livekit:
+  api-key: devkey
+  api-secret: 你的 LiveKit Secret
+  host: http://127.0.0.1:7880
+  ws-url: ws://127.0.0.1:7880
+
+# 文件存储：true = 存本地 ./uploads，false = 存七牛云
+storage:
+  use-local: true
+  local:
+    path: ./uploads
+    baseUrl: http://localhost:7410/uploads

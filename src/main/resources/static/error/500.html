@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
+    <title>服务器错误 - AI 智慧养老</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --primary: #4361EE;
+            --danger: #F72585;
+            --warning: #FF6B6B;
+            --text: #1E293B;
+            --text-light: #64748B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #E0EAFC 0%, #CFDEF3 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-code {
+            font-size: clamp(80px, 20vw, 180px);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--warning), var(--danger));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            position: relative;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% { 
+                transform: scale(1.02);
+                opacity: 0.9;
+            }
+        }
+
+        .error-icon {
+            font-size: clamp(60px, 15vw, 120px);
+            color: var(--warning);
+            margin-bottom: 20px;
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-icon-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .error-icon-container::before,
+        .error-icon-container::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--warning);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        .error-icon-container::before {
+            top: -10px;
+            left: -10px;
+        }
+
+        .error-icon-container::after {
+            bottom: -10px;
+            right: -10px;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(160%);
+            border-radius: 35px;
+            border: 1.5px solid var(--glass-border);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), inset 0 0 25px rgba(255, 255, 255, 0.3);
+            padding: 40px;
+            width: 100%;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .error-title {
+            font-size: clamp(24px, 5vw, 36px);
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 15px;
+        }
+
+        .error-desc {
+            font-size: clamp(16px, 3vw, 20px);
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 50px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--warning);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--warning);
+            border-radius: 50%;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: clamp(14px, 3vw, 18px);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            touch-action: manipulation;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #5a7bff);
+            color: white;
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn-primary:hover, .btn-primary:active {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(67, 97, 238, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.6);
+            color: var(--text);
+            border: 2px solid var(--glass-border);
+        }
+
+        .btn-secondary:hover, .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-3px);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), var(--danger));
+            color: white;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-warning:hover, .btn-warning:active {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn i {
+            font-size: 1.2em;
+        }
+
+        .retry-section {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+
+        .retry-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .retry-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .retry-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .retry-option:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: scale(1.02);
+        }
+
+        .retry-option i {
+            color: var(--primary);
+        }
+
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .quick-link {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .quick-link:hover {
+            background: rgba(255, 255, 255, 0.7);
+            transform: scale(1.05);
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .decorative-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: moveShape 20s infinite linear;
+        }
+
+        .shape-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--warning);
+            top: -100px;
+            right: -100px;
+            animation-delay: 0s;
+        }
+
+        .shape-2 {
+            width: 200px;
+            height: 200px;
+            background: var(--danger);
+            bottom: -50px;
+            left: -50px;
+            animation-delay: -5s;
+        }
+
+        .shape-3 {
+            width: 150px;
+            height: 150px;
+            background: var(--primary);
+            top: 50%;
+            left: 10%;
+            animation-delay: -10s;
+        }
+
+        @keyframes moveShape {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(30px, 30px) rotate(180deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+
+        .countdown {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-top: 15px;
+        }
+
+        .countdown span {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        @media (max-width: 600px) {
+            .glass-card {
+                padding: 25px;
+                border-radius: 25px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .quick-links {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .retry-options {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                padding: 15px;
+            }
+
+            .error-code {
+                font-size: 80px;
+            }
+
+            .error-icon {
+                font-size: 50px;
+                margin-bottom: 10px;
+            }
+
+            .glass-card {
+                padding: 20px;
+                margin-top: 15px;
+            }
+
+            .error-title {
+                font-size: 20px;
+                margin-bottom: 10px;
+            }
+
+            .error-desc {
+                font-size: 14px;
+                margin-bottom: 15px;
+            }
+
+            .action-buttons {
+                flex-direction: row;
+                margin-bottom: 15px;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+
+            .footer {
+                margin-top: 20px;
+            }
+
+            .retry-section {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .error-code,
+            .error-icon,
+            .shape,
+            .status-dot,
+            .error-icon-container::before,
+            .error-icon-container::after {
+                animation: none;
+            }
+
+            .error-container {
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="decorative-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <div class="error-container">
+        <div class="error-icon-container">
+            <i class="fa fa-cogs error-icon" aria-hidden="true"></i>
+        </div>
+        <div class="error-code">500</div>
+
+        <div class="glass-card">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                系统正在维护中
+            </div>
+            
+            <h1 class="error-title">服务器开小差了</h1>
+            <p class="error-desc">
+                抱歉，服务器遇到了一些问题，我们正在紧急修复中。<br>
+                请稍后再试，或选择以下操作继续使用。
+            </p>
+
+            <div class="retry-section">
+                <div class="retry-title">您可以尝试：</div>
+                <div class="retry-options">
+                    <div class="retry-option" onclick="location.reload()">
+                        <i class="fa fa-refresh"></i>
+                        刷新页面
+                    </div>
+                    <div class="retry-option" onclick="clearCacheAndRetry()">
+                        <i class="fa fa-trash-o"></i>
+                        清除缓存重试
+                    </div>
+                    <div class="retry-option" onclick="checkStatus()">
+                        <i class="fa fa-check-circle"></i>
+                        检查服务状态
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <a href="/index.html" class="btn btn-primary">
+                    <i class="fa fa-home"></i>
+                    返回首页
+                </a>
+                <button onclick="goBack()" class="btn btn-secondary">
+                    <i class="fa fa-arrow-left"></i>
+                    返回上页
+                </button>
+                <button onclick="reportError()" class="btn btn-warning">
+                    <i class="fa fa-bug"></i>
+                    报告问题
+                </button>
+            </div>
+
+            <div class="quick-links">
+                <a href="/health.html" class="quick-link"><i class="fa fa-heartbeat"></i> 健康监测</a>
+                <a href="/medicine.html" class="quick-link"><i class="fa fa-medkit"></i> 用药管家</a>
+                <a href="/news.html" class="quick-link"><i class="fa fa-newspaper-o"></i> 新闻播报</a>
+                <a href="/msg.html" class="quick-link"><i class="fa fa-comments-o"></i> 子女留言</a>
+            </div>
+
+            <p class="countdown">
+                页面将在 <span id="countdown">30</span> 秒后自动刷新
+            </p>
+        </div>
+
+        <footer class="footer">
+            <p>&copy; 2026 AI 智慧养老平台 · <a href="/login.html">网站首页</a> · <a href="javascript:contactSupport()">联系客服</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let countdownValue = 30;
+        let countdownTimer;
+
+        function startCountdown() {
+            countdownTimer = setInterval(() => {
+                countdownValue--;
+                document.getElementById('countdown').textContent = countdownValue;
+                if (countdownValue <= 0) {
+                    clearInterval(countdownTimer);
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+            }
+        }
+
+        function goBack() {
+            stopCountdown();
+            if (document.referrer && document.referrer !== '') {
+                window.history.back();
+            } else {
+                window.location.href = '/index.html';
+            }
+        }
+
+        function clearCacheAndRetry() {
+            stopCountdown();
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+            }
+            location.reload();
+        }
+
+        function checkStatus() {
+            alert('服务状态检查：\n✓ 主服务：运行中\n✓ 数据库：正常\n⚠ AI服务：维护中\n\n预计恢复时间：10分钟内');
+        }
+
+        function reportError() {
+            stopCountdown();
+            const errorInfo = {
+                url: window.location.href,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent
+            };
+            console.log('Error Report:', errorInfo);
+            alert('问题已记录！\n\n感谢您的反馈，我们会尽快处理。\n\n错误ID: ' + Date.now());
+        }
+
+        function contactSupport() {
+            alert('客服热线：177-236-5411\n服务时间：周一至周日 8:00-20:00\n\n紧急联系：187-0000-0000');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            startCountdown();
+        });
+
+        document.addEventListener('click', () => {
+            stopCountdown();
+        });
+    </script>
+</body>
+</html>

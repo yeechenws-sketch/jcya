@@ -1,0 +1,4336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>解尘颐安养老平台</title>
+  <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+        <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="lib/js/recorder.mp3.min.js"></script>
+  <script src="lib/js/wav.js"></script>
+  <script src="lib/js/axios.min.js"></script>
+  <script src="lib/js/socket.io.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="/js/global-mqtt-manager.js"></script>
+  <script src="/js/global-message-center.js"></script>
+  <script src="/js/user-settings-manager.js"></script>
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.45);
+      --glass-border: rgba(255, 255, 255, 0.7);
+      --primary: #4361EE;
+      --danger: #F72585;
+      --text: #1E293B;
+    }
+
+    body {
+      margin: 0; padding: 0;
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: radial-gradient(circle at 10% 20%, #E0EAFC 0%, #CFDEF3 100%);
+      height: 100vh; width: 100vw; overflow: hidden;
+    }
+
+    #page-zoom-wrapper {
+      width: 133.333%; height: 133.333%;
+      transform: scale(0.75); transform-origin: top left;
+      display: flex; flex-direction: column; box-sizing: border-box;
+    }
+
+    .header { padding: var(--header-padding); display: flex; justify-content: space-between; align-items: flex-end; }
+    .header h1 { font-size: var(--header-h1-size); margin: 0; font-weight: 800; color: #1e3a8a; }
+    .header p { font-size: var(--header-p-size); color: #64748B; margin: 5px 0 0; }
+    #current-time { font-size: var(--time-size); font-weight: 800; color: var(--primary); line-height: 1; }
+    #current-date { font-size: var(--date-size); color: #64748B; margin-top: 5px; font-weight: 600; }
+
+    .container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 3fr;
+      gap: 30px;
+      padding: 0 60px 140px;
+    }
+
+    .sidebar { display: flex; flex-direction: column; gap: 25px; }
+    .sidebar .glass-card { flex: 1; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(25px) saturate(160%);
+      border-radius: 35px;
+      border: 1.5px solid var(--glass-border);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.05), inset 0 0 25px rgba(255,255,255,0.3);
+      padding: var(--card-padding);
+      position: relative;
+      overflow: hidden;
+      transition: all 140ms cubic-bezier(.2,.8,.2,1);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      user-select: none;
+    }
+
+    .pressable { touch-action: manipulation; cursor: pointer; outline: none; }
+    .pressed { transform: translateY(2px) scale(0.96); opacity: 0.9; }
+
+    .temp-row { display: flex; align-items: center; justify-content: center; gap: 15px; width: 80%; margin: 15px 0; }
+    .temp-row .temp { font-size: var(--temp-size); font-weight: 800; }
+    .temp-row #w-icon { width: var(--weather-icon-size); height: var(--weather-icon-size); object-fit: contain; }
+    .weather-tip { font-size: var(--weather-tip-size); line-height: 1.5; background: rgba(255,255,255,0.18); padding: 15px; border-radius: 20px; width: 90%; }
+
+    /* AI 交互核心样式（保留第二个界面的样式） */
+    .ai-card {
+      justify-content: flex-start !important;
+      align-items: flex-start !important;
+      padding: 25px;
+    }
+
+    #ai-status {
+      text-align: left;
+      width: 100%;
+      font-size: var(--ai-status-size);
+      font-weight: 600;
+      color: var(--text);
+      line-height:  1.4;
+      transition: opacity 0.8s ease;
+      min-height: 120px;
+    }
+
+    .mic-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+
+    .mic-icon {
+      width: var(--mic-icon-size); height: var(--mic-icon-size);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4361EE 0%, #6366f1 50%, #a5b4fc 100%);
+      box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+    }
+
+    .mic-icon.minimized {
+      transform: scale(0.5) translateY(40px);
+      opacity: 0.7;
+    }
+
+    .mic-icon.recording {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .mic-icon i { font-size: var(--mic-icon-inner-size); color: white; }
+
+    .feature-card i.fa-main { font-size: var(--feature-icon-size); color: var(--primary); }
+    .feature-card .icon-img { width: var(--feature-icon-size); height: var(--feature-icon-size); object-fit: contain; }
+    .feature-card .title { font-size: var(--feature-title-size); font-weight: bold; }
+    .feature-card .desc { font-size: var(--feature-desc-size); color: #64748B; font-weight: 600; }
+  
+      .badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: var(--danger);
+        color: white;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 18px;
+        font-weight: bold;
+        white-space: nowrap;
+        height: 32px;
+        display: flex;
+        align-items: center;
+      }
+
+      .badge.taken {
+        background: #06D6A0 !important;
+      }
+
+      .badge.pending {
+        background: #FF6B6B !important;
+      }
+
+      .stock-carousel {
+        position: absolute;
+        top: 20px;
+        right: 160px;
+        background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+        color: white;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        animation: fadeInOut 3s ease-in-out infinite;
+        white-space: nowrap;
+        overflow: hidden;
+        max-width: 130px;
+        height: 32px;
+      }
+
+    .stock-carousel i {
+      font-size: 14px;
+    }
+
+    .stock-carousel-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .stock-carousel.fade-enter {
+      animation: slideIn 0.5s ease-out forwards;
+    }
+
+    .stock-carousel.fade-leave {
+      animation: slideOut 0.5s ease-in forwards;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(-20px); }
+    }
+
+    /* 紧急呼叫动画 */
+    @keyframes emergencyPulse {
+      0%, 100% { background-color: rgba(247, 37, 133, 0.85); }
+      50% { background-color: rgba(247, 37, 133, 0.6); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    @keyframes emergency-bg-pulse {
+      0%, 100% { background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.9) 100%); }
+      50% { background: linear-gradient(135deg, rgba(220, 38, 38, 0.9) 0%, rgba(239, 68, 68, 0.85) 100%); }
+    }
+
+    @keyframes emergency-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes emergency-shake {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      25% { transform: translateX(-8px) rotate(-3deg); }
+      75% { transform: translateX(8px) rotate(3deg); }
+    }
+
+    @keyframes emergency-ring {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    @keyframes emergency-btn-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 12px 30px rgba(239, 68, 68, 0.5); }
+      50% { transform: scale(1.05); box-shadow: 0 16px 40px rgba(239, 68, 68, 0.7); }
+    }
+
+    .bottom-nav {
+      position: fixed; bottom: 35px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
+      padding: 15px 70px; border-radius: 100px; display: flex; gap: 70px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid white; z-index: 1000;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 5px; color: #475569; }
+    .nav-item i { font-size: var(--nav-icon-size); }
+    .nav-item .nav-icon-img { width: var(--nav-icon-size); height: var(--nav-icon-size); object-fit: contain; }
+    .nav-item span { font-size: var(--nav-text-size); font-weight: 700; }
+
+    .toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #1E293B; color: white; padding: 22px 60px; border-radius: 100px; font-size: 26px; transition: 0.5s; z-index: 2000; }
+
+    /* 显示大小相关样式变量 */
+    :root {
+      --display-scale: 1;
+      --header-padding: 40px 60px 20px;
+      --header-h1-size: 40px;
+      --header-p-size: 22px;
+      --time-size: 52px;
+      --date-size: 20px;
+      --card-padding: 30px;
+      --feature-icon-size: 75px;
+      --feature-title-size: 34px;
+      --feature-desc-size: 21px;
+      --nav-icon-size: 34px;
+      --nav-text-size: 20px;
+      --temp-size: 65px;
+      --weather-tip-size: 19px;
+      --weather-icon-size: 110px;
+      --ai-status-size: 22px;
+      --mic-icon-size: 110px;
+      --mic-icon-inner-size: 50px;
+    }
+
+    /* 设置控制面板样式 */
+    .settings-panel {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 25px 40px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      z-index: 2147483647;
+      display: none;
+      min-width: 500px;
+    }
+    .settings-panel.show { display: block; animation: slideUp 0.3s ease; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .settings-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1E293B;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    .setting-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 15px 20px;
+      background: #f8fafc;
+      border-radius: 20px;
+    }
+    .setting-item:last-child { margin-bottom: 0; }
+    .setting-label {
+      font-size: 26px;
+      font-weight: 600;
+      color: #334155;
+      min-width: 140px;
+    }
+    .setting-control {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .setting-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 12px;
+      border-radius: 10px;
+      background: #e2e8f0;
+      outline: none;
+    }
+    .setting-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #7209B7);
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(67, 97, 238, 0.4);
+    }
+    .setting-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 60px;
+      text-align: right;
+    }
+    .voice-switch {
+      position: relative;
+      width: 100px;
+      height: 50px;
+      background: #e2e8f0;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .voice-switch.active {
+      background: linear-gradient(135deg, var(--primary), #7209B7);
+    }
+    .voice-switch::after {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      width: 40px;
+      height: 40px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .voice-switch.active::after {
+      transform: translateX(50px);
+    }
+    .voice-switch-label {
+      font-size: 20px;
+      color: #64748B;
+      margin-left: 15px;
+    }
+    .close-settings {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 30px;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+
+    /* 语音设置面板样式 */
+    .voice-settings-panel {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 25px 40px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      z-index: 2147483647;
+      display: none;
+      min-width: 500px;
+    }
+    .voice-settings-panel.show { display: block; animation: slideUp 0.3s ease; }
+
+    /* 小屏幕适配（保留原样式） */
+    @media (max-width: 900px) {
+      #page-zoom-wrapper { transform: scale(0.68); }
+      .header h1 { font-size: 28px; }
+      .feature-card .title { font-size: 20px; }
+      .feature-card .desc { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="page-zoom-wrapper">
+  <header class="header">
+    <div class="welcome-box">
+      <h1 id="user-display-name">您好，访客</h1>
+      <p>解尘颐安智护：一键呼叫守平安，用药监测更安心</p>
+    </div>
+    <div class="time-box">
+      <div id="current-time">00:00</div>
+      <div id="current-date">加载中...</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <aside class="sidebar">
+      <div class="glass-card pressable" onclick="speakWeather()" role="button" tabindex="0">
+        <div id="w-city" style="font-size: 24px; font-weight: bold;">正在定位...</div>
+        <div class="temp-row">
+          <img id="w-icon" src="/images/icons/weather-sun.png" alt="天气">
+          <span id="w-temp" class="temp">--°C</span>
+        </div>
+        <div id="w-tip" class="weather-tip">
+          <i class="fa fa-info-circle"></i> <b>天气贴士：</b><br>正在加载...
+        </div>
+      </div>
+
+      <!-- 保留第二个界面的AI卡片结构 -->
+      <div class="glass-card ai-card" id="ai-panel">
+        <div id="ai-status">
+          <img src="/images/icons/icon-ai.png" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 8px;"> 我是您的生活助手<br>
+          <small style="font-weight: normal; font-size: 18px; color: #64748B;">长按下方话筒说话</small>
+        </div>
+
+        <div class="mic-container">
+          <div class="mic-icon pressable" id="main-mic" role="button" aria-label="语音输入">
+            <img src="/images/icons/icon-ai-1.png" style="width: 70%; height: 70%; object-fit: contain;" alt="语音输入">
+          </div>
+        </div>
+
+        <a href="chat_detail.html" style="text-decoration:none; color: var(--primary); font-weight: bold; font-size: 18px; align-self: center;" class="pressable" tabindex="0">更多对话 ></a>
+      </div>
+    </aside>
+
+    <section class="feature-grid">
+      <div class="glass-card feature-card pressable" onclick="triggerEmergencyCall()" role="button" tabindex="0" id="emergency-call-card">
+        <img src="/images/icons/icon-emergency.png" class="icon-img" alt="紧急呼叫">
+        <span class="title">紧急呼叫</span>
+        <span class="desc">一键直连子女和社区</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('用药管家', '打开药盒', 'medicine.html')" role="button" tabindex="0" id="medicine-card">
+        <div class="stock-carousel" id="stock-carousel" style="display:none;">
+          <i class="fa fa-exclamation-triangle"></i>
+          <span id="stock-carousel-text"></span>
+        </div>
+        <div class="badge" id="medicine-badge" style="display:none;">吃药</div>
+        <img src="/images/icons/icon-medicine.png" class="icon-img" alt="用药管家">
+        <span class="title">用药管家</span>
+        <span class="desc" id="medicine-desc">加载中...</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('健康监测', '查看健康报告', 'health.html')" role="button" tabindex="0">
+        <img src="/images/icons/icon-health.png" class="icon-img" alt="健康监测">
+        <span class="title">健康监测</span>
+        <span class="desc">查看今日的健康状态</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('老年学堂', '去上课', 'school.html')" role="button" tabindex="0">
+        <img src="/images/icons/fa-graduation-cap.png" class="icon-img" alt="老年学堂">
+        <span class="title">老年学堂</span>
+        <span class="desc">挥毫泼墨 悦享时光</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('新闻播报', '听新闻', 'news.html')" role="button" tabindex="0" id="news-card">
+        <div class="badge" id="news-badge" style="display:none; background: #4CC9F0;">0条新</div>
+        <img src="/images/icons/icon-news.png" class="icon-img" alt="新闻播报">
+        <span class="title">新闻播报</span>
+        <span class="desc" id="news-desc">为您精选今日要闻</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('子女留言', '查看信息', 'msg.html')" role="button" tabindex="0" id="msg-card">
+        <div class="badge" id="msg-badge" style="display:none; background: var(--primary);">0条新</div>
+        <img src="/images/icons/icon-social.png" class="icon-img" alt="子女留言">
+        <span class="title">子女留言</span>
+        <span class="desc" id="msg-desc">暂无信息</span>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active pressable" onclick="location.reload()" role="button" tabindex="0"><img src="/images/icons/fa-home.png" class="nav-icon-img" alt="首页"><span>首页</span></div>
+    <div class="nav-item pressable" onclick="toggleVoiceSettingsPanel()" role="button" tabindex="0"><img src="/images/icons/fa-volume-up.png" class="nav-icon-img" alt="语音设置" id="mute-icon-img"><span id="mute-text">语音设置</span></div>
+    <div class="nav-item pressable" onclick="toggleSettingsPanel()" role="button" tabindex="0"><img src="/images/icons/fa-sliders.png" class="nav-icon-img" alt="显示大小"><span>显示大小</span></div>
+    <div class="nav-item pressable" onclick="handleNav('系统设置', '进入设置', 'set.html')" role="button" tabindex="0"><img src="/images/icons/icon-system.png" class="nav-icon-img" alt="设置"><span>设置</span></div>
+  </nav>
+  
+  <!-- 紧急呼叫确认弹窗 (放在缩放容器内部) -->
+  <div id="emergency-confirm-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.9) 100%); z-index:2147483647; justify-content:center; align-items:center; animation: emergency-bg-pulse 2s infinite;">
+    <div style="position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden;">
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.08) 30deg, transparent 60deg); animation: emergency-spin 4s linear infinite;"></div>
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.05) 30deg, transparent 60deg); animation: emergency-spin 6s linear infinite reverse;"></div>
+    </div>
+    <div style="background:linear-gradient(145deg, #ffffff 0%, #fef2f2 100%); border-radius:60px; padding:70px 60px; max-width:850px; width:90%; text-align:center; box-shadow:0 40px 100px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,255,255,0.8); position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color:white; padding:15px 40px; border-bottom-left-radius:40px; font-size:24px; font-weight:900; box-shadow:0 8px 30px rgba(239,68,68,0.5);">🚨 紧急</div>
+      <div style="width:200px; height:200px; border-radius:50%; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); margin:20px auto 40px; display:flex; align-items:center; justify-content:center; animation: emergency-shake 0.6s ease-in-out infinite; box-shadow:0 0 60px rgba(239,68,68,0.8), 0 0 100px rgba(239,68,68,0.4);">
+        <i class="fa fa-phone" style="font-size:100px; color:white; animation: emergency-ring 1.2s ease-in-out infinite;"></i>
+      </div>
+      <h2 style="font-size:56px; color:#DC2626; margin-bottom:20px; font-weight:900; text-shadow:0 4px 20px rgba(220,38,38,0.3);">紧急呼叫</h2>
+      <div style="display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); color:#92400E; padding:12px 28px; border-radius:30px; font-size:22px; font-weight:700; margin-bottom:30px; border:2px solid #F59E0B; box-shadow:0 4px 15px rgba(245,158,11,0.3);">
+        <i class="fa fa-hand-pointer-o"></i>
+        手动呼叫
+      </div>
+      <p style="font-size:38px; color:#1E293B; margin-bottom:35px; line-height:1.7; font-weight:700;">即将向紧急联系人发起视频呼叫</p>
+      <div style="background:linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%); border:3px solid #EF4444; border-radius:30px; padding:30px; margin-bottom:40px; box-shadow:0 8px 30px rgba(239,68,68,0.2);">
+        <p style="font-size:28px; color:#991B1B; margin:0 0 15px 0; font-weight:800;">⏱ 自动倒计时</p>
+        <p style="font-size:100px; color:#DC2626; margin:0; font-weight:900; text-shadow:0 4px 20px rgba(220,38,38,0.4);" id="emergency-countdown">10</p>
+        <p style="font-size:22px; color:#B91C1C; margin:15px 0 0 0; font-weight:600;">秒后自动发起呼叫</p>
+      </div>
+      <div style="display:flex; gap:35px; justify-content:center;">
+        <button onclick="cancelEmergencyCall()" style="padding:30px 70px; font-size:34px; border-radius:35px; border:none; background:linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%); color:#475569; font-weight:900; cursor:pointer; box-shadow:0 12px 30px rgba(0,0,0,0.2); transition:all 0.3s; position:relative; overflow:hidden;">
+          <i class="fa fa-times" style="margin-right:12px;"></i>
+          取消呼叫
+        </button>
+        <button onclick="confirmEmergencyCall()" style="padding:30px 70px; font-size:34px; border-radius:35px; border:none; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color:white; font-weight:900; cursor:pointer; box-shadow:0 12px 30px rgba(239,68,68,0.5); transition:all 0.3s; animation: emergency-btn-pulse 1.5s ease-in-out infinite; position:relative; overflow:hidden;">
+          <i class="fa fa-phone" style="margin-right:12px;"></i>
+          立即呼叫
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 紧急呼叫进行中界面 (放在缩放容器内部) -->
+  <div id="emergency-in-progress-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.9) 100%); z-index:2147483647; justify-content:center; align-items:center; animation: emergency-bg-pulse 2s infinite;">
+    <div style="position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden;">
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.08) 30deg, transparent 60deg); animation: emergency-spin 4s linear infinite;"></div>
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.05) 30deg, transparent 60deg); animation: emergency-spin 6s linear infinite reverse;"></div>
+    </div>
+    <div style="background:linear-gradient(145deg, #ffffff 0%, #fef2f2 100%); border-radius:60px; padding:70px 60px; max-width:850px; width:90%; text-align:center; box-shadow:0 40px 100px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,255,255,0.8); position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color:white; padding:15px 40px; border-bottom-left-radius:40px; font-size:24px; font-weight:900; box-shadow:0 8px 30px rgba(239,68,68,0.5);">🚨 紧急呼叫中</div>
+      <div style="width:200px; height:200px; border-radius:50%; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); margin:20px auto 40px; display:flex; align-items:center; justify-content:center; animation: emergency-shake 0.6s ease-in-out infinite; box-shadow:0 0 60px rgba(239,68,68,0.8), 0 0 100px rgba(239,68,68,0.4);">
+        <i class="fa fa-phone" style="font-size:100px; color:white; animation: emergency-ring 1.2s ease-in-out infinite;"></i>
+      </div>
+      <h2 style="font-size:56px; color:#DC2626; margin-bottom:20px; font-weight:900; text-shadow:0 4px 20px rgba(220,38,38,0.3);">正在呼叫紧急联系人</h2>
+      <div style="display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); color:#92400E; padding:12px 28px; border-radius:30px; font-size:22px; font-weight:700; margin-bottom:30px; border:2px solid #F59E0B; box-shadow:0 4px 15px rgba(245,158,11,0.3);">
+        <i class="fa fa-hand-pointer-o"></i>
+        手动呼叫
+      </div>
+      <p style="font-size:38px; color:#1E293B; margin-bottom:35px; line-height:1.7; font-weight:700;">请等待紧急联系人接听...</p>
+      <div style="background:linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%); border:3px solid #EF4444; border-radius:30px; padding:30px; margin-bottom:40px; box-shadow:0 8px 30px rgba(239,68,68,0.2);">
+        <p style="font-size:28px; color:#991B1B; margin:0 0 15px 0; font-weight:800;">📞 已向以下联系人发送呼叫</p>
+        <div id="emergency-calling-contacts" style="font-size:32px; color:#DC2626; font-weight:700; line-height:1.6;"></div>
+      </div>
+      <p id="emergency-waiting-text" style="font-size:26px; color:#64748B; margin-bottom:30px; line-height:1.6; font-weight:600;">正在等待有人接听...</p>
+      <div style="display:flex; gap:35px; justify-content:center;">
+        <button onclick="cancelEmergencyInProgress()" style="padding:30px 70px; font-size:34px; border-radius:35px; border:none; background:linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%); color:#475569; font-weight:900; cursor:pointer; box-shadow:0 12px 30px rgba(0,0,0,0.2); transition:all 0.3s; position:relative; overflow:hidden;">
+          <i class="fa fa-times" style="margin-right:12px;"></i>
+          取消呼叫
+        </button>
+      </div>
+    </div>
+  </div>
+  
+
+</div>
+<!-- 紧急联系人申请弹窗 (放在缩放容器外部) -->
+<div id="emergency-request-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2147483647; justify-content:center; align-items:center;">
+  <div style="background:white; border-radius:35px; padding:40px; max-width:700px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+    <div style="width:120px; height:120px; border-radius:50%; background:linear-gradient(135deg, #4361EE, #7209B7); margin:0 auto 25px; display:flex; align-items:center; justify-content:center;">
+      <i class="fa fa-user-plus" style="font-size:60px; color:white;"></i>
+    </div>
+    <h2 style="font-size:40px; color:#1E293B; margin-bottom:20px; font-weight:800;">紧急联系人申请</h2>
+    <p id="emergency-request-text" style="font-size:32px; color:#64748B; margin-bottom:35px; line-height:1.5;"></p>
+    <div style="display:flex; gap:25px; justify-content:center;">
+      <button onclick="handleEmergencyRequest(false)" style="padding:20px 60px; font-size:30px; border-radius:25px; border:none; background:#f1f5f9; color:#64748B; font-weight:bold; cursor:pointer;">拒绝</button>
+      <button onclick="handleEmergencyRequest(true)" style="padding:20px 60px; font-size:30px; border-radius:25px; border:none; background:linear-gradient(135deg, #4361EE, #7209B7); color:white; font-weight:bold; cursor:pointer;">同意</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<!-- 设置控制面板 - 只保留显示大小 -->
+<div id="settings-panel" class="settings-panel">
+  <div class="close-settings" onclick="toggleSettingsPanel()">&times;</div>
+  <div class="settings-title">显示大小设置</div>
+  
+  <div class="setting-item">
+    <span class="setting-label">显示大小</span>
+    <div class="setting-control">
+      <input type="range" class="setting-slider" id="display-size-slider" min="50" max="200" value="100">
+      <span class="setting-value" id="display-size-value">100%</span>
+    </div>
+  </div>
+</div>
+
+<!-- 语音设置面板 -->
+<div id="voice-settings-panel" class="voice-settings-panel">
+  <div class="close-settings" onclick="toggleVoiceSettingsPanel()">&times;</div>
+  <div class="settings-title">语音设置</div>
+  
+  <div class="setting-item">
+    <span class="setting-label">音量大小</span>
+    <div class="setting-control">
+      <input type="range" class="setting-slider" id="voice-volume-slider" min="0" max="100" value="80">
+      <span class="setting-value" id="voice-volume-value">80%</span>
+    </div>
+  </div>
+  
+  <div class="setting-item">
+    <span class="setting-label">语音模式</span>
+    <div class="setting-control">
+      <div class="voice-switch" id="voice-mode-switch-voice" onclick="toggleVoiceModeFromVoicePanel()"></div>
+      <span class="voice-switch-label" id="voice-mode-label-voice">自动播放</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let isMuted = false;
+  let currentWeatherText = "正在获取天气信息";
+  let isAiProcessing = false;
+  let pressTimer;
+  let currentEmergencyRequest = null;
+  let currentUserId = null;
+  
+  // 紧急呼叫相关变量
+  let emergencyCountdownTimer = null;
+  let emergencyCountdown = 10;
+  let warningAudio = null;
+  let emergencyContacts = [];
+  let currentUserName = '';
+  let signalingSocket = null;
+  let currentCallRecordId = null;
+  let ringtoneConfig = {};
+  
+  // 用户设置变量
+  let userDisplaySize = 100;
+  let userVolume = 80;
+  let userVoiceMode = 0; // 0-自动播放, 1-手动触发
+  
+  // 全局设置存储，用于跨页面同步
+  window.userSettings = {
+    displaySize: 100,
+    volume: 80,
+    voiceMode: 0
+  };
+
+  // 获取 DOM 元素
+  const micBtn = document.getElementById('main-mic');
+  const statusText = document.getElementById('ai-status');
+
+  // --- 长按麦克风逻辑（保留第二个界面） ---
+  micBtn.addEventListener('pointerdown', (e) => {
+    if (isAiProcessing) return;
+    e.preventDefault();
+    micBtn.classList.add('pressed');
+    pressTimer = setTimeout(() => {
+      startRecording();
+    }, 500); // 长按 0.5 秒触发录音
+  });
+
+  micBtn.addEventListener('pointerup', (e) => {
+    clearTimeout(pressTimer);
+    micBtn.classList.remove('pressed');
+    if (micBtn.classList.contains('recording')) {
+      stopRecordingAndAsk();
+    }
+  });
+
+  micBtn.addEventListener('pointerleave', () => {
+    clearTimeout(pressTimer);
+    micBtn.classList.remove('pressed');
+    if (micBtn.classList.contains('recording')) {
+      stopRecordingAndAsk();
+    }
+  });
+  let rec; // 录音对象
+
+  // --- 改进后的开始录音 ---
+  function startRecording() {
+    // 初始化录音机
+    rec = Recorder({ type: "wav", sampleRate: 18000, bitRate: 16 });
+    rec.open(() => {
+      rec.start();
+      micBtn.classList.add('recording');
+      statusText.innerHTML = `<i class="fa fa-dot-circle-o" style="color:var(--danger)"></i> 正在听您说话...`;
+    }, (msg) => {
+      console.error("无法打开录音", msg);
+      showToast("麦克风启动失败");
+    });
+  }
+
+  // --- 改进后的结束录音并提问 ---
+  async function stopRecordingAndAsk() {
+    if (!rec) return;
+    micBtn.classList.remove('recording');
+    statusText.innerHTML = `<i class="fa fa-spinner fa-spin" style="color:var(--primary)"></i> 正在努力听懂...`;
+    isAiProcessing = true;
+
+    rec.stop(async (blob, duration) => {
+      rec.close();
+      if (duration < 800) {
+        statusText.innerHTML = "说话时间太短了，请长按久一点点";
+        isAiProcessing = false;
+        return;
+      }
+
+      try {
+        // 第一步：将录音发送给后端进行语音转文字 (ASR)
+        const fd = new FormData();
+        fd.append('file', blob, 'audio.wav');
+
+        const asrRes = await fetch('/api/asr/translate', { method: 'POST', body: fd });
+        const asrData = await asrRes.json();
+
+        if (asrData.code === 200 && asrData.data) {
+          const userMsg = asrData.data;
+          statusText.innerHTML = `<i class="fa fa-spinner fa-spin" style="color:var(--primary)"></i> 正在思考：${userMsg}`;
+
+          // 第二步：将识别到的文字发给 AI 助手
+          const response = await fetch(`/ask?msg=${encodeURIComponent(userMsg)}`);
+          const replyText = await response.text();
+
+          playAiReply(replyText);
+        } else {
+          statusText.innerHTML = "哎呀，没听清，咱们再试一次吧？";
+          isAiProcessing = false;
+        }
+      } catch (err) {
+        console.error("AI 交互失败", err);
+        statusText.innerHTML = "网络开小差了，请稍后再试";
+        isAiProcessing = false;
+      }
+    }, () => {
+      rec.close();
+      isAiProcessing = false;
+    });
+  }
+
+  function playAiReply(text) {
+    speak(text,
+            () => {
+              // 播放开始：麦克风缩小动画
+              statusText.style.opacity = '1';
+              statusText.innerHTML = `小智：<br>${text}`;
+              micBtn.classList.add('minimized');
+            },
+            () => {
+              // 播放结束：恢复初始状态
+              statusText.style.opacity = '0';
+              setTimeout(() => {
+                micBtn.classList.remove('minimized');
+                statusText.innerHTML = `<i class="fa fa-commenting-o" style="color:var(--primary)"></i> 我是您的生活助手<br><small style="font-weight: normal; font-size: 18px; color: #64748B;">长按下方话筒说话</small>`;
+                statusText.style.opacity = '1';
+                isAiProcessing = false;
+              }, 800);
+            }
+    );
+  }
+
+  // --- 修改后的 speak 函数（增加 onEnd 回调和 10 秒安全定时器） ---
+  function speak(text, onStart, onEnd) {
+    if (isMuted) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    // 停止当前正在播放的音频
+    const existingAudio = document.getElementById('baidu-tts-player');
+    if (existingAudio) {
+      existingAudio.pause();
+      existingAudio.remove();
+    }
+
+    const url = `/api/tts/speak?text=${encodeURIComponent(text)}&t=${Date.now()}`;
+    const audio = new Audio(url);
+    audio.id = 'baidu-tts-player';
+
+    if (onStart) onStart(); // 播放开始回调
+
+    // 10秒强制恢复的安全定时器
+    const safetyTimer = setTimeout(() => {
+      if (onEnd) onEnd();
+    }, 16000);
+
+    audio.onended = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.onerror = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.play().catch(e => {
+      console.error("语音播放失败:", e);
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    });
+  }
+
+  // --- 天气相关功能 ---
+  async function updateWeatherUI() {
+    try {
+      const response = await fetch('/api/weather/now');
+      if (!response.ok) return;
+      const data = await response.json();
+      document.getElementById('w-city').innerText = `${data.city} · ${data.weatherText}`;
+      document.getElementById('w-temp').innerText = `${data.temperature}°C`;
+      document.getElementById('w-tip').innerHTML = `<i class="fa fa-info-circle"></i> <b>天气贴士：</b><br>${data.tip}`;
+      currentWeatherText = `当前${data.city}${data.weatherText}，温度${data.temperature}度。${data.tip}`;
+
+      // 天气图标适配（支持白天/夜晚）
+      const iconElem = document.getElementById('w-icon');
+      const wt = data.weatherText || "";
+      const hour = new Date().getHours();
+      const isNight = hour < 6 || hour >= 18;
+      
+      let iconFile = 'weather-sun.png';
+      if (wt.includes("雷")) iconFile = 'weather-thunder.png';
+      else if (wt.includes("雨")) iconFile = 'weather-rain.png';
+      else if (wt.includes("雪")) iconFile = 'weather-snow.png';
+      else if (wt.includes("雾") || wt.includes("霾")) iconFile = 'weather-fog.png';
+      else if (wt.includes("沙") || wt.includes("尘")) iconFile = 'weather-sand.png';
+      else if (wt.includes("风")) iconFile = 'weather-wind.png';
+      else if (wt.includes("阴")) iconFile = 'weather-overcast.png';
+      else if (wt.includes("云")) {
+        iconFile = isNight ? 'weather-night-cloudy.png' : 'weather-cloud.png';
+      }
+      else if (wt.includes("晴")) {
+        iconFile = isNight ? 'weather-night-clear.png' : 'weather-sun.png';
+      }
+      else {
+        iconFile = isNight ? 'weather-night-clear.png' : 'weather-sun.png';
+      }
+      
+      iconElem.src = `/images/icons/${iconFile}`;
+    } catch (err) {
+      console.error("天气获取失败", err);
+    }
+  }
+
+  function speakWeather() {
+    showToast("播报天气中...");
+    speak(currentWeatherText);
+  }
+
+  // --- 导航和通用功能 ---
+  function handleNav(title, toastText, url) {
+    showToast(toastText);
+    speak(title + "。" + toastText, null, () => {
+      if (url && url !== '#') {
+        window.location.href = url;
+      }
+    });
+  }
+
+  function adjustVolume() {
+    toggleVoiceSettingsPanel();
+  }
+
+  function toggleSettingsPanel() {
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('show');
+  }
+
+  function toggleVoiceSettingsPanel() {
+    const panel = document.getElementById('voice-settings-panel');
+    panel.classList.toggle('show');
+  }
+
+  function updateVoiceVolume(vol) {
+    userVolume = vol;
+    window.userSettings.volume = vol;
+    document.getElementById('voice-volume-value').textContent = vol + '%';
+    saveUserSettings();
+    broadcastSettingsChange();
+  }
+
+  function toggleVoiceModeFromVoicePanel() {
+    const switchEl = document.getElementById('voice-mode-switch-voice');
+    const labelEl = document.getElementById('voice-mode-label-voice');
+    const navIconImg = document.getElementById('mute-icon-img');
+    userVoiceMode = userVoiceMode === 0 ? 1 : 0;
+    window.userSettings.voiceMode = userVoiceMode;
+    
+    if (userVoiceMode === 1) {
+      switchEl.classList.add('active');
+      labelEl.textContent = '手动触发';
+      navIconImg.src = '/images/icons/fa-volume-off.png';
+    } else {
+      switchEl.classList.remove('active');
+      labelEl.textContent = '自动播放';
+      navIconImg.src = '/images/icons/fa-volume-up.png';
+    }
+    
+    saveUserSettings();
+    broadcastSettingsChange();
+  }
+
+  function updateDisplaySize(size) {
+    userDisplaySize = size;
+    window.userSettings.displaySize = size;
+    document.getElementById('display-size-value').textContent = size + '%';
+    
+    const scale = size / 100;
+    const root = document.documentElement;
+    
+    // 更新CSS变量，实现放大效果
+    root.style.setProperty('--header-h1-size', (40 * scale) + 'px');
+    root.style.setProperty('--header-p-size', (22 * scale) + 'px');
+    root.style.setProperty('--time-size', (52 * scale) + 'px');
+    root.style.setProperty('--date-size', (20 * scale) + 'px');
+    root.style.setProperty('--feature-icon-size', (75 * scale) + 'px');
+    root.style.setProperty('--feature-title-size', (34 * scale) + 'px');
+    root.style.setProperty('--feature-desc-size', (21 * scale) + 'px');
+    root.style.setProperty('--nav-icon-size', (34 * scale) + 'px');
+    root.style.setProperty('--nav-text-size', (20 * scale) + 'px');
+    root.style.setProperty('--temp-size', (65 * scale) + 'px');
+    root.style.setProperty('--weather-tip-size', (19 * scale) + 'px');
+    root.style.setProperty('--weather-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--ai-status-size', (22 * scale) + 'px');
+    root.style.setProperty('--mic-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--mic-icon-inner-size', (50 * scale) + 'px');
+    
+    // 调整卡片和容器的大小
+    const containers = document.querySelectorAll('.container, .feature-grid');
+    containers.forEach(el => {
+      el.style.gap = (25 * scale) + 'px';
+    });
+    
+    const glassCards = document.querySelectorAll('.glass-card');
+    glassCards.forEach(el => {
+      el.style.padding = (30 * scale) + 'px';
+    });
+    
+    // 调整天气图标大小
+    const weatherIcon = document.getElementById('w-icon');
+    if (weatherIcon) {
+      weatherIcon.style.fontSize = (75 * scale) + 'px';
+    }
+    
+    saveUserSettings();
+    broadcastSettingsChange();
+  }
+
+  function applyDisplaySize(size) {
+    userDisplaySize = size;
+    window.userSettings.displaySize = size;
+    
+    const scale = size / 100;
+    const root = document.documentElement;
+    
+    // 更新CSS变量，实现放大效果
+    root.style.setProperty('--header-h1-size', (40 * scale) + 'px');
+    root.style.setProperty('--header-p-size', (22 * scale) + 'px');
+    root.style.setProperty('--time-size', (52 * scale) + 'px');
+    root.style.setProperty('--date-size', (20 * scale) + 'px');
+    root.style.setProperty('--feature-icon-size', (75 * scale) + 'px');
+    root.style.setProperty('--feature-title-size', (34 * scale) + 'px');
+    root.style.setProperty('--feature-desc-size', (21 * scale) + 'px');
+    root.style.setProperty('--nav-icon-size', (34 * scale) + 'px');
+    root.style.setProperty('--nav-text-size', (20 * scale) + 'px');
+    root.style.setProperty('--temp-size', (65 * scale) + 'px');
+    root.style.setProperty('--weather-tip-size', (19 * scale) + 'px');
+    root.style.setProperty('--weather-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--ai-status-size', (22 * scale) + 'px');
+    root.style.setProperty('--mic-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--mic-icon-inner-size', (50 * scale) + 'px');
+    
+    // 调整卡片和容器的大小
+    const containers = document.querySelectorAll('.container, .feature-grid');
+    containers.forEach(el => {
+      el.style.gap = (25 * scale) + 'px';
+    });
+    
+    const glassCards = document.querySelectorAll('.glass-card');
+    glassCards.forEach(el => {
+      el.style.padding = (30 * scale) + 'px';
+    });
+    
+    // 调整天气图标大小
+    const weatherIcon = document.getElementById('w-icon');
+    if (weatherIcon) {
+      weatherIcon.style.fontSize = (75 * scale) + 'px';
+    }
+    
+    document.getElementById('display-size-slider').value = size;
+    document.getElementById('display-size-value').textContent = size + '%';
+  }
+
+  function applyVolume(vol) {
+    userVolume = vol;
+    window.userSettings.volume = vol;
+    document.getElementById('voice-volume-slider').value = vol;
+    document.getElementById('voice-volume-value').textContent = vol + '%';
+  }
+
+  function applyVoiceMode(mode) {
+    userVoiceMode = mode;
+    window.userSettings.voiceMode = mode;
+    const switchEl = document.getElementById('voice-mode-switch-voice');
+    const labelEl = document.getElementById('voice-mode-label-voice');
+    const navIconImg = document.getElementById('mute-icon-img');
+    
+    if (mode === 1) {
+      switchEl.classList.add('active');
+      labelEl.textContent = '手动触发';
+      navIconImg.src = '/images/icons/fa-volume-off.png';
+    } else {
+      switchEl.classList.remove('active');
+      labelEl.textContent = '自动播放';
+      navIconImg.src = '/images/icons/fa-volume-up.png';
+    }
+  }
+
+  // 保存用户设置到后端
+  async function saveUserSettings() {
+    if (!currentUserId) return;
+    
+    try {
+      await fetch('/api/user/display-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          displaySize: userDisplaySize,
+          volume: userVolume,
+          voiceMode: userVoiceMode
+        })
+      });
+    } catch (e) {
+      console.error('保存设置失败:', e);
+    }
+  }
+
+  // 从后端加载用户设置
+  async function loadUserSettings() {
+    if (!currentUserId) return;
+    
+    try {
+      const res = await fetch('/api/user/display-settings?userId=' + currentUserId);
+      const data = await res.json();
+      
+      if (data.code === 200 && data.data) {
+        const settings = data.data;
+        applyDisplaySize(settings.displaySize || 100);
+        applyVolume(settings.volume || 80);
+        applyVoiceMode(settings.voiceMode || 0);
+      }
+    } catch (e) {
+      console.error('加载设置失败:', e);
+    }
+  }
+
+  // 广播设置变更到其他页面
+  function broadcastSettingsChange() {
+    localStorage.setItem('userSettingsUpdated', Date.now());
+  }
+
+  // 监听其他页面的设置变更
+  function listenSettingsChange() {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'userSettingsUpdated') {
+        const settings = window.userSettings;
+        applyDisplaySize(settings.displaySize);
+        applyVolume(settings.volume);
+        applyVoiceMode(settings.voiceMode);
+      }
+    });
+  }
+
+  // 修改speak函数以支持音量控制和语音模式
+  function speak(text, onStart, onEnd) {
+    if (isMuted) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    // 如果是语音模式(手动触发)，检查是否允许播放
+    if (userVoiceMode === 1) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    const existingAudio = document.getElementById('baidu-tts-player');
+    if (existingAudio) {
+      existingAudio.pause();
+      existingAudio.remove();
+    }
+
+    const url = `/api/tts/speak?text=${encodeURIComponent(text)}&t=${Date.now()}`;
+    const audio = new Audio(url);
+    audio.id = 'baidu-tts-player';
+    audio.volume = userVolume / 100;
+
+    if (onStart) onStart();
+
+    const safetyTimer = setTimeout(() => {
+      if (onEnd) onEnd();
+    }, 16000);
+
+    audio.onended = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.onerror = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.play().catch(e => {
+      console.error("语音播放失败:", e);
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    });
+  }
+
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('current-time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    document.getElementById('current-date').textContent = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  }
+
+  // 紧急呼叫核心功能
+  // 触发紧急呼叫
+  async function triggerEmergencyCall() {
+    console.log('[紧急呼叫] 触发紧急呼叫');
+    speak('紧急呼叫已触发，请确认');
+    
+    // 加载紧急联系人列表
+    await loadEmergencyContacts();
+    
+    // 显示确认弹窗
+    const modal = document.getElementById('emergency-confirm-modal');
+    modal.style.display = 'flex';
+    
+    // 重置倒计时
+    emergencyCountdown = 10;
+    document.getElementById('emergency-countdown').textContent = emergencyCountdown;
+    
+    // 播放警告铃声
+    playWarningSound();
+    
+    // 启动倒计时
+    startEmergencyCountdown();
+  }
+  
+  // 加载紧急联系人列表
+  async function loadEmergencyContacts() {
+    try {
+      console.log('[紧急呼叫] 开始加载紧急联系人列表...');
+      
+      const res = await fetch('/api/emergency/list');
+      const data = await res.json();
+      
+      console.log('[紧急呼叫] 紧急联系人接口返回:', data);
+      
+      if (data.code === 200 && Array.isArray(data.data)) {
+        emergencyContacts = data.data;
+        console.log('[紧急呼叫] 紧急联系人列表:', emergencyContacts);
+      } else {
+        emergencyContacts = [];
+      }
+    } catch (e) {
+      console.error('[紧急呼叫] 加载紧急联系人失败:', e);
+      emergencyContacts = [];
+    }
+  }
+  
+  // 加载铃声配置
+  async function loadRingtoneConfig() {
+    try {
+      const res = await fetch('/api/qiniu/ringtones');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.items) {
+          ringtoneConfig = {};
+          data.items.forEach(item => {
+            ringtoneConfig[item.type] = item.url;
+          });
+        }
+      }
+    } catch (e) {
+      console.log('加载铃声配置失败:', e);
+    }
+  }
+  
+  // 播放警告铃声
+  function playWarningSound() {
+    try {
+      const ringtoneUrl = ringtoneConfig.emergency || 'http://t9se9imi4.hn-bkt.clouddn.com/warning.mp3';
+      warningAudio = new Audio(ringtoneUrl);
+      warningAudio.loop = true;
+      warningAudio.volume = 1.0;
+      warningAudio.play().catch(e => {
+        console.error('[紧急呼叫] 播放警告铃声失败:', e);
+      });
+    } catch (e) {
+      console.error('[紧急呼叫] 初始化音频失败:', e);
+    }
+  }
+  
+  // 停止警告铃声
+  function stopWarningSound() {
+    if (warningAudio) {
+      try {
+        warningAudio.pause();
+        warningAudio.currentTime = 0;
+      } catch (e) {
+        console.error('[紧急呼叫] 停止警告铃声失败:', e);
+      }
+    }
+  }
+  
+  // 启动紧急呼叫倒计时
+  function startEmergencyCountdown() {
+    if (emergencyCountdownTimer) {
+      clearInterval(emergencyCountdownTimer);
+    }
+    
+    emergencyCountdownTimer = setInterval(() => {
+      emergencyCountdown--;
+      document.getElementById('emergency-countdown').textContent = emergencyCountdown;
+      
+      if (emergencyCountdown <= 0) {
+        clearInterval(emergencyCountdownTimer);
+        confirmEmergencyCall();
+      }
+    }, 1000);
+  }
+  
+  // 取消紧急呼叫
+  function cancelEmergencyCall() {
+    console.log('[紧急呼叫] 取消紧急呼叫');
+    
+    // 停止倒计时
+    if (emergencyCountdownTimer) {
+      clearInterval(emergencyCountdownTimer);
+      emergencyCountdownTimer = null;
+    }
+    
+    // 停止警告铃声
+    stopWarningSound();
+    
+    // 隐藏弹窗
+    const modal = document.getElementById('emergency-confirm-modal');
+    modal.style.display = 'none';
+    
+    showToast('已取消紧急呼叫');
+    speak('已取消紧急呼叫');
+  }
+  
+  // 确认紧急呼叫
+  async function confirmEmergencyCall() {
+    console.log('[紧急呼叫] 确认执行紧急呼叫');
+    
+    // 停止倒计时
+    if (emergencyCountdownTimer) {
+      clearInterval(emergencyCountdownTimer);
+      emergencyCountdownTimer = null;
+    }
+    
+    // 隐藏弹窗
+    const modal = document.getElementById('emergency-confirm-modal');
+    modal.style.display = 'none';
+    
+    // 执行紧急呼叫流程
+    await executeEmergencyCall();
+  }
+  
+  // 保存紧急呼叫的 Socket 引用，以便后续处理
+  let emergencyCallSocket = null;
+
+  // 显示紧急呼叫进行中的界面
+  function showEmergencyInProgress() {
+    const modal = document.getElementById('emergency-in-progress-modal');
+    const contactsDiv = document.getElementById('emergency-calling-contacts');
+    
+    // 显示紧急联系人列表
+    const contactNames = emergencyContacts.map(c => c.contactName || c.nickname || c.name).join('、');
+    contactsDiv.innerText = contactNames;
+    
+    modal.style.display = 'flex';
+  }
+
+  // 隐藏紧急呼叫进行中的界面
+  function hideEmergencyInProgress() {
+    const modal = document.getElementById('emergency-in-progress-modal');
+    modal.style.display = 'none';
+  }
+
+  // 取消紧急呼叫进行中
+  async function cancelEmergencyInProgress() {
+    console.log('[紧急呼叫] 取消紧急呼叫进行中');
+    
+    if (currentCallRecordId) {
+      try {
+        await fetch('/api/emergency/call/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ callRecordId: currentCallRecordId })
+        });
+      } catch (e) {
+        console.error('[紧急呼叫] 取消呼叫记录失败:', e);
+      }
+    }
+    
+    // 发送 hangup 事件给所有紧急联系人
+    if (emergencyCallSocket) {
+      emergencyContacts.forEach(contact => {
+        const contactId = contact.contactUserId || contact.id;
+        emergencyCallSocket.emit('hangup', { toUserId: contactId });
+      });
+      emergencyCallSocket.disconnect();
+      emergencyCallSocket = null;
+    }
+    
+    hideEmergencyInProgress();
+    stopWarningSound();
+    showToast('已取消紧急呼叫');
+    speak('已取消紧急呼叫');
+    currentCallRecordId = null;
+  }
+
+  // 更新紧急呼叫等待状态文本
+  function updateEmergencyWaitingText(text) {
+    const waitingText = document.getElementById('emergency-waiting-text');
+    if (waitingText) {
+      waitingText.innerText = text;
+    }
+  }
+
+  // 执行紧急呼叫
+  async function executeEmergencyCall() {
+    console.log('[紧急呼叫] 开始执行紧急呼叫流程');
+    speak('正在向所有紧急联系人发起呼叫，请等待接听');
+    
+    if (emergencyContacts.length === 0) {
+      console.error('[紧急呼叫] 没有紧急联系人');
+      showToast('未设置紧急联系人');
+      speak('未设置紧急联系人，请先添加');
+      stopWarningSound();
+      return;
+    }
+    
+    try {
+      console.log('[紧急呼叫] 调用后端API记录紧急呼叫');
+      const res = await fetch('/api/emergency/call/start', { method: 'POST' });
+      const data = await res.json();
+      
+      if (data.code === 200) {
+        currentCallRecordId = data.data.callRecordId;
+        emergencyContacts = data.data.contacts;
+        console.log('[紧急呼叫] 紧急呼叫记录创建成功，ID:', currentCallRecordId);
+      } else {
+        console.error('[紧急呼叫] 创建呼叫记录失败:', data.msg);
+        showToast(data.msg || '操作失败');
+        return;
+      }
+    } catch (e) {
+      console.error('[紧急呼叫] 调用API失败:', e);
+    }
+    
+    // 显示紧急呼叫进行中的界面
+    showEmergencyInProgress();
+    
+    // 获取当前用户名
+    currentUserName = localStorage.getItem('nickname') || '长辈';
+    
+    // 收集所有紧急联系人的 ID
+    const emergencyContactIds = emergencyContacts.map(c => c.contactUserId || c.id);
+    console.log('[紧急呼叫] 所有紧急联系人 ID:', emergencyContactIds);
+    
+    // 向所有紧急联系人发送文字消息
+    for (const contact of emergencyContacts) {
+      console.log('[紧急呼叫] 向联系人发送消息:', contact.id);
+      await sendEmergencyMessage(contact, 'pending');
+    }
+    
+    // 连接到信令服务器并发送紧急呼叫
+    try {
+      const signalingUrl = window.location.origin;
+      emergencyCallSocket = io(signalingUrl, {
+        path: '/socket.io',
+        transports: ['websocket', 'polling']
+      });
+      
+      emergencyCallSocket.on('connect', () => {
+        console.log('[紧急呼叫] 信令服务器连接成功');
+        emergencyCallSocket.emit('login', {
+          userId: currentUserId,
+          nickname: currentUserName,
+          avatar: ''
+        });
+      });
+      
+      emergencyCallSocket.on('loginSuccess', () => {
+        console.log('[紧急呼叫] 登录成功，发送紧急呼叫');
+        updateEmergencyWaitingText('正在发送紧急呼叫...');
+        // 向所有紧急联系人发送紧急呼叫
+        emergencyCallSocket.emit('emergencyCall', {
+          fromUserId: currentUserId,
+          toUserIds: emergencyContactIds,
+          type: 'video',
+          fromUserName: currentUserName,
+          fromUserAvatar: ''
+        });
+      });
+      
+      emergencyCallSocket.on('emergencyCallSuccess', (data) => {
+        console.log('[紧急呼叫] 成功向 ' + data.calledCount + ' 个联系人发送紧急呼叫');
+        updateEmergencyWaitingText('已向 ' + data.calledCount + ' 个联系人发送呼叫，请等待有人接听...');
+        
+        // 发送状态通知
+        sendEmergencyStatusNotification(null);
+      });
+      
+      // 监听：有人接听了紧急呼叫
+      emergencyCallSocket.on('emergencyCallAnsweredBySomeone', async (data) => {
+        console.log('[紧急呼叫] 有人接听了:', data);
+        stopWarningSound();
+        updateEmergencyWaitingText(data.answeredByName + ' 已接听呼叫，正在建立连接...');
+        speak(data.answeredByName + ' 已接听呼叫');
+        
+        // 调用后端 API 记录接听信息
+        if (currentCallRecordId) {
+          try {
+            await fetch('/api/emergency/call/answered', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                callRecordId: currentCallRecordId,
+                answeredByUserId: data.answeredBy
+              })
+            });
+            console.log('[紧急呼叫] 接听记录已保存');
+          } catch (e) {
+            console.error('[紧急呼叫] 保存接听记录失败:', e);
+          }
+        }
+        
+        // 找到接听的联系人对象
+        const answeredContact = emergencyContacts.find(c => String(c.contactUserId || c.id) === String(data.answeredBy));
+        if (answeredContact) {
+          console.log('[紧急呼叫] 跳转到与 ' + (answeredContact.contactName || answeredContact.nickname || answeredContact.name) + ' 的通话页面');
+          setTimeout(() => {
+            hideEmergencyInProgress();
+            initiateEmergencyVideoCall(answeredContact);
+          }, 500);
+        } else {
+          console.error('[紧急呼叫] 找不到接听的联系人:', data.answeredBy);
+          // 降级：使用第一个联系人
+          const firstContact = emergencyContacts[0];
+          if (firstContact) {
+            setTimeout(() => {
+              hideEmergencyInProgress();
+              initiateEmergencyVideoCall(firstContact);
+            }, 1000);
+          }
+        }
+      });
+      
+      emergencyCallSocket.on('callFailed', (msg) => {
+        console.error('[紧急呼叫] 发送呼叫失败:', msg);
+        updateEmergencyWaitingText('发送失败: ' + msg);
+        stopWarningSound();
+      });
+      
+      // 紧急呼叫不设置超时自动挂断，持续等待有人接听
+      
+    } catch (e) {
+      console.error('[紧急呼叫] 连接信令服务器失败:', e);
+      updateEmergencyWaitingText('连接服务器失败');
+      stopWarningSound();
+    }
+  }
+  
+  // 发起紧急视频通话
+  function initiateEmergencyVideoCall(contact) {
+    console.log('[紧急呼叫] 发起视频通话给:', contact.contactName || contact.nickname || contact.name);
+    
+    const myName = localStorage.getItem('nickname') || '长辈';
+    const myAvatar = '';
+    const peerId = contact.contactUserId || contact.id;
+    const peerName = contact.contactName || contact.nickname || contact.name || '联系人';
+    const peerAvatar = contact.avatar || '';
+    const callType = 'video';
+    
+    console.log('[紧急呼叫] 构造URL参数:', {
+      userId: currentUserId,
+      peerId,
+      peerName,
+      callType,
+      myName
+    });
+    
+    // 直接跳转到通话页面，使用正确的URL参数格式
+    const url = `call.html?userId=${currentUserId}&peerId=${peerId}&peerName=${encodeURIComponent(peerName)}&peerAvatar=${encodeURIComponent(peerAvatar)}&type=${callType}&incoming=false&myName=${encodeURIComponent(myName)}&myAvatar=${encodeURIComponent(myAvatar)}&isEmergency=true`;
+    
+    console.log('[紧急呼叫] 跳转到通话页面:', url);
+    window.location.href = url;
+  }
+  
+  // 发送紧急消息
+  async function sendEmergencyMessage(contact, status) {
+    const contactId = contact.contactUserId || contact.id;
+    const contactName = contact.contactName || contact.nickname || contact.name;
+    console.log('[紧急呼叫] 发送紧急消息给:', contactName);
+    
+    try {
+      const message = `长辈${currentUserName}发起了紧急呼叫，请关心长辈`;
+      
+      // 发送消息
+      const res = await fetch('/api/msg/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toUserId: contactId,
+          content: message,
+          type: 'text',
+          isEmergency: true
+        })
+      });
+      
+      const data = await res.json();
+      console.log('[紧急呼叫] 消息发送结果:', data);
+    } catch (e) {
+      console.error('[紧急呼叫] 发送消息失败:', e);
+    }
+  }
+  
+  // 发送紧急状态通知
+  async function sendEmergencyStatusNotification(connectedUserId) {
+    console.log('[紧急呼叫] 发送状态通知');
+    
+    for (const contact of emergencyContacts) {
+      try {
+        const contactId = contact.contactUserId || contact.id;
+        const contactName = contact.contactName || contact.nickname || contact.name;
+        let message = '';
+        
+        if (connectedUserId) {
+          const connectedContact = emergencyContacts.find(c => (c.contactUserId || c.id) === connectedUserId);
+          const connectedName = connectedContact ? (connectedContact.contactName || connectedContact.nickname || connectedContact.name) : '联系人';
+          message = `${currentUserName}发起紧急呼叫，现已由${connectedName}接通`;
+        } else {
+          message = '长辈手动进行紧急呼叫，请关注';
+        }
+        
+        // 发送状态消息
+        const res = await fetch('/api/msg/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toUserId: contactId,
+            content: message,
+            type: 'text',
+            isEmergency: true,
+            isStatusNotification: true
+          })
+        });
+        
+        await res.json();
+      } catch (e) {
+        console.error('[紧急呼叫] 发送状态通知失败:', e);
+      }
+    }
+  }
+  
+  function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('mute-icon-img').src = isMuted ? '/images/icons/fa-volume-off.png' : '/images/icons/fa-volume-up.png';
+    document.getElementById('mute-text').innerText = isMuted ? '已静音' : '语音开启';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.top = '50px';
+    setTimeout(() => t.style.top = '-120px', 2500);
+  }
+
+  function initWebSocket(uid) {
+    currentUserId = uid;
+    console.log('初始化WebSocket回调, 用户ID:', uid);
+    
+    // 使用全局消息中心的回调机制
+    if (window.GlobalMessageCenter) {
+      // 注册消息回调
+      GlobalMessageCenter.onMessage((msg, contact) => {
+        console.log('[Index] 通过全局消息中心收到消息:', msg);
+        loadMessageUnread();
+      });
+      
+      // 注册通话回调
+      GlobalMessageCenter.onCall((data) => {
+        console.log('[Index] 通过全局消息中心收到来电:', data);
+      });
+      
+      console.log('已注册全局消息中心回调');
+    }
+  }
+
+  function showEmergencyRequestModal(msg) {
+    console.log('显示紧急联系人申请弹窗:', msg);
+    currentEmergencyRequest = msg;
+    
+    const modal = document.getElementById('emergency-request-modal');
+    const textEl = document.getElementById('emergency-request-text');
+    
+    if (!modal) {
+      console.error('找不到弹窗元素 emergency-request-modal');
+      return;
+    }
+    
+    const text = `${msg.fromName} 想成为您的紧急联系人，是否同意？`;
+    console.log('弹窗文本:', text);
+    textEl.innerText = text;
+    modal.style.display = 'flex';
+    console.log('弹窗已显示, display:', modal.style.display);
+    
+    speak(`${msg.fromName}想成为您的紧急联系人，请确认是否同意`);
+  }
+
+  async function handleEmergencyRequest(accept) {
+    if (!currentEmergencyRequest) return;
+    
+    const modal = document.getElementById('emergency-request-modal');
+    modal.style.display = 'none';
+    
+    try {
+      const res = await fetch('/api/emergency/request/handle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requesterId: currentEmergencyRequest.fromId,
+          accept: accept
+        })
+      });
+      
+      const data = await res.json();
+      if (data.code === 200) {
+        showToast(accept ? '已同意，紧急联系人添加成功' : '已拒绝');
+        speak(accept ? '已同意，紧急联系人添加成功' : '已拒绝');
+      } else {
+        showToast(data.msg || '操作失败');
+      }
+    } catch (e) {
+      console.error('处理请求失败', e);
+      showToast('操作失败');
+    }
+    
+    currentEmergencyRequest = null;
+  }
+
+  // --- 加载最后一次聊天记录 ---
+  async function loadLastChat() {
+    try {
+      const res = await fetch('/history'); // 历史记录接口
+      const history = await res.json();
+      // 增加数组有效性严谨判断
+      if (Array.isArray(history) && history.length > 0) {
+        const lastReply = history[history.length - 1];
+        // 严谨判断属性是否存在
+        if (lastReply?.role === 'ai' && lastReply?.content) {
+          const MAX_DISPLAY_LENGTH = 35; // 限制最多展示30字
+          let originalContent = lastReply.content.trim(); // 清理首尾无用空格
+
+          // 字符串截断核心逻辑
+          let displayContent = originalContent;
+          if (originalContent.length > MAX_DISPLAY_LENGTH) {
+            displayContent = originalContent.substring(0, MAX_DISPLAY_LENGTH) + '...';
+          }
+
+          // 优化：innerHTML改混合写法，内容区用textContent防XSS注入
+          const aiStatusDom = document.getElementById('ai-status');
+          aiStatusDom.innerHTML = '<span style="color:#64748B">上次聊到：</span><br>';
+          aiStatusDom.appendChild(document.createTextNode(displayContent));
+        }
+      }
+    } catch (e) {
+      console.error("主页加载历史对话失败:", e); // 建议用error级别日志，更容易发现问题
+    }
+  }
+
+  // --- 加载用药管家数据 ---
+  async function loadMedicineData() {
+    try {
+      const res = await fetch('/api/medicine/todayLogs');
+      const data = await res.json();
+      console.log('[用药数据]', data);
+      
+      if (data.code === 200 && Array.isArray(data.data)) {
+        const logs = data.data;
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        let nextReminder = null;
+        let takenCount = 0;
+        let totalCount = logs.length;
+        let missedCount = 0;
+        let pendingCount = 0;
+        
+        function canStillMakeupFrontend(reminderTimesJson, currentTime) {
+          try {
+            let times = typeof reminderTimesJson === 'string' ? JSON.parse(reminderTimesJson) : reminderTimesJson;
+            if (!times || times.length === 0) return false;
+            
+            const sortedTimes = times.map(t => {
+              const [h, m] = t.split(':').map(Number);
+              return h * 60 + m;
+            }).sort((a, b) => a - b);
+            
+            const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+            
+            let nextReminderMinutes = null;
+            for (const time of sortedTimes) {
+              if (time > currentMinutes) {
+                nextReminderMinutes = time;
+                break;
+              }
+            }
+            
+            if (nextReminderMinutes === null) {
+              nextReminderMinutes = sortedTimes[0] + 24 * 60;
+            }
+            
+            const minutesToNext = nextReminderMinutes > currentMinutes 
+              ? nextReminderMinutes - currentMinutes 
+              : (nextReminderMinutes + 24 * 60) - currentMinutes;
+            
+            return minutesToNext >= 120;
+          } catch (e) {
+            console.error('解析提醒时间失败', e);
+            return false;
+          }
+        }
+        
+        logs.forEach(log => {
+          const status = log.status;
+          const reminderTimes = log.reminderTimes || log.reminder_times;
+          console.log('[用药记录]', log.medicineName, '状态:', status, '时间:', log.scheduledTime);
+          
+          const scheduleTime = log.scheduledTime || log.schedule_time || log.scheduleTime;
+          let hour = 0, minute = 0;
+          
+          if (scheduleTime) {
+            const timeStr = scheduleTime.toString();
+            if (timeStr.includes('T')) {
+              const timePart = timeStr.split('T')[1];
+              [hour, minute] = timePart.split(':').map(Number);
+            } else if (timeStr.includes('-')) {
+              const parts = timeStr.split(' ');
+              if (parts.length > 1) {
+                [hour, minute] = parts[1].split(':').map(Number);
+              }
+            } else {
+              [hour, minute] = timeStr.split(':').map(Number);
+            }
+          }
+          
+          const scheduledDate = new Date();
+          scheduledDate.setHours(hour, minute, 0, 0);
+          const minutesSinceScheduled = Math.floor((now - scheduledDate) / 60000);
+          
+          let actualStatus = status;
+          if (status === 'pending' || !status) {
+            if (minutesSinceScheduled > 60) {
+              if (reminderTimes && canStillMakeupFrontend(reminderTimes, now)) {
+                actualStatus = 'pending_take';
+              } else {
+                actualStatus = 'missed';
+              }
+            } else if (minutesSinceScheduled > 0) {
+              actualStatus = 'pending_take';
+            } else {
+              actualStatus = 'pending';
+            }
+          } else if (status === 'missed') {
+            if (reminderTimes && canStillMakeupFrontend(reminderTimes, now)) {
+              actualStatus = 'pending_take';
+            }
+          }
+          
+          if (actualStatus === 'taken') {
+            takenCount++;
+          } else if (actualStatus === 'missed') {
+            missedCount++;
+          } else if (actualStatus === 'pending' || actualStatus === 'pending_take') {
+            pendingCount++;
+          }
+          
+          // 找出所有未服药记录中距离当前时间最近的
+          if (scheduleTime && actualStatus !== 'taken') {
+            const scheduledMinutes = hour * 60 + minute;
+            const currentMinutes = currentHour * 60 + currentMinute;
+            
+            // 计算时间差（绝对值）
+            const timeDiff = Math.abs(scheduledMinutes - currentMinutes);
+            const displayTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            const isPast = scheduledMinutes <= currentMinutes;
+            
+            // 如果还没有下一个提醒，或者这个时间更接近当前时间
+            if (!nextReminder || timeDiff < nextReminder.timeDiff) {
+              nextReminder = { 
+                time: displayTime, 
+                status: actualStatus, 
+                isPast: isPast,
+                timeDiff: timeDiff,
+                scheduledMinutes: scheduledMinutes
+              };
+            }
+          }
+        });
+
+        console.log('[用药统计] 总数:', totalCount, '已服:', takenCount, '漏服:', missedCount, '待服:', pendingCount);
+
+        const badge = document.getElementById('medicine-badge');
+        const desc = document.getElementById('medicine-desc');
+        
+        if (nextReminder) {
+          badge.textContent = nextReminder.time + ' 吃药';
+          badge.style.display = 'block';
+          
+          if (nextReminder.isPast && nextReminder.status === 'missed') {
+            badge.classList.remove('taken');
+            badge.classList.add('pending');
+            badge.style.background = '#FF6B6B';
+          } else if (nextReminder.status === 'taken') {
+            badge.classList.remove('pending');
+            badge.classList.add('taken');
+            badge.style.background = '#06D6A0';
+          } else {
+            badge.classList.remove('taken', 'pending');
+            badge.style.background = '#FF6B6B';
+          }
+        } else if (takenCount === totalCount && totalCount > 0) {
+          badge.textContent = '已完成';
+          badge.style.display = 'block';
+          badge.classList.remove('pending');
+          badge.classList.add('taken');
+          badge.style.background = '#06D6A0';
+        } else {
+          badge.style.display = 'none';
+        }
+        
+        if (missedCount > 0) {
+          desc.textContent = `今日漏服 ${missedCount} 次`;
+          desc.style.color = '#FF6B6B';
+        } else if (totalCount === 0) {
+          desc.textContent = '今日暂无用药计划';
+          desc.style.color = '#64748B';
+        } else {
+          desc.textContent = '今日用药正常';
+          desc.style.color = '#06D6A0';
+        }
+      } else {
+        document.getElementById('medicine-desc').textContent = '今日暂无用药计划';
+        document.getElementById('medicine-badge').style.display = 'none';
+      }
+    } catch (e) {
+      console.error("加载用药数据失败:", e);
+      document.getElementById('medicine-desc').textContent = '点击查看用药详情';
+    }
+  }
+
+  // --- 库存不足药品轮播 ---
+  let stockAlertList = [];
+  let currentStockIndex = 0;
+  let stockCarouselTimer = null;
+
+  function startStockCarousel() {
+    if (stockCarouselTimer) {
+      clearInterval(stockCarouselTimer);
+    }
+    
+    const carousel = document.getElementById('stock-carousel');
+    const textEl = document.getElementById('stock-carousel-text');
+    
+    if (stockAlertList.length === 0) {
+      carousel.style.display = 'none';
+      return;
+    }
+    
+    if (stockAlertList.length === 1) {
+      carousel.style.display = 'flex';
+      textEl.textContent = stockAlertList[0] + '不足';
+      return;
+    }
+    
+    carousel.style.display = 'flex';
+    
+    function showNextStock() {
+      carousel.classList.remove('fade-enter');
+      carousel.classList.add('fade-leave');
+      
+      setTimeout(() => {
+        currentStockIndex = (currentStockIndex + 1) % stockAlertList.length;
+        textEl.textContent = stockAlertList[currentStockIndex] + '不足';
+        
+        carousel.classList.remove('fade-leave');
+        carousel.classList.add('fade-enter');
+      }, 500);
+    }
+    
+    textEl.textContent = stockAlertList[currentStockIndex] + '不足';
+    carousel.classList.add('fade-enter');
+    
+    stockCarouselTimer = setInterval(showNextStock, 3000);
+  }
+
+  // --- 加载药品库存预警 ---
+  async function loadStockAlerts() {
+    try {
+      const res = await fetch('/api/medicine/alerts');
+      const data = await res.json();
+      console.log('[库存预警]', data);
+      
+      if (data.code === 200 && Array.isArray(data.data) && data.data.length > 0) {
+        stockAlertList = data.data.map(a => a.medicineName || a.name || '药品');
+        currentStockIndex = 0;
+        startStockCarousel();
+      } else {
+        stockAlertList = [];
+        if (stockCarouselTimer) {
+          clearInterval(stockCarouselTimer);
+        }
+        document.getElementById('stock-carousel').style.display = 'none';
+        document.getElementById('medicine-badge').style.display = 'block';
+      }
+    } catch (e) {
+      console.error("加载库存预警失败:", e);
+      stockAlertList = [];
+      if (stockCarouselTimer) {
+        clearInterval(stockCarouselTimer);
+      }
+      document.getElementById('stock-carousel').style.display = 'none';
+    }
+  }
+
+  // --- 加载新闻未读数量 ---
+  async function loadNewsUnread() {
+    try {
+      const res = await axios.get(`/api/news/community/list`, {
+        params: { page: 1, limit: 5 },
+        withCredentials: true
+      });
+      const data = res.data;
+      console.log('[新闻数据]', data);
+      
+      const badge = document.getElementById('news-badge');
+      const desc = document.getElementById('news-desc');
+      
+      const unreadCount = data.unreadCount || 0;
+      
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount + '条新';
+        badge.style.display = 'block';
+        desc.textContent = `有${unreadCount}条未读新闻`;
+      } else {
+        badge.style.display = 'none';
+        desc.textContent = '为您精选今日要闻';
+      }
+    } catch (e) {
+      console.error("加载新闻未读失败:", e);
+      document.getElementById('news-badge').style.display = 'none';
+      document.getElementById('news-desc').textContent = '为您精选今日要闻';
+    }
+  }
+
+  // --- 加载子女留言未读数量 ---
+  async function loadMessageUnread() {
+    try {
+      const res = await fetch('/api/msg/unread/detail');
+      const data = await res.json();
+      console.log('[消息未读]', data);
+      
+      const badge = document.getElementById('msg-badge');
+      const desc = document.getElementById('msg-desc');
+      
+      if (data.code === 200 && Array.isArray(data.data)) {
+        let totalUnread = 0;
+        data.data.forEach(item => {
+          totalUnread += item.count || item.unreadCount || item.unread_count || 0;
+        });
+        
+        if (totalUnread > 0) {
+          badge.textContent = totalUnread + '条新';
+          badge.style.display = 'block';
+          desc.textContent = `有${totalUnread}条未读消息`;
+        } else {
+          badge.style.display = 'none';
+          desc.textContent = '暂无新消息';
+        }
+      } else {
+        badge.style.display = 'none';
+        desc.textContent = '暂无新消息';
+      }
+    } catch (e) {
+      console.error("加载消息未读失败:", e);
+      document.getElementById('msg-badge').style.display = 'none';
+      document.getElementById('msg-desc').textContent = '暂无新消息';
+    }
+  }
+
+  // --- 触摸/点击反馈绑定 ---
+  function bindPressFeedback(selector) {
+    const nodes = document.querySelectorAll(selector);
+    nodes.forEach(el => {
+      el.classList.add('pressable');
+
+      // 指针事件（兼容鼠标/触摸）
+      el.addEventListener('pointerdown', (e) => {
+        if (e.isPrimary === false) return;
+        el.classList.add('pressed');
+      }, { passive: true });
+
+      const removePressed = () => el.classList.remove('pressed');
+      el.addEventListener('pointerup', removePressed, { passive: true });
+      el.addEventListener('pointercancel', removePressed, { passive: true });
+      el.addEventListener('pointerleave', removePressed, { passive: true });
+
+      // 键盘访问支持
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.classList.add('pressed');
+        }
+      });
+      el.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.classList.remove('pressed');
+          el.click();
+        }
+      });
+    });
+  }
+
+  // --- 页面初始化 ---
+  document.addEventListener('DOMContentLoaded', async () => {
+    console.log('页面加载完成，开始初始化');
+    updateTime();
+    updateWeatherUI();
+    loadLastChat();
+    loadRingtoneConfig();
+    setInterval(updateTime, 1000);
+
+    // 加载首页数据
+    loadMedicineData();
+    loadStockAlerts();
+    loadNewsUnread();
+    loadMessageUnread();
+
+    // 定时刷新数据（每60秒）
+    setInterval(() => {
+      loadMedicineData();
+      loadStockAlerts();
+      loadNewsUnread();
+      loadMessageUnread();
+    }, 60000);
+
+    // 监听localStorage变化，实时刷新新闻未读
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'communityNewsReadUpdated') {
+        console.log('社区新闻已读状态变化，刷新未读数量');
+        loadNewsUnread();
+      }
+    });
+
+    // 页面获得焦点时刷新数据
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        console.log('页面获得焦点，刷新数据');
+        loadMedicineData();
+        loadStockAlerts();
+        loadNewsUnread();
+        loadMessageUnread();
+      }
+    });
+
+    try {
+      console.log('获取用户信息...');
+      const userRes = await fetch('/api/user/info');
+      const userData = await userRes.json();
+      console.log('用户信息响应:', userData);
+      
+      if (userData.code === 200 && userData.data) {
+        const nickname = userData.data.nickname || "长辈";
+        const userId = userData.data.id;
+        console.log('用户昵称:', nickname, '用户ID:', userId);
+        
+        document.getElementById('user-display-name').textContent = `Hi，${nickname}`;
+        localStorage.setItem('nickname', nickname);
+        localStorage.setItem('user_id', userId);
+        currentUserId = userId;
+        
+        console.log('开始初始化WebSocket...');
+        initWebSocket(userId);
+        
+        // 加载用户显示和播放设置
+        loadUserSettings();
+      } else {
+        console.error('获取用户信息失败:', userData.msg);
+      }
+    } catch (e) {
+      console.error('初始化失败:', e);
+      const nickname = localStorage.getItem('nickname') || "长辈";
+      document.getElementById('user-display-name').textContent = `Hi，${nickname}`;
+    }
+
+    // 设置面板事件监听
+    document.getElementById('display-size-slider').addEventListener('input', function() {
+      updateDisplaySize(parseInt(this.value));
+    });
+    
+    document.getElementById('voice-volume-slider').addEventListener('input', function() {
+      updateVoiceVolume(parseInt(this.value));
+    });
+    
+    // 监听其他页面设置变更
+    listenSettingsChange();
+
+    // 绑定所有可点击元素的反馈
+    bindPressFeedback('.glass-card');
+    bindPressFeedback('.nav-item');
+    bindPressFeedback('.mic-icon');
+    bindPressFeedback('a.pressable');
+
+    // 防止长按选中文字
+    document.querySelectorAll('.pressable').forEach(el => {
+      el.addEventListener('dragstart', (ev) => ev.preventDefault());
+    });
+  });
+</script>
+</body>
+</html>
+
+
+t src="lib/js/wav.js"></script>
+  <script src="lib/js/axios.min.js"></script>
+  <script src="lib/js/socket.io.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="/js/global-mqtt-manager.js"></script>
+  <script src="/js/global-message-center.js"></script>
+  <script src="/js/user-settings-manager.js"></script>
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.45);
+      --glass-border: rgba(255, 255, 255, 0.7);
+      --primary: #4361EE;
+      --danger: #F72585;
+      --text: #1E293B;
+    }
+
+    body {
+      margin: 0; padding: 0;
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: radial-gradient(circle at 10% 20%, #E0EAFC 0%, #CFDEF3 100%);
+      height: 100vh; width: 100vw; overflow: hidden;
+    }
+
+    #page-zoom-wrapper {
+      width: 133.333%; height: 133.333%;
+      transform: scale(0.75); transform-origin: top left;
+      display: flex; flex-direction: column; box-sizing: border-box;
+    }
+
+    .header { padding: var(--header-padding); display: flex; justify-content: space-between; align-items: flex-end; }
+    .header h1 { font-size: var(--header-h1-size); margin: 0; font-weight: 800; color: #1e3a8a; }
+    .header p { font-size: var(--header-p-size); color: #64748B; margin: 5px 0 0; }
+    #current-time { font-size: var(--time-size); font-weight: 800; color: var(--primary); line-height: 1; }
+    #current-date { font-size: var(--date-size); color: #64748B; margin-top: 5px; font-weight: 600; }
+
+    .container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 3fr;
+      gap: 30px;
+      padding: 0 60px 140px;
+    }
+
+    .sidebar { display: flex; flex-direction: column; gap: 25px; }
+    .sidebar .glass-card { flex: 1; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(25px) saturate(160%);
+      border-radius: 35px;
+      border: 1.5px solid var(--glass-border);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.05), inset 0 0 25px rgba(255,255,255,0.3);
+      padding: var(--card-padding);
+      position: relative;
+      overflow: hidden;
+      transition: all 140ms cubic-bezier(.2,.8,.2,1);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      user-select: none;
+    }
+
+    .pressable { touch-action: manipulation; cursor: pointer; outline: none; }
+    .pressed { transform: translateY(2px) scale(0.96); opacity: 0.9; }
+
+    .temp-row { display: flex; align-items: center; justify-content: center; gap: 15px; width: 80%; margin: 15px 0; }
+    .temp-row .temp { font-size: var(--temp-size); font-weight: 800; }
+    .temp-row #w-icon { width: var(--weather-icon-size); height: var(--weather-icon-size); object-fit: contain; }
+    .weather-tip { font-size: var(--weather-tip-size); line-height: 1.5; background: rgba(255,255,255,0.18); padding: 15px; border-radius: 20px; width: 90%; }
+
+    /* AI 交互核心样式（保留第二个界面的样式） */
+    .ai-card {
+      justify-content: flex-start !important;
+      align-items: flex-start !important;
+      padding: 25px;
+    }
+
+    #ai-status {
+      text-align: left;
+      width: 100%;
+      font-size: var(--ai-status-size);
+      font-weight: 600;
+      color: var(--text);
+      line-height:  1.4;
+      transition: opacity 0.8s ease;
+      min-height: 120px;
+    }
+
+    .mic-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+
+    .mic-icon {
+      width: var(--mic-icon-size); height: var(--mic-icon-size);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4361EE 0%, #6366f1 50%, #a5b4fc 100%);
+      box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+    }
+
+    .mic-icon.minimized {
+      transform: scale(0.5) translateY(40px);
+      opacity: 0.7;
+    }
+
+    .mic-icon.recording {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .mic-icon i { font-size: var(--mic-icon-inner-size); color: white; }
+
+    .feature-card i.fa-main { font-size: var(--feature-icon-size); color: var(--primary); }
+    .feature-card .icon-img { width: var(--feature-icon-size); height: var(--feature-icon-size); object-fit: contain; }
+    .feature-card .title { font-size: var(--feature-title-size); font-weight: bold; }
+    .feature-card .desc { font-size: var(--feature-desc-size); color: #64748B; font-weight: 600; }
+  
+      .badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: var(--danger);
+        color: white;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 18px;
+        font-weight: bold;
+        white-space: nowrap;
+        height: 32px;
+        display: flex;
+        align-items: center;
+      }
+
+      .badge.taken {
+        background: #06D6A0 !important;
+      }
+
+      .badge.pending {
+        background: #FF6B6B !important;
+      }
+
+      .stock-carousel {
+        position: absolute;
+        top: 20px;
+        right: 160px;
+        background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+        color: white;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        animation: fadeInOut 3s ease-in-out infinite;
+        white-space: nowrap;
+        overflow: hidden;
+        max-width: 130px;
+        height: 32px;
+      }
+
+    .stock-carousel i {
+      font-size: 14px;
+    }
+
+    .stock-carousel-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .stock-carousel.fade-enter {
+      animation: slideIn 0.5s ease-out forwards;
+    }
+
+    .stock-carousel.fade-leave {
+      animation: slideOut 0.5s ease-in forwards;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(-20px); }
+    }
+
+    /* 紧急呼叫动画 */
+    @keyframes emergencyPulse {
+      0%, 100% { background-color: rgba(247, 37, 133, 0.85); }
+      50% { background-color: rgba(247, 37, 133, 0.6); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    @keyframes emergency-bg-pulse {
+      0%, 100% { background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.9) 100%); }
+      50% { background: linear-gradient(135deg, rgba(220, 38, 38, 0.9) 0%, rgba(239, 68, 68, 0.85) 100%); }
+    }
+
+    @keyframes emergency-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes emergency-shake {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      25% { transform: translateX(-8px) rotate(-3deg); }
+      75% { transform: translateX(8px) rotate(3deg); }
+    }
+
+    @keyframes emergency-ring {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    @keyframes emergency-btn-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 12px 30px rgba(239, 68, 68, 0.5); }
+      50% { transform: scale(1.05); box-shadow: 0 16px 40px rgba(239, 68, 68, 0.7); }
+    }
+
+    .bottom-nav {
+      position: fixed; bottom: 35px; left: 50%; transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
+      padding: 15px 70px; border-radius: 100px; display: flex; gap: 70px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.1); border: 1px solid white; z-index: 1000;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 5px; color: #475569; }
+    .nav-item i { font-size: var(--nav-icon-size); }
+    .nav-item .nav-icon-img { width: var(--nav-icon-size); height: var(--nav-icon-size); object-fit: contain; }
+    .nav-item span { font-size: var(--nav-text-size); font-weight: 700; }
+
+    .toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #1E293B; color: white; padding: 22px 60px; border-radius: 100px; font-size: 26px; transition: 0.5s; z-index: 2000; }
+
+    /* 显示大小相关样式变量 */
+    :root {
+      --display-scale: 1;
+      --header-padding: 40px 60px 20px;
+      --header-h1-size: 40px;
+      --header-p-size: 22px;
+      --time-size: 52px;
+      --date-size: 20px;
+      --card-padding: 30px;
+      --feature-icon-size: 75px;
+      --feature-title-size: 34px;
+      --feature-desc-size: 21px;
+      --nav-icon-size: 34px;
+      --nav-text-size: 20px;
+      --temp-size: 65px;
+      --weather-tip-size: 19px;
+      --weather-icon-size: 110px;
+      --ai-status-size: 22px;
+      --mic-icon-size: 110px;
+      --mic-icon-inner-size: 50px;
+    }
+
+    /* 设置控制面板样式 */
+    .settings-panel {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 25px 40px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      z-index: 2147483647;
+      display: none;
+      min-width: 500px;
+    }
+    .settings-panel.show { display: block; animation: slideUp 0.3s ease; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .settings-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1E293B;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    .setting-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 15px 20px;
+      background: #f8fafc;
+      border-radius: 20px;
+    }
+    .setting-item:last-child { margin-bottom: 0; }
+    .setting-label {
+      font-size: 26px;
+      font-weight: 600;
+      color: #334155;
+      min-width: 140px;
+    }
+    .setting-control {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .setting-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 12px;
+      border-radius: 10px;
+      background: #e2e8f0;
+      outline: none;
+    }
+    .setting-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), #7209B7);
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(67, 97, 238, 0.4);
+    }
+    .setting-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 60px;
+      text-align: right;
+    }
+    .voice-switch {
+      position: relative;
+      width: 100px;
+      height: 50px;
+      background: #e2e8f0;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .voice-switch.active {
+      background: linear-gradient(135deg, var(--primary), #7209B7);
+    }
+    .voice-switch::after {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      width: 40px;
+      height: 40px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .voice-switch.active::after {
+      transform: translateX(50px);
+    }
+    .voice-switch-label {
+      font-size: 20px;
+      color: #64748B;
+      margin-left: 15px;
+    }
+    .close-settings {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 30px;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+
+    /* 语音设置面板样式 */
+    .voice-settings-panel {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      padding: 25px 40px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      z-index: 2147483647;
+      display: none;
+      min-width: 500px;
+    }
+    .voice-settings-panel.show { display: block; animation: slideUp 0.3s ease; }
+
+    /* 小屏幕适配（保留原样式） */
+    @media (max-width: 900px) {
+      #page-zoom-wrapper { transform: scale(0.68); }
+      .header h1 { font-size: 28px; }
+      .feature-card .title { font-size: 20px; }
+      .feature-card .desc { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="page-zoom-wrapper">
+  <header class="header">
+    <div class="welcome-box">
+      <h1 id="user-display-name">您好，访客</h1>
+      <p>解尘颐安智护：一键呼叫守平安，用药监测更安心</p>
+    </div>
+    <div class="time-box">
+      <div id="current-time">00:00</div>
+      <div id="current-date">加载中...</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <aside class="sidebar">
+      <div class="glass-card pressable" onclick="speakWeather()" role="button" tabindex="0">
+        <div id="w-city" style="font-size: 24px; font-weight: bold;">正在定位...</div>
+        <div class="temp-row">
+          <img id="w-icon" src="/images/icons/weather-sun.png" alt="天气">
+          <span id="w-temp" class="temp">--°C</span>
+        </div>
+        <div id="w-tip" class="weather-tip">
+          <i class="fa fa-info-circle"></i> <b>天气贴士：</b><br>正在加载...
+        </div>
+      </div>
+
+      <!-- 保留第二个界面的AI卡片结构 -->
+      <div class="glass-card ai-card" id="ai-panel">
+        <div id="ai-status">
+          <img src="/images/icons/icon-ai.png" style="width: 28px; height: 28px; vertical-align: middle; margin-right: 8px;"> 我是您的生活助手<br>
+          <small style="font-weight: normal; font-size: 18px; color: #64748B;">长按下方话筒说话</small>
+        </div>
+
+        <div class="mic-container">
+          <div class="mic-icon pressable" id="main-mic" role="button" aria-label="语音输入">
+            <img src="/images/icons/icon-ai-1.png" style="width: 70%; height: 70%; object-fit: contain;" alt="语音输入">
+          </div>
+        </div>
+
+        <a href="chat_detail.html" style="text-decoration:none; color: var(--primary); font-weight: bold; font-size: 18px; align-self: center;" class="pressable" tabindex="0">更多对话 ></a>
+      </div>
+    </aside>
+
+    <section class="feature-grid">
+      <div class="glass-card feature-card pressable" onclick="triggerEmergencyCall()" role="button" tabindex="0" id="emergency-call-card">
+        <img src="/images/icons/icon-emergency.png" class="icon-img" alt="紧急呼叫">
+        <span class="title">紧急呼叫</span>
+        <span class="desc">一键直连子女和社区</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('用药管家', '打开药盒', 'medicine.html')" role="button" tabindex="0" id="medicine-card">
+        <div class="stock-carousel" id="stock-carousel" style="display:none;">
+          <i class="fa fa-exclamation-triangle"></i>
+          <span id="stock-carousel-text"></span>
+        </div>
+        <div class="badge" id="medicine-badge" style="display:none;">吃药</div>
+        <img src="/images/icons/icon-medicine.png" class="icon-img" alt="用药管家">
+        <span class="title">用药管家</span>
+        <span class="desc" id="medicine-desc">加载中...</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('健康监测', '查看健康报告', 'health.html')" role="button" tabindex="0">
+        <img src="/images/icons/icon-health.png" class="icon-img" alt="健康监测">
+        <span class="title">健康监测</span>
+        <span class="desc">查看今日的健康状态</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('老年学堂', '去上课', 'school.html')" role="button" tabindex="0">
+        <img src="/images/icons/fa-graduation-cap.png" class="icon-img" alt="老年学堂">
+        <span class="title">老年学堂</span>
+        <span class="desc">挥毫泼墨 悦享时光</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('新闻播报', '听新闻', 'news.html')" role="button" tabindex="0" id="news-card">
+        <div class="badge" id="news-badge" style="display:none; background: #4CC9F0;">0条新</div>
+        <img src="/images/icons/icon-news.png" class="icon-img" alt="新闻播报">
+        <span class="title">新闻播报</span>
+        <span class="desc" id="news-desc">为您精选今日要闻</span>
+      </div>
+      <div class="glass-card feature-card pressable" onclick="handleNav('子女留言', '查看信息', 'msg.html')" role="button" tabindex="0" id="msg-card">
+        <div class="badge" id="msg-badge" style="display:none; background: var(--primary);">0条新</div>
+        <img src="/images/icons/icon-social.png" class="icon-img" alt="子女留言">
+        <span class="title">子女留言</span>
+        <span class="desc" id="msg-desc">暂无信息</span>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active pressable" onclick="location.reload()" role="button" tabindex="0"><img src="/images/icons/fa-home.png" class="nav-icon-img" alt="首页"><span>首页</span></div>
+    <div class="nav-item pressable" onclick="toggleVoiceSettingsPanel()" role="button" tabindex="0"><img src="/images/icons/fa-volume-up.png" class="nav-icon-img" alt="语音设置" id="mute-icon-img"><span id="mute-text">语音设置</span></div>
+    <div class="nav-item pressable" onclick="toggleSettingsPanel()" role="button" tabindex="0"><img src="/images/icons/fa-sliders.png" class="nav-icon-img" alt="显示大小"><span>显示大小</span></div>
+    <div class="nav-item pressable" onclick="handleNav('系统设置', '进入设置', 'set.html')" role="button" tabindex="0"><img src="/images/icons/icon-system.png" class="nav-icon-img" alt="设置"><span>设置</span></div>
+  </nav>
+  
+  <!-- 紧急呼叫确认弹窗 (放在缩放容器内部) -->
+  <div id="emergency-confirm-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.9) 100%); z-index:2147483647; justify-content:center; align-items:center; animation: emergency-bg-pulse 2s infinite;">
+    <div style="position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden;">
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.08) 30deg, transparent 60deg); animation: emergency-spin 4s linear infinite;"></div>
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.05) 30deg, transparent 60deg); animation: emergency-spin 6s linear infinite reverse;"></div>
+    </div>
+    <div style="background:linear-gradient(145deg, #ffffff 0%, #fef2f2 100%); border-radius:60px; padding:70px 60px; max-width:850px; width:90%; text-align:center; box-shadow:0 40px 100px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,255,255,0.8); position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color:white; padding:15px 40px; border-bottom-left-radius:40px; font-size:24px; font-weight:900; box-shadow:0 8px 30px rgba(239,68,68,0.5);">🚨 紧急</div>
+      <div style="width:200px; height:200px; border-radius:50%; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); margin:20px auto 40px; display:flex; align-items:center; justify-content:center; animation: emergency-shake 0.6s ease-in-out infinite; box-shadow:0 0 60px rgba(239,68,68,0.8), 0 0 100px rgba(239,68,68,0.4);">
+        <i class="fa fa-phone" style="font-size:100px; color:white; animation: emergency-ring 1.2s ease-in-out infinite;"></i>
+      </div>
+      <h2 style="font-size:56px; color:#DC2626; margin-bottom:20px; font-weight:900; text-shadow:0 4px 20px rgba(220,38,38,0.3);">紧急呼叫</h2>
+      <div style="display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); color:#92400E; padding:12px 28px; border-radius:30px; font-size:22px; font-weight:700; margin-bottom:30px; border:2px solid #F59E0B; box-shadow:0 4px 15px rgba(245,158,11,0.3);">
+        <i class="fa fa-hand-pointer-o"></i>
+        手动呼叫
+      </div>
+      <p style="font-size:38px; color:#1E293B; margin-bottom:35px; line-height:1.7; font-weight:700;">即将向紧急联系人发起视频呼叫</p>
+      <div style="background:linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%); border:3px solid #EF4444; border-radius:30px; padding:30px; margin-bottom:40px; box-shadow:0 8px 30px rgba(239,68,68,0.2);">
+        <p style="font-size:28px; color:#991B1B; margin:0 0 15px 0; font-weight:800;">⏱ 自动倒计时</p>
+        <p style="font-size:100px; color:#DC2626; margin:0; font-weight:900; text-shadow:0 4px 20px rgba(220,38,38,0.4);" id="emergency-countdown">10</p>
+        <p style="font-size:22px; color:#B91C1C; margin:15px 0 0 0; font-weight:600;">秒后自动发起呼叫</p>
+      </div>
+      <div style="display:flex; gap:35px; justify-content:center;">
+        <button onclick="cancelEmergencyCall()" style="padding:30px 70px; font-size:34px; border-radius:35px; border:none; background:linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%); color:#475569; font-weight:900; cursor:pointer; box-shadow:0 12px 30px rgba(0,0,0,0.2); transition:all 0.3s; position:relative; overflow:hidden;">
+          <i class="fa fa-times" style="margin-right:12px;"></i>
+          取消呼叫
+        </button>
+        <button onclick="confirmEmergencyCall()" style="padding:30px 70px; font-size:34px; border-radius:35px; border:none; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color:white; font-weight:900; cursor:pointer; box-shadow:0 12px 30px rgba(239,68,68,0.5); transition:all 0.3s; animation: emergency-btn-pulse 1.5s ease-in-out infinite; position:relative; overflow:hidden;">
+          <i class="fa fa-phone" style="margin-right:12px;"></i>
+          立即呼叫
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 紧急呼叫进行中界面 (放在缩放容器内部) -->
+  <div id="emergency-in-progress-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.9) 100%); z-index:2147483647; justify-content:center; align-items:center; animation: emergency-bg-pulse 2s infinite;">
+    <div style="position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden;">
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.08) 30deg, transparent 60deg); animation: emergency-spin 4s linear infinite;"></div>
+      <div style="position:absolute; width:200%; height:200%; top:-50%; left:-50%; background:conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.05) 30deg, transparent 60deg); animation: emergency-spin 6s linear infinite reverse;"></div>
+    </div>
+    <div style="background:linear-gradient(145deg, #ffffff 0%, #fef2f2 100%); border-radius:60px; padding:70px 60px; max-width:850px; width:90%; text-align:center; box-shadow:0 40px 100px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,255,255,0.8); position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; right:0; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color:white; padding:15px 40px; border-bottom-left-radius:40px; font-size:24px; font-weight:900; box-shadow:0 8px 30px rgba(239,68,68,0.5);">🚨 紧急呼叫中</div>
+      <div style="width:200px; height:200px; border-radius:50%; background:linear-gradient(135deg, #EF4444 0%, #DC2626 100%); margin:20px auto 40px; display:flex; align-items:center; justify-content:center; animation: emergency-shake 0.6s ease-in-out infinite; box-shadow:0 0 60px rgba(239,68,68,0.8), 0 0 100px rgba(239,68,68,0.4);">
+        <i class="fa fa-phone" style="font-size:100px; color:white; animation: emergency-ring 1.2s ease-in-out infinite;"></i>
+      </div>
+      <h2 style="font-size:56px; color:#DC2626; margin-bottom:20px; font-weight:900; text-shadow:0 4px 20px rgba(220,38,38,0.3);">正在呼叫紧急联系人</h2>
+      <div style="display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); color:#92400E; padding:12px 28px; border-radius:30px; font-size:22px; font-weight:700; margin-bottom:30px; border:2px solid #F59E0B; box-shadow:0 4px 15px rgba(245,158,11,0.3);">
+        <i class="fa fa-hand-pointer-o"></i>
+        手动呼叫
+      </div>
+      <p style="font-size:38px; color:#1E293B; margin-bottom:35px; line-height:1.7; font-weight:700;">请等待紧急联系人接听...</p>
+      <div style="background:linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%); border:3px solid #EF4444; border-radius:30px; padding:30px; margin-bottom:40px; box-shadow:0 8px 30px rgba(239,68,68,0.2);">
+        <p style="font-size:28px; color:#991B1B; margin:0 0 15px 0; font-weight:800;">📞 已向以下联系人发送呼叫</p>
+        <div id="emergency-calling-contacts" style="font-size:32px; color:#DC2626; font-weight:700; line-height:1.6;"></div>
+      </div>
+      <p id="emergency-waiting-text" style="font-size:26px; color:#64748B; margin-bottom:30px; line-height:1.6; font-weight:600;">正在等待有人接听...</p>
+      <div style="display:flex; gap:35px; justify-content:center;">
+        <button onclick="cancelEmergencyInProgress()" style="padding:30px 70px; font-size:34px; border-radius:35px; border:none; background:linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%); color:#475569; font-weight:900; cursor:pointer; box-shadow:0 12px 30px rgba(0,0,0,0.2); transition:all 0.3s; position:relative; overflow:hidden;">
+          <i class="fa fa-times" style="margin-right:12px;"></i>
+          取消呼叫
+        </button>
+      </div>
+    </div>
+  </div>
+  
+
+</div>
+<!-- 紧急联系人申请弹窗 (放在缩放容器外部) -->
+<div id="emergency-request-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2147483647; justify-content:center; align-items:center;">
+  <div style="background:white; border-radius:35px; padding:40px; max-width:700px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+    <div style="width:120px; height:120px; border-radius:50%; background:linear-gradient(135deg, #4361EE, #7209B7); margin:0 auto 25px; display:flex; align-items:center; justify-content:center;">
+      <i class="fa fa-user-plus" style="font-size:60px; color:white;"></i>
+    </div>
+    <h2 style="font-size:40px; color:#1E293B; margin-bottom:20px; font-weight:800;">紧急联系人申请</h2>
+    <p id="emergency-request-text" style="font-size:32px; color:#64748B; margin-bottom:35px; line-height:1.5;"></p>
+    <div style="display:flex; gap:25px; justify-content:center;">
+      <button onclick="handleEmergencyRequest(false)" style="padding:20px 60px; font-size:30px; border-radius:25px; border:none; background:#f1f5f9; color:#64748B; font-weight:bold; cursor:pointer;">拒绝</button>
+      <button onclick="handleEmergencyRequest(true)" style="padding:20px 60px; font-size:30px; border-radius:25px; border:none; background:linear-gradient(135deg, #4361EE, #7209B7); color:white; font-weight:bold; cursor:pointer;">同意</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<!-- 设置控制面板 - 只保留显示大小 -->
+<div id="settings-panel" class="settings-panel">
+  <div class="close-settings" onclick="toggleSettingsPanel()">&times;</div>
+  <div class="settings-title">显示大小设置</div>
+  
+  <div class="setting-item">
+    <span class="setting-label">显示大小</span>
+    <div class="setting-control">
+      <input type="range" class="setting-slider" id="display-size-slider" min="50" max="200" value="100">
+      <span class="setting-value" id="display-size-value">100%</span>
+    </div>
+  </div>
+</div>
+
+<!-- 语音设置面板 -->
+<div id="voice-settings-panel" class="voice-settings-panel">
+  <div class="close-settings" onclick="toggleVoiceSettingsPanel()">&times;</div>
+  <div class="settings-title">语音设置</div>
+  
+  <div class="setting-item">
+    <span class="setting-label">音量大小</span>
+    <div class="setting-control">
+      <input type="range" class="setting-slider" id="voice-volume-slider" min="0" max="100" value="80">
+      <span class="setting-value" id="voice-volume-value">80%</span>
+    </div>
+  </div>
+  
+  <div class="setting-item">
+    <span class="setting-label">语音模式</span>
+    <div class="setting-control">
+      <div class="voice-switch" id="voice-mode-switch-voice" onclick="toggleVoiceModeFromVoicePanel()"></div>
+      <span class="voice-switch-label" id="voice-mode-label-voice">自动播放</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let isMuted = false;
+  let currentWeatherText = "正在获取天气信息";
+  let isAiProcessing = false;
+  let pressTimer;
+  let currentEmergencyRequest = null;
+  let currentUserId = null;
+  
+  // 紧急呼叫相关变量
+  let emergencyCountdownTimer = null;
+  let emergencyCountdown = 10;
+  let warningAudio = null;
+  let emergencyContacts = [];
+  let currentUserName = '';
+  let signalingSocket = null;
+  let currentCallRecordId = null;
+  let ringtoneConfig = {};
+  
+  // 用户设置变量
+  let userDisplaySize = 100;
+  let userVolume = 80;
+  let userVoiceMode = 0; // 0-自动播放, 1-手动触发
+  
+  // 全局设置存储，用于跨页面同步
+  window.userSettings = {
+    displaySize: 100,
+    volume: 80,
+    voiceMode: 0
+  };
+
+  // 获取 DOM 元素
+  const micBtn = document.getElementById('main-mic');
+  const statusText = document.getElementById('ai-status');
+
+  // --- 长按麦克风逻辑（保留第二个界面） ---
+  micBtn.addEventListener('pointerdown', (e) => {
+    if (isAiProcessing) return;
+    e.preventDefault();
+    micBtn.classList.add('pressed');
+    pressTimer = setTimeout(() => {
+      startRecording();
+    }, 500); // 长按 0.5 秒触发录音
+  });
+
+  let stopTimer = null; // debounce 定时器
+
+  micBtn.addEventListener('pointerup', (e) => {
+    clearTimeout(pressTimer);
+    micBtn.classList.remove('pressed');
+    if (micBtn.classList.contains('recording')) {
+      micBtn.classList.remove('recording');
+      scheduleStop();
+    }
+  });
+
+  micBtn.addEventListener('pointerleave', () => {
+    clearTimeout(pressTimer);
+    micBtn.classList.remove('pressed');
+    if (micBtn.classList.contains('recording')) {
+      micBtn.classList.remove('recording');
+      scheduleStop();
+    }
+  });
+
+  function scheduleStop() {
+    if (stopTimer) return; // 已有待执行的停止，忽略重复触发
+    stopTimer = setTimeout(() => {
+      stopTimer = null;
+      stopRecordingAndAsk();
+    }, 100); // 100ms 内的重复触发只执行1次
+  }
+
+  let rec; // 录音对象
+
+  // --- 改进后的开始录音 ---
+  function startRecording() {
+    clearTimeout(stopTimer); // 开始新录音时清除待执行的停止
+    // 初始化录音机
+    rec = Recorder({ type: "wav", sampleRate: 18000, bitRate: 16 });
+    rec.open(() => {
+      rec.start();
+      micBtn.classList.add('recording');
+      statusText.innerHTML = `<i class="fa fa-dot-circle-o" style="color:var(--danger)"></i> 正在听您说话...`;
+    }, (msg) => {
+      console.error("无法打开录音", msg);
+      showToast("麦克风启动失败");
+    });
+  }
+
+  // --- 改进后的结束录音并提问 ---
+  async function stopRecordingAndAsk() {
+    if (!rec || isAiProcessing) return;
+    const currentRec = rec;
+    rec = null;
+    isAiProcessing = true;
+    micBtn.classList.remove('recording');
+    statusText.innerHTML = `<i class="fa fa-spinner fa-spin" style="color:var(--primary)"></i> 正在努力听懂...`;
+
+    currentRec.stop(async (blob, duration) => {
+      currentRec.close();
+      if (duration < 800) {
+        statusText.innerHTML = "说话时间太短了，请长按久一点点";
+        isAiProcessing = false;
+        return;
+      }
+
+      try {
+        const fd = new FormData();
+        fd.append('file', blob, 'audio.wav');
+
+        const asrRes = await fetch('/api/asr/translate', { method: 'POST', body: fd });
+        const asrData = await asrRes.json();
+
+        if (asrData.code === 200 && asrData.data) {
+          const userMsg = asrData.data;
+          statusText.innerHTML = `<i class="fa fa-spinner fa-spin" style="color:var(--primary)"></i> 正在思考：${userMsg}`;
+
+          const response = await fetch(`/ask?msg=${encodeURIComponent(userMsg)}`);
+          const replyText = await response.text();
+
+          playAiReply(replyText);
+        } else {
+          statusText.innerHTML = "哎呀，没听清，咱们再试一次吧？";
+          isAiProcessing = false;
+        }
+      } catch (err) {
+        console.error("AI 交互失败", err);
+        statusText.innerHTML = "网络开小差了，请稍后再试";
+        isAiProcessing = false;
+      }
+    }, () => {
+      currentRec.close();
+      isAiProcessing = false;
+    });
+  }
+
+  function playAiReply(text) {
+    speak(text,
+            () => {
+              // 播放开始：麦克风缩小动画
+              statusText.style.opacity = '1';
+              statusText.innerHTML = `小智：<br>${text}`;
+              micBtn.classList.add('minimized');
+            },
+            () => {
+              // 播放结束：恢复初始状态
+              statusText.style.opacity = '0';
+              setTimeout(() => {
+                micBtn.classList.remove('minimized');
+                statusText.innerHTML = `<i class="fa fa-commenting-o" style="color:var(--primary)"></i> 我是您的生活助手<br><small style="font-weight: normal; font-size: 18px; color: #64748B;">长按下方话筒说话</small>`;
+                statusText.style.opacity = '1';
+                isAiProcessing = false;
+                stopRecordingLock = false;
+              }, 800);
+            }
+    );
+  }
+
+  // --- 修改后的 speak 函数（增加 onEnd 回调和 10 秒安全定时器） ---
+  function speak(text, onStart, onEnd) {
+    if (isMuted) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    // 停止当前正在播放的音频
+    const existingAudio = document.getElementById('baidu-tts-player');
+    if (existingAudio) {
+      existingAudio.pause();
+      existingAudio.remove();
+    }
+
+    const url = `/api/tts/speak?text=${encodeURIComponent(text)}&t=${Date.now()}`;
+    const audio = new Audio(url);
+    audio.id = 'baidu-tts-player';
+
+    if (onStart) onStart(); // 播放开始回调
+
+    // 10秒强制恢复的安全定时器
+    const safetyTimer = setTimeout(() => {
+      if (onEnd) onEnd();
+    }, 16000);
+
+    audio.onended = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.onerror = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.play().catch(e => {
+      console.error("语音播放失败:", e);
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    });
+  }
+
+  // --- 天气相关功能 ---
+  async function updateWeatherUI() {
+    try {
+      const response = await fetch('/api/weather/now');
+      if (!response.ok) return;
+      const data = await response.json();
+      document.getElementById('w-city').innerText = `${data.city} · ${data.weatherText}`;
+      document.getElementById('w-temp').innerText = `${data.temperature}°C`;
+      document.getElementById('w-tip').innerHTML = `<i class="fa fa-info-circle"></i> <b>天气贴士：</b><br>${data.tip}`;
+      currentWeatherText = `当前${data.city}${data.weatherText}，温度${data.temperature}度。${data.tip}`;
+
+      // 天气图标适配（支持白天/夜晚）
+      const iconElem = document.getElementById('w-icon');
+      const wt = data.weatherText || "";
+      const hour = new Date().getHours();
+      const isNight = hour < 6 || hour >= 18;
+      
+      let iconFile = 'weather-sun.png';
+      if (wt.includes("雷")) iconFile = 'weather-thunder.png';
+      else if (wt.includes("雨")) iconFile = 'weather-rain.png';
+      else if (wt.includes("雪")) iconFile = 'weather-snow.png';
+      else if (wt.includes("雾") || wt.includes("霾")) iconFile = 'weather-fog.png';
+      else if (wt.includes("沙") || wt.includes("尘")) iconFile = 'weather-sand.png';
+      else if (wt.includes("风")) iconFile = 'weather-wind.png';
+      else if (wt.includes("阴")) iconFile = 'weather-overcast.png';
+      else if (wt.includes("云")) {
+        iconFile = isNight ? 'weather-night-cloudy.png' : 'weather-cloud.png';
+      }
+      else if (wt.includes("晴")) {
+        iconFile = isNight ? 'weather-night-clear.png' : 'weather-sun.png';
+      }
+      else {
+        iconFile = isNight ? 'weather-night-clear.png' : 'weather-sun.png';
+      }
+      
+      iconElem.src = `/images/icons/${iconFile}`;
+    } catch (err) {
+      console.error("天气获取失败", err);
+    }
+  }
+
+  function speakWeather() {
+    showToast("播报天气中...");
+    speak(currentWeatherText);
+  }
+
+  // --- 导航和通用功能 ---
+  function handleNav(title, toastText, url) {
+    showToast(toastText);
+    speak(title + "。" + toastText, null, () => {
+      if (url && url !== '#') {
+        window.location.href = url;
+      }
+    });
+  }
+
+  function adjustVolume() {
+    toggleVoiceSettingsPanel();
+  }
+
+  function toggleSettingsPanel() {
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('show');
+  }
+
+  function toggleVoiceSettingsPanel() {
+    const panel = document.getElementById('voice-settings-panel');
+    panel.classList.toggle('show');
+  }
+
+  function updateVoiceVolume(vol) {
+    userVolume = vol;
+    window.userSettings.volume = vol;
+    document.getElementById('voice-volume-value').textContent = vol + '%';
+    saveUserSettings();
+    broadcastSettingsChange();
+  }
+
+  function toggleVoiceModeFromVoicePanel() {
+    const switchEl = document.getElementById('voice-mode-switch-voice');
+    const labelEl = document.getElementById('voice-mode-label-voice');
+    const navIconImg = document.getElementById('mute-icon-img');
+    userVoiceMode = userVoiceMode === 0 ? 1 : 0;
+    window.userSettings.voiceMode = userVoiceMode;
+    
+    if (userVoiceMode === 1) {
+      switchEl.classList.add('active');
+      labelEl.textContent = '手动触发';
+      navIconImg.src = '/images/icons/fa-volume-off.png';
+    } else {
+      switchEl.classList.remove('active');
+      labelEl.textContent = '自动播放';
+      navIconImg.src = '/images/icons/fa-volume-up.png';
+    }
+    
+    saveUserSettings();
+    broadcastSettingsChange();
+  }
+
+  function updateDisplaySize(size) {
+    userDisplaySize = size;
+    window.userSettings.displaySize = size;
+    document.getElementById('display-size-value').textContent = size + '%';
+    
+    const scale = size / 100;
+    const root = document.documentElement;
+    
+    // 更新CSS变量，实现放大效果
+    root.style.setProperty('--header-h1-size', (40 * scale) + 'px');
+    root.style.setProperty('--header-p-size', (22 * scale) + 'px');
+    root.style.setProperty('--time-size', (52 * scale) + 'px');
+    root.style.setProperty('--date-size', (20 * scale) + 'px');
+    root.style.setProperty('--feature-icon-size', (75 * scale) + 'px');
+    root.style.setProperty('--feature-title-size', (34 * scale) + 'px');
+    root.style.setProperty('--feature-desc-size', (21 * scale) + 'px');
+    root.style.setProperty('--nav-icon-size', (34 * scale) + 'px');
+    root.style.setProperty('--nav-text-size', (20 * scale) + 'px');
+    root.style.setProperty('--temp-size', (65 * scale) + 'px');
+    root.style.setProperty('--weather-tip-size', (19 * scale) + 'px');
+    root.style.setProperty('--weather-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--ai-status-size', (22 * scale) + 'px');
+    root.style.setProperty('--mic-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--mic-icon-inner-size', (50 * scale) + 'px');
+    
+    // 调整卡片和容器的大小
+    const containers = document.querySelectorAll('.container, .feature-grid');
+    containers.forEach(el => {
+      el.style.gap = (25 * scale) + 'px';
+    });
+    
+    const glassCards = document.querySelectorAll('.glass-card');
+    glassCards.forEach(el => {
+      el.style.padding = (30 * scale) + 'px';
+    });
+    
+    // 调整天气图标大小
+    const weatherIcon = document.getElementById('w-icon');
+    if (weatherIcon) {
+      weatherIcon.style.fontSize = (75 * scale) + 'px';
+    }
+    
+    saveUserSettings();
+    broadcastSettingsChange();
+  }
+
+  function applyDisplaySize(size) {
+    userDisplaySize = size;
+    window.userSettings.displaySize = size;
+    
+    const scale = size / 100;
+    const root = document.documentElement;
+    
+    // 更新CSS变量，实现放大效果
+    root.style.setProperty('--header-h1-size', (40 * scale) + 'px');
+    root.style.setProperty('--header-p-size', (22 * scale) + 'px');
+    root.style.setProperty('--time-size', (52 * scale) + 'px');
+    root.style.setProperty('--date-size', (20 * scale) + 'px');
+    root.style.setProperty('--feature-icon-size', (75 * scale) + 'px');
+    root.style.setProperty('--feature-title-size', (34 * scale) + 'px');
+    root.style.setProperty('--feature-desc-size', (21 * scale) + 'px');
+    root.style.setProperty('--nav-icon-size', (34 * scale) + 'px');
+    root.style.setProperty('--nav-text-size', (20 * scale) + 'px');
+    root.style.setProperty('--temp-size', (65 * scale) + 'px');
+    root.style.setProperty('--weather-tip-size', (19 * scale) + 'px');
+    root.style.setProperty('--weather-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--ai-status-size', (22 * scale) + 'px');
+    root.style.setProperty('--mic-icon-size', (110 * scale) + 'px');
+    root.style.setProperty('--mic-icon-inner-size', (50 * scale) + 'px');
+    
+    // 调整卡片和容器的大小
+    const containers = document.querySelectorAll('.container, .feature-grid');
+    containers.forEach(el => {
+      el.style.gap = (25 * scale) + 'px';
+    });
+    
+    const glassCards = document.querySelectorAll('.glass-card');
+    glassCards.forEach(el => {
+      el.style.padding = (30 * scale) + 'px';
+    });
+    
+    // 调整天气图标大小
+    const weatherIcon = document.getElementById('w-icon');
+    if (weatherIcon) {
+      weatherIcon.style.fontSize = (75 * scale) + 'px';
+    }
+    
+    document.getElementById('display-size-slider').value = size;
+    document.getElementById('display-size-value').textContent = size + '%';
+  }
+
+  function applyVolume(vol) {
+    userVolume = vol;
+    window.userSettings.volume = vol;
+    document.getElementById('voice-volume-slider').value = vol;
+    document.getElementById('voice-volume-value').textContent = vol + '%';
+  }
+
+  function applyVoiceMode(mode) {
+    userVoiceMode = mode;
+    window.userSettings.voiceMode = mode;
+    const switchEl = document.getElementById('voice-mode-switch-voice');
+    const labelEl = document.getElementById('voice-mode-label-voice');
+    const navIconImg = document.getElementById('mute-icon-img');
+    
+    if (mode === 1) {
+      switchEl.classList.add('active');
+      labelEl.textContent = '手动触发';
+      navIconImg.src = '/images/icons/fa-volume-off.png';
+    } else {
+      switchEl.classList.remove('active');
+      labelEl.textContent = '自动播放';
+      navIconImg.src = '/images/icons/fa-volume-up.png';
+    }
+  }
+
+  // 保存用户设置到后端
+  async function saveUserSettings() {
+    if (!currentUserId) return;
+    
+    try {
+      await fetch('/api/user/display-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          displaySize: userDisplaySize,
+          volume: userVolume,
+          voiceMode: userVoiceMode
+        })
+      });
+    } catch (e) {
+      console.error('保存设置失败:', e);
+    }
+  }
+
+  // 从后端加载用户设置
+  async function loadUserSettings() {
+    if (!currentUserId) return;
+    
+    try {
+      const res = await fetch('/api/user/display-settings?userId=' + currentUserId);
+      const data = await res.json();
+      
+      if (data.code === 200 && data.data) {
+        const settings = data.data;
+        applyDisplaySize(settings.displaySize || 100);
+        applyVolume(settings.volume || 80);
+        applyVoiceMode(settings.voiceMode || 0);
+      }
+    } catch (e) {
+      console.error('加载设置失败:', e);
+    }
+  }
+
+  // 广播设置变更到其他页面
+  function broadcastSettingsChange() {
+    localStorage.setItem('userSettingsUpdated', Date.now());
+  }
+
+  // 监听其他页面的设置变更
+  function listenSettingsChange() {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'userSettingsUpdated') {
+        const settings = window.userSettings;
+        applyDisplaySize(settings.displaySize);
+        applyVolume(settings.volume);
+        applyVoiceMode(settings.voiceMode);
+      }
+    });
+  }
+
+  // 修改speak函数以支持音量控制和语音模式
+  function speak(text, onStart, onEnd) {
+    if (isMuted) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    // 如果是语音模式(手动触发)，检查是否允许播放
+    if (userVoiceMode === 1) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    const existingAudio = document.getElementById('baidu-tts-player');
+    if (existingAudio) {
+      existingAudio.pause();
+      existingAudio.remove();
+    }
+
+    const url = `/api/tts/speak?text=${encodeURIComponent(text)}&t=${Date.now()}`;
+    const audio = new Audio(url);
+    audio.id = 'baidu-tts-player';
+    audio.volume = userVolume / 100;
+
+    if (onStart) onStart();
+
+    const safetyTimer = setTimeout(() => {
+      if (onEnd) onEnd();
+    }, 16000);
+
+    audio.onended = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.onerror = () => {
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    };
+
+    audio.play().catch(e => {
+      console.error("语音播放失败:", e);
+      clearTimeout(safetyTimer);
+      if (onEnd) onEnd();
+    });
+  }
+
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('current-time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    document.getElementById('current-date').textContent = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  }
+
+  // 紧急呼叫核心功能
+  // 触发紧急呼叫
+  async function triggerEmergencyCall() {
+    console.log('[紧急呼叫] 触发紧急呼叫');
+    speak('紧急呼叫已触发，请确认');
+    
+    // 加载紧急联系人列表
+    await loadEmergencyContacts();
+    
+    // 显示确认弹窗
+    const modal = document.getElementById('emergency-confirm-modal');
+    modal.style.display = 'flex';
+    
+    // 重置倒计时
+    emergencyCountdown = 10;
+    document.getElementById('emergency-countdown').textContent = emergencyCountdown;
+    
+    // 播放警告铃声
+    playWarningSound();
+    
+    // 启动倒计时
+    startEmergencyCountdown();
+  }
+  
+  // 加载紧急联系人列表
+  async function loadEmergencyContacts() {
+    try {
+      console.log('[紧急呼叫] 开始加载紧急联系人列表...');
+      
+      const res = await fetch('/api/emergency/list');
+      const data = await res.json();
+      
+      console.log('[紧急呼叫] 紧急联系人接口返回:', data);
+      
+      if (data.code === 200 && Array.isArray(data.data)) {
+        emergencyContacts = data.data;
+        console.log('[紧急呼叫] 紧急联系人列表:', emergencyContacts);
+      } else {
+        emergencyContacts = [];
+      }
+    } catch (e) {
+      console.error('[紧急呼叫] 加载紧急联系人失败:', e);
+      emergencyContacts = [];
+    }
+  }
+  
+  // 加载铃声配置
+  async function loadRingtoneConfig() {
+    try {
+      const res = await fetch('/api/qiniu/ringtones');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.items) {
+          ringtoneConfig = {};
+          data.items.forEach(item => {
+            ringtoneConfig[item.type] = item.url;
+          });
+        }
+      }
+    } catch (e) {
+      console.log('加载铃声配置失败:', e);
+    }
+  }
+  
+  // 播放警告铃声
+  function playWarningSound() {
+    try {
+      const ringtoneUrl = ringtoneConfig.emergency || 'http://t9se9imi4.hn-bkt.clouddn.com/warning.mp3';
+      warningAudio = new Audio(ringtoneUrl);
+      warningAudio.loop = true;
+      warningAudio.volume = 1.0;
+      warningAudio.play().catch(e => {
+        console.error('[紧急呼叫] 播放警告铃声失败:', e);
+      });
+    } catch (e) {
+      console.error('[紧急呼叫] 初始化音频失败:', e);
+    }
+  }
+  
+  // 停止警告铃声
+  function stopWarningSound() {
+    if (warningAudio) {
+      try {
+        warningAudio.pause();
+        warningAudio.currentTime = 0;
+      } catch (e) {
+        console.error('[紧急呼叫] 停止警告铃声失败:', e);
+      }
+    }
+  }
+  
+  // 启动紧急呼叫倒计时
+  function startEmergencyCountdown() {
+    if (emergencyCountdownTimer) {
+      clearInterval(emergencyCountdownTimer);
+    }
+    
+    emergencyCountdownTimer = setInterval(() => {
+      emergencyCountdown--;
+      document.getElementById('emergency-countdown').textContent = emergencyCountdown;
+      
+      if (emergencyCountdown <= 0) {
+        clearInterval(emergencyCountdownTimer);
+        confirmEmergencyCall();
+      }
+    }, 1000);
+  }
+  
+  // 取消紧急呼叫
+  function cancelEmergencyCall() {
+    console.log('[紧急呼叫] 取消紧急呼叫');
+    
+    // 停止倒计时
+    if (emergencyCountdownTimer) {
+      clearInterval(emergencyCountdownTimer);
+      emergencyCountdownTimer = null;
+    }
+    
+    // 停止警告铃声
+    stopWarningSound();
+    
+    // 隐藏弹窗
+    const modal = document.getElementById('emergency-confirm-modal');
+    modal.style.display = 'none';
+    
+    showToast('已取消紧急呼叫');
+    speak('已取消紧急呼叫');
+  }
+  
+  // 确认紧急呼叫
+  async function confirmEmergencyCall() {
+    console.log('[紧急呼叫] 确认执行紧急呼叫');
+    
+    // 停止倒计时
+    if (emergencyCountdownTimer) {
+      clearInterval(emergencyCountdownTimer);
+      emergencyCountdownTimer = null;
+    }
+    
+    // 隐藏弹窗
+    const modal = document.getElementById('emergency-confirm-modal');
+    modal.style.display = 'none';
+    
+    // 执行紧急呼叫流程
+    await executeEmergencyCall();
+  }
+  
+  // 保存紧急呼叫的 Socket 引用，以便后续处理
+  let emergencyCallSocket = null;
+
+  // 显示紧急呼叫进行中的界面
+  function showEmergencyInProgress() {
+    const modal = document.getElementById('emergency-in-progress-modal');
+    const contactsDiv = document.getElementById('emergency-calling-contacts');
+    
+    // 显示紧急联系人列表
+    const contactNames = emergencyContacts.map(c => c.contactName || c.nickname || c.name).join('、');
+    contactsDiv.innerText = contactNames;
+    
+    modal.style.display = 'flex';
+  }
+
+  // 隐藏紧急呼叫进行中的界面
+  function hideEmergencyInProgress() {
+    const modal = document.getElementById('emergency-in-progress-modal');
+    modal.style.display = 'none';
+  }
+
+  // 取消紧急呼叫进行中
+  async function cancelEmergencyInProgress() {
+    console.log('[紧急呼叫] 取消紧急呼叫进行中');
+    
+    if (currentCallRecordId) {
+      try {
+        await fetch('/api/emergency/call/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ callRecordId: currentCallRecordId })
+        });
+      } catch (e) {
+        console.error('[紧急呼叫] 取消呼叫记录失败:', e);
+      }
+    }
+    
+    // 发送 hangup 事件给所有紧急联系人
+    if (emergencyCallSocket) {
+      emergencyContacts.forEach(contact => {
+        const contactId = contact.contactUserId || contact.id;
+        emergencyCallSocket.emit('hangup', { toUserId: contactId });
+      });
+      emergencyCallSocket.disconnect();
+      emergencyCallSocket = null;
+    }
+    
+    hideEmergencyInProgress();
+    stopWarningSound();
+    showToast('已取消紧急呼叫');
+    speak('已取消紧急呼叫');
+    currentCallRecordId = null;
+  }
+
+  // 更新紧急呼叫等待状态文本
+  function updateEmergencyWaitingText(text) {
+    const waitingText = document.getElementById('emergency-waiting-text');
+    if (waitingText) {
+      waitingText.innerText = text;
+    }
+  }
+
+  // 执行紧急呼叫
+  async function executeEmergencyCall() {
+    console.log('[紧急呼叫] 开始执行紧急呼叫流程');
+    speak('正在向所有紧急联系人发起呼叫，请等待接听');
+    
+    if (emergencyContacts.length === 0) {
+      console.error('[紧急呼叫] 没有紧急联系人');
+      showToast('未设置紧急联系人');
+      speak('未设置紧急联系人，请先添加');
+      stopWarningSound();
+      return;
+    }
+    
+    try {
+      console.log('[紧急呼叫] 调用后端API记录紧急呼叫');
+      const res = await fetch('/api/emergency/call/start', { method: 'POST' });
+      const data = await res.json();
+      
+      if (data.code === 200) {
+        currentCallRecordId = data.data.callRecordId;
+        emergencyContacts = data.data.contacts;
+        console.log('[紧急呼叫] 紧急呼叫记录创建成功，ID:', currentCallRecordId);
+      } else {
+        console.error('[紧急呼叫] 创建呼叫记录失败:', data.msg);
+        showToast(data.msg || '操作失败');
+        return;
+      }
+    } catch (e) {
+      console.error('[紧急呼叫] 调用API失败:', e);
+    }
+    
+    // 显示紧急呼叫进行中的界面
+    showEmergencyInProgress();
+    
+    // 获取当前用户名
+    currentUserName = localStorage.getItem('nickname') || '长辈';
+    
+    // 收集所有紧急联系人的 ID
+    const emergencyContactIds = emergencyContacts.map(c => c.contactUserId || c.id);
+    console.log('[紧急呼叫] 所有紧急联系人 ID:', emergencyContactIds);
+    
+    // 向所有紧急联系人发送文字消息
+    for (const contact of emergencyContacts) {
+      console.log('[紧急呼叫] 向联系人发送消息:', contact.id);
+      await sendEmergencyMessage(contact, 'pending');
+    }
+    
+    // 连接到信令服务器并发送紧急呼叫
+    try {
+      const signalingUrl = window.location.origin;
+      emergencyCallSocket = io(signalingUrl, {
+        path: '/socket.io',
+        transports: ['websocket', 'polling']
+      });
+      
+      emergencyCallSocket.on('connect', () => {
+        console.log('[紧急呼叫] 信令服务器连接成功');
+        emergencyCallSocket.emit('login', {
+          userId: currentUserId,
+          nickname: currentUserName,
+          avatar: ''
+        });
+      });
+      
+      emergencyCallSocket.on('loginSuccess', () => {
+        console.log('[紧急呼叫] 登录成功，发送紧急呼叫');
+        updateEmergencyWaitingText('正在发送紧急呼叫...');
+        // 向所有紧急联系人发送紧急呼叫
+        emergencyCallSocket.emit('emergencyCall', {
+          fromUserId: currentUserId,
+          toUserIds: emergencyContactIds,
+          type: 'video',
+          fromUserName: currentUserName,
+          fromUserAvatar: ''
+        });
+      });
+      
+      emergencyCallSocket.on('emergencyCallSuccess', (data) => {
+        console.log('[紧急呼叫] 成功向 ' + data.calledCount + ' 个联系人发送紧急呼叫');
+        updateEmergencyWaitingText('已向 ' + data.calledCount + ' 个联系人发送呼叫，请等待有人接听...');
+        
+        // 发送状态通知
+        sendEmergencyStatusNotification(null);
+      });
+      
+      // 监听：有人接听了紧急呼叫
+      emergencyCallSocket.on('emergencyCallAnsweredBySomeone', async (data) => {
+        console.log('[紧急呼叫] 有人接听了:', data);
+        stopWarningSound();
+        updateEmergencyWaitingText(data.answeredByName + ' 已接听呼叫，正在建立连接...');
+        speak(data.answeredByName + ' 已接听呼叫');
+        
+        // 调用后端 API 记录接听信息
+        if (currentCallRecordId) {
+          try {
+            await fetch('/api/emergency/call/answered', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                callRecordId: currentCallRecordId,
+                answeredByUserId: data.answeredBy
+              })
+            });
+            console.log('[紧急呼叫] 接听记录已保存');
+          } catch (e) {
+            console.error('[紧急呼叫] 保存接听记录失败:', e);
+          }
+        }
+        
+        // 找到接听的联系人对象
+        const answeredContact = emergencyContacts.find(c => String(c.contactUserId || c.id) === String(data.answeredBy));
+        if (answeredContact) {
+          console.log('[紧急呼叫] 跳转到与 ' + (answeredContact.contactName || answeredContact.nickname || answeredContact.name) + ' 的通话页面');
+          setTimeout(() => {
+            hideEmergencyInProgress();
+            initiateEmergencyVideoCall(answeredContact);
+          }, 500);
+        } else {
+          console.error('[紧急呼叫] 找不到接听的联系人:', data.answeredBy);
+          // 降级：使用第一个联系人
+          const firstContact = emergencyContacts[0];
+          if (firstContact) {
+            setTimeout(() => {
+              hideEmergencyInProgress();
+              initiateEmergencyVideoCall(firstContact);
+            }, 1000);
+          }
+        }
+      });
+      
+      emergencyCallSocket.on('callFailed', (msg) => {
+        console.error('[紧急呼叫] 发送呼叫失败:', msg);
+        updateEmergencyWaitingText('发送失败: ' + msg);
+        stopWarningSound();
+      });
+      
+      // 紧急呼叫不设置超时自动挂断，持续等待有人接听
+      
+    } catch (e) {
+      console.error('[紧急呼叫] 连接信令服务器失败:', e);
+      updateEmergencyWaitingText('连接服务器失败');
+      stopWarningSound();
+    }
+  }
+  
+  // 发起紧急视频通话
+  function initiateEmergencyVideoCall(contact) {
+    console.log('[紧急呼叫] 发起视频通话给:', contact.contactName || contact.nickname || contact.name);
+    
+    const myName = localStorage.getItem('nickname') || '长辈';
+    const myAvatar = '';
+    const peerId = contact.contactUserId || contact.id;
+    const peerName = contact.contactName || contact.nickname || contact.name || '联系人';
+    const peerAvatar = contact.avatar || '';
+    const callType = 'video';
+    
+    console.log('[紧急呼叫] 构造URL参数:', {
+      userId: currentUserId,
+      peerId,
+      peerName,
+      callType,
+      myName
+    });
+    
+    // 直接跳转到通话页面，使用正确的URL参数格式
+    const url = `call.html?userId=${currentUserId}&peerId=${peerId}&peerName=${encodeURIComponent(peerName)}&peerAvatar=${encodeURIComponent(peerAvatar)}&type=${callType}&incoming=false&myName=${encodeURIComponent(myName)}&myAvatar=${encodeURIComponent(myAvatar)}&isEmergency=true`;
+    
+    console.log('[紧急呼叫] 跳转到通话页面:', url);
+    window.location.href = url;
+  }
+  
+  // 发送紧急消息
+  async function sendEmergencyMessage(contact, status) {
+    const contactId = contact.contactUserId || contact.id;
+    const contactName = contact.contactName || contact.nickname || contact.name;
+    console.log('[紧急呼叫] 发送紧急消息给:', contactName);
+    
+    try {
+      const message = `长辈${currentUserName}发起了紧急呼叫，请关心长辈`;
+      
+      // 发送消息
+      const res = await fetch('/api/msg/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toUserId: contactId,
+          content: message,
+          type: 'text',
+          isEmergency: true
+        })
+      });
+      
+      const data = await res.json();
+      console.log('[紧急呼叫] 消息发送结果:', data);
+    } catch (e) {
+      console.error('[紧急呼叫] 发送消息失败:', e);
+    }
+  }
+  
+  // 发送紧急状态通知
+  async function sendEmergencyStatusNotification(connectedUserId) {
+    console.log('[紧急呼叫] 发送状态通知');
+    
+    for (const contact of emergencyContacts) {
+      try {
+        const contactId = contact.contactUserId || contact.id;
+        const contactName = contact.contactName || contact.nickname || contact.name;
+        let message = '';
+        
+        if (connectedUserId) {
+          const connectedContact = emergencyContacts.find(c => (c.contactUserId || c.id) === connectedUserId);
+          const connectedName = connectedContact ? (connectedContact.contactName || connectedContact.nickname || connectedContact.name) : '联系人';
+          message = `${currentUserName}发起紧急呼叫，现已由${connectedName}接通`;
+        } else {
+          message = '长辈手动进行紧急呼叫，请关注';
+        }
+        
+        // 发送状态消息
+        const res = await fetch('/api/msg/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toUserId: contactId,
+            content: message,
+            type: 'text',
+            isEmergency: true,
+            isStatusNotification: true
+          })
+        });
+        
+        await res.json();
+      } catch (e) {
+        console.error('[紧急呼叫] 发送状态通知失败:', e);
+      }
+    }
+  }
+  
+  function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('mute-icon-img').src = isMuted ? '/images/icons/fa-volume-off.png' : '/images/icons/fa-volume-up.png';
+    document.getElementById('mute-text').innerText = isMuted ? '已静音' : '语音开启';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.top = '50px';
+    setTimeout(() => t.style.top = '-120px', 2500);
+  }
+
+  function initWebSocket(uid) {
+    currentUserId = uid;
+    console.log('初始化WebSocket回调, 用户ID:', uid);
+    
+    // 使用全局消息中心的回调机制
+    if (window.GlobalMessageCenter) {
+      // 注册消息回调
+      GlobalMessageCenter.onMessage((msg, contact) => {
+        console.log('[Index] 通过全局消息中心收到消息:', msg);
+        loadMessageUnread();
+      });
+      
+      // 注册通话回调
+      GlobalMessageCenter.onCall((data) => {
+        console.log('[Index] 通过全局消息中心收到来电:', data);
+      });
+      
+      console.log('已注册全局消息中心回调');
+    }
+  }
+
+  function showEmergencyRequestModal(msg) {
+    console.log('显示紧急联系人申请弹窗:', msg);
+    currentEmergencyRequest = msg;
+    
+    const modal = document.getElementById('emergency-request-modal');
+    const textEl = document.getElementById('emergency-request-text');
+    
+    if (!modal) {
+      console.error('找不到弹窗元素 emergency-request-modal');
+      return;
+    }
+    
+    const text = `${msg.fromName} 想成为您的紧急联系人，是否同意？`;
+    console.log('弹窗文本:', text);
+    textEl.innerText = text;
+    modal.style.display = 'flex';
+    console.log('弹窗已显示, display:', modal.style.display);
+    
+    speak(`${msg.fromName}想成为您的紧急联系人，请确认是否同意`);
+  }
+
+  async function handleEmergencyRequest(accept) {
+    if (!currentEmergencyRequest) return;
+    
+    const modal = document.getElementById('emergency-request-modal');
+    modal.style.display = 'none';
+    
+    try {
+      const res = await fetch('/api/emergency/request/handle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requesterId: currentEmergencyRequest.fromId,
+          accept: accept
+        })
+      });
+      
+      const data = await res.json();
+      if (data.code === 200) {
+        showToast(accept ? '已同意，紧急联系人添加成功' : '已拒绝');
+        speak(accept ? '已同意，紧急联系人添加成功' : '已拒绝');
+      } else {
+        showToast(data.msg || '操作失败');
+      }
+    } catch (e) {
+      console.error('处理请求失败', e);
+      showToast('操作失败');
+    }
+    
+    currentEmergencyRequest = null;
+  }
+
+  // --- 加载最后一次聊天记录 ---
+  async function loadLastChat() {
+    try {
+      const res = await fetch('/history'); // 历史记录接口
+      const history = await res.json();
+      // 增加数组有效性严谨判断
+      if (Array.isArray(history) && history.length > 0) {
+        const lastReply = history[history.length - 1];
+        // 严谨判断属性是否存在
+        if (lastReply?.role === 'ai' && lastReply?.content) {
+          const MAX_DISPLAY_LENGTH = 35; // 限制最多展示30字
+          let originalContent = lastReply.content.trim(); // 清理首尾无用空格
+
+          // 字符串截断核心逻辑
+          let displayContent = originalContent;
+          if (originalContent.length > MAX_DISPLAY_LENGTH) {
+            displayContent = originalContent.substring(0, MAX_DISPLAY_LENGTH) + '...';
+          }
+
+          // 优化：innerHTML改混合写法，内容区用textContent防XSS注入
+          const aiStatusDom = document.getElementById('ai-status');
+          aiStatusDom.innerHTML = '<span style="color:#64748B">上次聊到：</span><br>';
+          aiStatusDom.appendChild(document.createTextNode(displayContent));
+        }
+      }
+    } catch (e) {
+      console.error("主页加载历史对话失败:", e); // 建议用error级别日志，更容易发现问题
+    }
+  }
+
+  // --- 加载用药管家数据 ---
+  async function loadMedicineData() {
+    try {
+      const res = await fetch('/api/medicine/todayLogs');
+      const data = await res.json();
+      console.log('[用药数据]', data);
+      
+      if (data.code === 200 && Array.isArray(data.data)) {
+        const logs = data.data;
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        let nextReminder = null;
+        let takenCount = 0;
+        let totalCount = logs.length;
+        let missedCount = 0;
+        let pendingCount = 0;
+        
+        function canStillMakeupFrontend(reminderTimesJson, currentTime) {
+          try {
+            let times = typeof reminderTimesJson === 'string' ? JSON.parse(reminderTimesJson) : reminderTimesJson;
+            if (!times || times.length === 0) return false;
+            
+            const sortedTimes = times.map(t => {
+              const [h, m] = t.split(':').map(Number);
+              return h * 60 + m;
+            }).sort((a, b) => a - b);
+            
+            const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+            
+            let nextReminderMinutes = null;
+            for (const time of sortedTimes) {
+              if (time > currentMinutes) {
+                nextReminderMinutes = time;
+                break;
+              }
+            }
+            
+            if (nextReminderMinutes === null) {
+              nextReminderMinutes = sortedTimes[0] + 24 * 60;
+            }
+            
+            const minutesToNext = nextReminderMinutes > currentMinutes 
+              ? nextReminderMinutes - currentMinutes 
+              : (nextReminderMinutes + 24 * 60) - currentMinutes;
+            
+            return minutesToNext >= 120;
+          } catch (e) {
+            console.error('解析提醒时间失败', e);
+            return false;
+          }
+        }
+        
+        logs.forEach(log => {
+          const status = log.status;
+          const reminderTimes = log.reminderTimes || log.reminder_times;
+          console.log('[用药记录]', log.medicineName, '状态:', status, '时间:', log.scheduledTime);
+          
+          const scheduleTime = log.scheduledTime || log.schedule_time || log.scheduleTime;
+          let hour = 0, minute = 0;
+          
+          if (scheduleTime) {
+            const timeStr = scheduleTime.toString();
+            if (timeStr.includes('T')) {
+              const timePart = timeStr.split('T')[1];
+              [hour, minute] = timePart.split(':').map(Number);
+            } else if (timeStr.includes('-')) {
+              const parts = timeStr.split(' ');
+              if (parts.length > 1) {
+                [hour, minute] = parts[1].split(':').map(Number);
+              }
+            } else {
+              [hour, minute] = timeStr.split(':').map(Number);
+            }
+          }
+          
+          const scheduledDate = new Date();
+          scheduledDate.setHours(hour, minute, 0, 0);
+          const minutesSinceScheduled = Math.floor((now - scheduledDate) / 60000);
+          
+          let actualStatus = status;
+          if (status === 'pending' || !status) {
+            if (minutesSinceScheduled > 60) {
+              if (reminderTimes && canStillMakeupFrontend(reminderTimes, now)) {
+                actualStatus = 'pending_take';
+              } else {
+                actualStatus = 'missed';
+              }
+            } else if (minutesSinceScheduled > 0) {
+              actualStatus = 'pending_take';
+            } else {
+              actualStatus = 'pending';
+            }
+          } else if (status === 'missed') {
+            if (reminderTimes && canStillMakeupFrontend(reminderTimes, now)) {
+              actualStatus = 'pending_take';
+            }
+          }
+          
+          if (actualStatus === 'taken') {
+            takenCount++;
+          } else if (actualStatus === 'missed') {
+            missedCount++;
+          } else if (actualStatus === 'pending' || actualStatus === 'pending_take') {
+            pendingCount++;
+          }
+          
+          // 找出所有未服药记录中距离当前时间最近的
+          if (scheduleTime && actualStatus !== 'taken') {
+            const scheduledMinutes = hour * 60 + minute;
+            const currentMinutes = currentHour * 60 + currentMinute;
+            
+            // 计算时间差（绝对值）
+            const timeDiff = Math.abs(scheduledMinutes - currentMinutes);
+            const displayTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            const isPast = scheduledMinutes <= currentMinutes;
+            
+            // 如果还没有下一个提醒，或者这个时间更接近当前时间
+            if (!nextReminder || timeDiff < nextReminder.timeDiff) {
+              nextReminder = { 
+                time: displayTime, 
+                status: actualStatus, 
+                isPast: isPast,
+                timeDiff: timeDiff,
+                scheduledMinutes: scheduledMinutes
+              };
+            }
+          }
+        });
+
+        console.log('[用药统计] 总数:', totalCount, '已服:', takenCount, '漏服:', missedCount, '待服:', pendingCount);
+
+        const badge = document.getElementById('medicine-badge');
+        const desc = document.getElementById('medicine-desc');
+        
+        if (nextReminder) {
+          badge.textContent = nextReminder.time + ' 吃药';
+          badge.style.display = 'block';
+          
+          if (nextReminder.isPast && nextReminder.status === 'missed') {
+            badge.classList.remove('taken');
+            badge.classList.add('pending');
+            badge.style.background = '#FF6B6B';
+          } else if (nextReminder.status === 'taken') {
+            badge.classList.remove('pending');
+            badge.classList.add('taken');
+            badge.style.background = '#06D6A0';
+          } else {
+            badge.classList.remove('taken', 'pending');
+            badge.style.background = '#FF6B6B';
+          }
+        } else if (takenCount === totalCount && totalCount > 0) {
+          badge.textContent = '已完成';
+          badge.style.display = 'block';
+          badge.classList.remove('pending');
+          badge.classList.add('taken');
+          badge.style.background = '#06D6A0';
+        } else {
+          badge.style.display = 'none';
+        }
+        
+        if (missedCount > 0) {
+          desc.textContent = `今日漏服 ${missedCount} 次`;
+          desc.style.color = '#FF6B6B';
+        } else if (totalCount === 0) {
+          desc.textContent = '今日暂无用药计划';
+          desc.style.color = '#64748B';
+        } else {
+          desc.textContent = '今日用药正常';
+          desc.style.color = '#06D6A0';
+        }
+      } else {
+        document.getElementById('medicine-desc').textContent = '今日暂无用药计划';
+        document.getElementById('medicine-badge').style.display = 'none';
+      }
+    } catch (e) {
+      console.error("加载用药数据失败:", e);
+      document.getElementById('medicine-desc').textContent = '点击查看用药详情';
+    }
+  }
+
+  // --- 库存不足药品轮播 ---
+  let stockAlertList = [];
+  let currentStockIndex = 0;
+  let stockCarouselTimer = null;
+
+  function startStockCarousel() {
+    if (stockCarouselTimer) {
+      clearInterval(stockCarouselTimer);
+    }
+    
+    const carousel = document.getElementById('stock-carousel');
+    const textEl = document.getElementById('stock-carousel-text');
+    
+    if (stockAlertList.length === 0) {
+      carousel.style.display = 'none';
+      return;
+    }
+    
+    if (stockAlertList.length === 1) {
+      carousel.style.display = 'flex';
+      textEl.textContent = stockAlertList[0] + '不足';
+      return;
+    }
+    
+    carousel.style.display = 'flex';
+    
+    function showNextStock() {
+      carousel.classList.remove('fade-enter');
+      carousel.classList.add('fade-leave');
+      
+      setTimeout(() => {
+        currentStockIndex = (currentStockIndex + 1) % stockAlertList.length;
+        textEl.textContent = stockAlertList[currentStockIndex] + '不足';
+        
+        carousel.classList.remove('fade-leave');
+        carousel.classList.add('fade-enter');
+      }, 500);
+    }
+    
+    textEl.textContent = stockAlertList[currentStockIndex] + '不足';
+    carousel.classList.add('fade-enter');
+    
+    stockCarouselTimer = setInterval(showNextStock, 3000);
+  }
+
+  // --- 加载药品库存预警 ---
+  async function loadStockAlerts() {
+    try {
+      const res = await fetch('/api/medicine/alerts');
+      const data = await res.json();
+      console.log('[库存预警]', data);
+      
+      if (data.code === 200 && Array.isArray(data.data) && data.data.length > 0) {
+        stockAlertList = data.data.map(a => a.medicineName || a.name || '药品');
+        currentStockIndex = 0;
+        startStockCarousel();
+      } else {
+        stockAlertList = [];
+        if (stockCarouselTimer) {
+          clearInterval(stockCarouselTimer);
+        }
+        document.getElementById('stock-carousel').style.display = 'none';
+        document.getElementById('medicine-badge').style.display = 'block';
+      }
+    } catch (e) {
+      console.error("加载库存预警失败:", e);
+      stockAlertList = [];
+      if (stockCarouselTimer) {
+        clearInterval(stockCarouselTimer);
+      }
+      document.getElementById('stock-carousel').style.display = 'none';
+    }
+  }
+
+  // --- 加载新闻未读数量 ---
+  async function loadNewsUnread() {
+    try {
+      const res = await axios.get(`/api/news/community/list`, {
+        params: { page: 1, limit: 5 },
+        withCredentials: true
+      });
+      const data = res.data;
+      console.log('[新闻数据]', data);
+      
+      const badge = document.getElementById('news-badge');
+      const desc = document.getElementById('news-desc');
+      
+      const unreadCount = data.unreadCount || 0;
+      
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount + '条新';
+        badge.style.display = 'block';
+        desc.textContent = `有${unreadCount}条未读新闻`;
+      } else {
+        badge.style.display = 'none';
+        desc.textContent = '为您精选今日要闻';
+      }
+    } catch (e) {
+      console.error("加载新闻未读失败:", e);
+      document.getElementById('news-badge').style.display = 'none';
+      document.getElementById('news-desc').textContent = '为您精选今日要闻';
+    }
+  }
+
+  // --- 加载子女留言未读数量 ---
+  async function loadMessageUnread() {
+    try {
+      const res = await fetch('/api/msg/unread/detail');
+      const data = await res.json();
+      console.log('[消息未读]', data);
+      
+      const badge = document.getElementById('msg-badge');
+      const desc = document.getElementById('msg-desc');
+      
+      if (data.code === 200 && Array.isArray(data.data)) {
+        let totalUnread = 0;
+        data.data.forEach(item => {
+          totalUnread += item.count || item.unreadCount || item.unread_count || 0;
+        });
+        
+        if (totalUnread > 0) {
+          badge.textContent = totalUnread + '条新';
+          badge.style.display = 'block';
+          desc.textContent = `有${totalUnread}条未读消息`;
+        } else {
+          badge.style.display = 'none';
+          desc.textContent = '暂无新消息';
+        }
+      } else {
+        badge.style.display = 'none';
+        desc.textContent = '暂无新消息';
+      }
+    } catch (e) {
+      console.error("加载消息未读失败:", e);
+      document.getElementById('msg-badge').style.display = 'none';
+      document.getElementById('msg-desc').textContent = '暂无新消息';
+    }
+  }
+
+  // --- 触摸/点击反馈绑定 ---
+  function bindPressFeedback(selector) {
+    const nodes = document.querySelectorAll(selector);
+    nodes.forEach(el => {
+      el.classList.add('pressable');
+
+      // 指针事件（兼容鼠标/触摸）
+      el.addEventListener('pointerdown', (e) => {
+        if (e.isPrimary === false) return;
+        el.classList.add('pressed');
+      }, { passive: true });
+
+      const removePressed = () => el.classList.remove('pressed');
+      el.addEventListener('pointerup', removePressed, { passive: true });
+      el.addEventListener('pointercancel', removePressed, { passive: true });
+      el.addEventListener('pointerleave', removePressed, { passive: true });
+
+      // 键盘访问支持
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.classList.add('pressed');
+        }
+      });
+      el.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.classList.remove('pressed');
+          el.click();
+        }
+      });
+    });
+  }
+
+  // --- 页面初始化 ---
+  document.addEventListener('DOMContentLoaded', async () => {
+    console.log('页面加载完成，开始初始化');
+    updateTime();
+    updateWeatherUI();
+    loadLastChat();
+    loadRingtoneConfig();
+    setInterval(updateTime, 1000);
+
+    // 加载首页数据
+    loadMedicineData();
+    loadStockAlerts();
+    loadNewsUnread();
+    loadMessageUnread();
+
+    // 定时刷新数据（每60秒）
+    setInterval(() => {
+      loadMedicineData();
+      loadStockAlerts();
+      loadNewsUnread();
+      loadMessageUnread();
+    }, 60000);
+
+    // 监听localStorage变化，实时刷新新闻未读
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'communityNewsReadUpdated') {
+        console.log('社区新闻已读状态变化，刷新未读数量');
+        loadNewsUnread();
+      }
+    });
+
+    // 页面获得焦点时刷新数据
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        console.log('页面获得焦点，刷新数据');
+        loadMedicineData();
+        loadStockAlerts();
+        loadNewsUnread();
+        loadMessageUnread();
+      }
+    });
+
+    try {
+      console.log('获取用户信息...');
+      const userRes = await fetch('/api/user/info');
+      const userData = await userRes.json();
+      console.log('用户信息响应:', userData);
+      
+      if (userData.code === 200 && userData.data) {
+        const nickname = userData.data.nickname || "长辈";
+        const userId = userData.data.id;
+        console.log('用户昵称:', nickname, '用户ID:', userId);
+        
+        document.getElementById('user-display-name').textContent = `Hi，${nickname}`;
+        localStorage.setItem('nickname', nickname);
+        localStorage.setItem('user_id', userId);
+        currentUserId = userId;
+        
+        console.log('开始初始化WebSocket...');
+        initWebSocket(userId);
+        
+        // 加载用户显示和播放设置
+        loadUserSettings();
+      } else {
+        console.error('获取用户信息失败:', userData.msg);
+      }
+    } catch (e) {
+      console.error('初始化失败:', e);
+      const nickname = localStorage.getItem('nickname') || "长辈";
+      document.getElementById('user-display-name').textContent = `Hi，${nickname}`;
+    }
+
+    // 设置面板事件监听
+    document.getElementById('display-size-slider').addEventListener('input', function() {
+      updateDisplaySize(parseInt(this.value));
+    });
+    
+    document.getElementById('voice-volume-slider').addEventListener('input', function() {
+      updateVoiceVolume(parseInt(this.value));
+    });
+    
+    // 监听其他页面设置变更
+    listenSettingsChange();
+
+    // 绑定所有可点击元素的反馈
+    bindPressFeedback('.glass-card');
+    bindPressFeedback('.nav-item');
+    bindPressFeedback('.mic-icon');
+    bindPressFeedback('a.pressable');
+
+    // 防止长按选中文字
+    document.querySelectorAll('.pressable').forEach(el => {
+      el.addEventListener('dragstart', (ev) => ev.preventDefault());
+    });
+  });
+</script>
+</body>
+</html>
+
+

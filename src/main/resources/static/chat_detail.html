@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小智 - 解尘颐安养老平台</title>
+    <script src="js/image-compressor.js"></script>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="/js/global-mqtt-manager.js"></script>
+    <script src="/js/global-message-center.js"></script>
+
+    <script src="lib/js/recorder.mp3.min.js"></script>
+    <script src="lib/js/wav.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #4361EE;
+            --primary-light: #4895EF;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --blur-val: 45px;
+            --ai-bubble-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        /* --- 基础布局 --- */
+        * { scrollbar-width: none; -ms-overflow-style: none; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            margin: 0; padding: 0;
+            background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
+            height: 100vh; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex; flex-direction: column;
+            height: 133.33vh; width: 133.33vw;
+            transform: scale(0.75); transform-origin: top left;
+            position: relative;
+        }
+
+        /* --- 顶部导航栏 (恢复模糊感) --- */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 110px;
+            padding: 0 50px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            border-bottom: 1px solid var(--glass-border); z-index: 9999;
+        }
+
+        .main-container { display: flex; height: 100%; box-sizing: border-box; }
+
+        /* --- 聊天区域 --- */
+        .content-area {
+            flex: 1; overflow-y: auto; padding: 0 50px 350px; scroll-behavior: smooth;
+        }
+        .scroll-spacer { height: 130px; width: 100%; flex-shrink: 0; }
+
+        .msg-row { display: flex; margin-bottom: 45px; width: 100%; }
+        .msg-ai { flex-direction: row; animation: slideInLeft 0.5s forwards; }
+        .msg-user { flex-direction: row-reverse; animation: slideInRight 0.5s forwards; }
+
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+        .avatar-box img { width: 85px; height: 85px; border-radius: 50%; border: 4px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .bubble {
+            padding: 24px 35px; border-radius: 30px; background: white; font-size: 28px; font-weight: 600;
+            color: #1E293B; box-shadow: 0 12px 35px rgba(0,0,0,0.07); word-break: break-all; margin: 0 20px; line-height: 1.5;
+        }
+        .msg-ai .bubble { background: var(--ai-bubble-bg); border-left: 8px solid var(--primary); }
+        .msg-user .bubble { background: var(--primary); color: white; border: none; }
+
+        /* --- 右侧机器人小智卡片 (恢复展示) --- */
+        .ai-sidebar {
+            width: 420px; background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-val)); -webkit-backdrop-filter: blur(var(--blur-val));
+            border-left: 1px solid var(--glass-border); padding: 130px 35px 35px; overflow-y: auto;
+        }
+        .ai-info-card {
+            background: rgba(255, 255, 255, 0.4); border-radius: 30px; padding: 30px;
+            text-align: center; margin-bottom: 40px; border: 1px solid var(--glass-border);
+        }
+        .suggest-item {
+            background: rgba(255, 255, 255, 0.25); padding: 25px; border-radius: 25px;
+            margin-bottom: 20px; font-size: 24px; font-weight: bold; color: #1E3A8A;
+            cursor: pointer; transition: 0.3s; border: 2px solid transparent;
+        }
+        .suggest-item:hover { background: white; border-color: var(--primary); transform: translateX(-10px); }
+
+        /* --- 底部输入栏 (流光平滑切换) --- */
+        .bottom-container { position: fixed; bottom: 50px; left: 50px; right: 470px; z-index: 9000; }
+        .record-tip { text-align: center; color: var(--primary); font-size: 24px; font-weight: bold; margin-bottom: 12px; height: 30px; }
+
+        .input-box-glass {
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+            padding: 15px 25px; border-radius: 80px; display: flex; align-items: center;
+            border: 1px solid var(--glass-border); box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            position: relative; overflow: hidden; transition: all 0.4s ease;
+        }
+
+        /* 录音时的蓝色渐变流光 */
+        .input-box-glass::before {
+            content: ''; position: absolute; left: 50%; top: 0; width: 0; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(67, 97, 238, 0.15), transparent);
+            transition: all 0.5s ease; z-index: 0; pointer-events: none;
+        }
+        .input-box-glass.recording-active { border-color: var(--primary); transform: scale(1.02); }
+        .input-box-glass.recording-active::before { left: 0; width: 100%; }
+
+        .mode-switch-btn {
+            width: 75px; height: 75px; border-radius: 50%; border: none; background: rgba(0,0,0,0.05);
+            color: #64748b; font-size: 35px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;
+        }
+
+        .input-main-area { flex: 1; margin: 0 20px; height: 90px; position: relative; display: flex; align-items: center; z-index: 10; }
+
+        /* 按住说话按钮 */
+        .voice-btn {
+            width: 100%; height: 100%; border-radius: 50px; border: 1px solid rgba(0,0,0,0.05);
+            background: white; font-size: 30px; font-weight: 900; color: #1E3A8A;
+            cursor: pointer; user-select: none; transition: 0.2s;
+        }
+        .voice-btn:active, .voice-btn.active { background: var(--primary); color: white; transform: scale(0.97); }
+
+        .text-input { width: 100%; height: 100%; border: none; background: transparent; font-size: 28px; font-weight: 600; outline: none; }
+
+        .send-btn {
+            background: var(--primary); color: white; border: none; padding: 0 45px; height: 85px;
+            border-radius: 45px; font-size: 26px; font-weight: bold; cursor: pointer; z-index: 10;
+        }
+
+        /* 平滑过渡动画 */
+        .mode-fade-enter-active, .mode-fade-leave-active { transition: all 0.3s ease; }
+        .mode-fade-enter-from { opacity: 0; transform: translateY(10px); }
+        .mode-fade-leave-to { opacity: 0; transform: translateY(-10px); }
+
+        [v-cloak] { display: none; }
+
+        /* --- 底部免责声明 --- */
+        .footer-disclaimer {
+            position: fixed; bottom: 10px; left: 50px; right: 470px; z-index: 8000;
+            text-align: center; font-size: 18px; color: #999; padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <header class="top-bar">
+        <a href="javascript:void(0)" @click="goBack" style="text-decoration: none; color: #1E3A8A; font-weight: bold; font-size: 42px;">
+            <i class="fa fa-angle-left"></i> 返回
+        </a>
+        <h1 style="color: #1E3A8A; font-size: 44px; font-weight: 900; margin: 0;">AI 智能助理</h1>
+
+        <div style="display: flex; align-items: center;">
+            <div @click="clearChat" style="margin-right: 30px; cursor: pointer; color: #ef4444; font-size: 40px;">
+                <i class="fa fa-trash-o"></i>
+            </div>
+            <div style="text-align: right">
+                <div style="font-size: 48px; font-weight: 900; color: var(--primary);">{{ currentTime }}</div>
+                <div style="font-size: 20px; color: #64748b; font-weight: 800; margin-top: 5px;">{{ currentDate }}</div>
+            </div>
+        </div>
+    </header>
+    <main class="main-container">
+        <section class="content-area" id="chat-box">
+            <div class="scroll-spacer"></div>
+            <div v-for="(msg, index) in history" :key="index"
+                 :class="['msg-row', msg.role === 'ai' ? 'msg-ai' : 'msg-user']">
+                <div class="avatar-box">
+                    <img :src="msg.role === 'ai' ? 'https://cdn-icons-png.flaticon.com/512/2593/2593635.png' : userAvatar">
+                </div>
+                <div class="msg-content" style="max-width: 75%;">
+                    <div class="bubble">
+                        <!-- 判断是否为图片消息（支持 blob: 和 http/https/上传路径） -->
+                        <div v-if="msg.content && (msg.content.startsWith('http://') || msg.content.startsWith('https://') || msg.content.startsWith('/uploads/') || msg.content.startsWith('blob:'))"
+                             style="margin-bottom: 10px;">
+                            <img :src="msg.content"
+                                 style="max-width: 300px; max-height: 300px; border-radius: 15px; display: block; cursor: zoom-in; box-shadow: 0 4px 12px rgba(0,0,0,0.1); object-fit: contain;"
+                                 @click="window.open(msg.content.startsWith('/') ? window.location.origin + msg.content : msg.content)">
+                        </div>
+
+                        <!-- 否则显示为文本 -->
+                        <div v-else>{{ msg.content }}</div>
+
+                        <!-- AI消息且不是图片时才显示朗读按钮 -->
+                        <div v-if="msg.role === 'ai' && msg.content && !(msg.content.startsWith('http://') || msg.content.startsWith('https://') || msg.content.startsWith('/uploads/') || msg.content.startsWith('blob:'))"
+                             @click="speak(msg.content)"
+                             style="margin-top:12px; font-size:22px; color:var(--primary); cursor:pointer; font-weight:bold;">
+                            <i class="fa fa-volume-up"></i> 点击朗读
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="loading" class="msg-row msg-ai">
+                <div class="avatar-box"><img src="https://cdn-icons-png.flaticon.com/512/2593/2593635.png"></div>
+                <div class="bubble"><i class="fa fa-circle-o-notch fa-spin"></i> 正在思考...</div>
+            </div>
+        </section>
+
+        <aside class="ai-sidebar">
+            <div class="ai-info-card">
+                <img src="https://cdn-icons-png.flaticon.com/512/2593/2593635.png" style="width: 130px;">
+                <h2 style="font-size: 34px; color: #1E3A8A; margin: 15px 0 5px;">我是小智</h2>
+                <p style="font-size: 24px; color: #64748b;">您的贴身健康管家</p>
+            </div>
+
+            <div style="font-size: 26px; font-weight: 900; color: #1E3A8A; margin-bottom: 25px;">您可以这样问我：</div>
+            <div v-for="q in prompts" @click="quickAsk(q)" class="suggest-item">
+                <i class="fa fa-lightbulb-o" style="margin-right:10px;"></i> {{ q }}
+            </div>
+        </aside>
+    </main>
+
+    <div class="bottom-container">
+        <div class="record-tip" v-show="isRecording">● 正在倾听...</div>
+        <div :class="['input-box-glass', { 'recording-active': isRecording }]">
+            <button class="mode-switch-btn" @click="isVoiceMode = !isVoiceMode">
+                <i :class="['fa', isVoiceMode ? 'fa-keyboard-o' : 'fa-microphone']"></i>
+            </button>
+
+            <!-- 新增：相机按钮用于图片上传 -->
+            <button class="mode-switch-btn" @click="triggerUpload" style="margin-left: 10px; color: var(--primary);">
+                <i class="fa fa-camera"></i>
+            </button>
+            <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" style="display: none;">
+
+            <div class="input-main-area">
+                <transition name="mode-fade" mode="out-in">
+                    <button v-if="isVoiceMode"
+                            class="voice-btn"
+                            :class="{active: isRecording}"
+                            @mousedown.prevent="startVoice"
+                            @touchstart.prevent="startVoice"
+                            @mouseup.prevent="stopVoice"
+                            @touchend.prevent="stopVoice">
+                        {{ isRecording ? '松开 结束' : '按住 说话' }}
+                    </button>
+                    <input v-else v-model="userInput"
+                           class="text-input"
+                           placeholder="输入您的问题..."
+                           @keyup.enter="askAI">
+                </transition>
+            </div>
+
+            <transition name="mode-fade">
+                <button v-if="!isVoiceMode" class="send-btn" @click="askAI">发送</button>
+            </transition>
+        </div>
+    </div>
+
+    <footer class="footer-disclaimer">
+        回答内容由AI生成，请注意甄别，小智也可能会犯错哦~
+    </footer>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                currentTime: '',
+                currentDate: '',
+                userInput: '',
+                loading: false,
+                isVoiceMode: true,
+                isRecording: false,
+                userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=family',
+                history: [{ role: 'ai', content: '您好！我是您的AI助理小智。您可以问我天气、健康常识，或者跟我聊聊家常。' }],
+                prompts: ["今天天气怎么样？", "给我讲个开心的故事", "怎样吃才更健康？", "现在几点了？"],
+                rec: null,
+                lastUploadTime: 0 // 用于防止重复上传
+        mounted() {
+            this.updateClock();
+            setInterval(this.updateClock, 1000);
+            this.fetchUser();
+            // 获取与AI的聊天记录
+            this.loadHistory();
+            // 全局释放
+            window.addEventListener('mouseup', this.stopVoice);
+            window.addEventListener('touchend', this.stopVoice);
+        },
+        methods: {
+            updateClock() {
+                const d = new Date();
+                // 显示 时分 (如 09:05 带补0)
+                this.currentTime = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                // 显示 月日 + 星期几 (如 1月13日 星期二)
+                this.currentDate = (d.getMonth() + 1).toString().padStart(2, '0') + '月' + d.getDate().toString().padStart(2, '0') + '日 ' + ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+            },
+            // 获取聊天记录的方法
+            async loadHistory() {
+                try {
+                    const res = await axios.get('/history'); // 对应后端的接口
+                    if (res.data && res.data.length > 0) {
+                        // 把查到的记录直接换掉原本的欢迎语
+                        this.history = res.data;
+                        this.scrollDown(); // 滚到底部显示最新的话
+                    }
+                } catch (e) {
+                    console.log("加载历史记录失败", e);
+                }
+            },
+            async fetchUser() {
+                try {
+                    const res = await axios.get('/api/user/info');
+                    if(res.data.code === 200) this.userAvatar = res.data.data.avatar;
+                } catch(e) {}
+            },
+            quickAsk(q) {
+                this.userInput = q;
+                this.askAI();
+            },
+            async askAI() {
+                if (!this.userInput.trim() || this.loading) return;
+                const text = this.userInput;
+                // 1.把用户输入的内容，追加到聊天记录里（显示用户气泡）
+                this.history.push({ role: 'user', content: text });
+                this.userInput = ''; // 清空输入框
+                this.loading = true; // 显示加载中
+                this.scrollDown(); // 滚动到底部
+
+                try {
+                    // ✅核心修改：GET请求 + 正确地址/ask + 传参名msg 完全匹配后端
+                    const res = await axios.get('/ask', {
+                        params: { msg: text } // GET请求传参格式，后端用String msg接收
+                    });
+                    // ✅后端直接返回字符串，无需解析data.data，直接用res.data即可
+                    const reply = res.data || "您好，我没听清您的问题，能再说一次吗？";
+                    // 2.把AI返回的内容，追加到聊天记录里（显示AI气泡）
+                    this.history.push({ role: 'ai', content: reply });
+                    this.speak(reply); // 朗读AI回复（老人友好，保留这个功能）
+                } catch (e) {
+                    // 请求失败提示
+                    this.history.push({ role: 'ai', content: "哎呀，网络有点慢，再试一下吧～" });
+                    console.log("请求异常：", e); // 控制台看错误，方便排查
+                } finally {
+                    this.loading = false; // 关闭加载中
+                    this.scrollDown(); // 滚动到底部
+                }
+            },
+            // --- 录音功能 ---
+            startVoice() {
+                if(this.isRecording) return;
+                this.rec = Recorder({ type: "wav", sampleRate: 16000, bitRate: 16 });
+                this.rec.open(() => {
+                    this.rec.start();
+                    this.isRecording = true;
+            },
+            async clearChat() {
+                if (confirm("长辈，您确定要删除所有的聊天记录吗？")) {
+                    try {
+                        const res = await axios.post('/clearHistory'); // 告诉后端删掉数据库里的记录
+                        this.history = [{ role: 'ai', content: '记录已扫除干净，咱们重新开始聊吧！' }];
+                    } catch (e) {
+                        alert("扫除失败了，请稍后再试");
+                    }
+                }
+            },
+            stopVoice() {
+                if (!this.isRecording) return;
+                this.isRecording = false;
+                if (this.rec) {
+                    this.rec.stop((blob, duration) => {
+                        if (duration < 800) return;
+                        const fd = new FormData();
+                        fd.append('file', blob, 'audio.wav');
+                        axios.post('/api/asr/translate', fd).then(res => {
+                            if (res.data.code === 200 && res.data.data) {
+                                this.userInput = res.data.data;
+                                this.askAI();
+                            }
+                        });
+                        this.rec.close();
+                    }, () => this.rec.close());
+                }
+            },
+            scrollDown() {
+                setTimeout(() => {
+                    const el = document.getElementById('chat-box');
+                    if (el) el.scrollTop = el.scrollHeight;
+                }, 100);
+            },
+            speak(txt) {
+                const url = `/api/tts/speak?text=${encodeURIComponent(txt)}&t=${Date.now()}`;
+                new Audio(url).play().catch(e => console.log(e));
+            },
+            goBack() { window.location.href = 'index.html'; },
+
+            // 新增：看图识药功能
+            // 触发隐藏的文件上传
+            triggerUpload() {
+                this.$refs.fileInput.click();
+            },
+
+            // 处理图片上传和识别 - 优化版
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const now = Date.now();
+                if (now - this.lastUploadTime < 3000) {
+                    alert("请稍等，正在处理上一张图片...");
+                    event.target.value = '';
+                    return;
+                }
+                this.lastUploadTime = now;
+
+                this.history.push({
+                    role: 'ai',
+                    content: "正在上传并识别图片，请稍候..."
+                });
+                this.scrollDown();
+
+                const localUrl = URL.createObjectURL(file);
+
+                const userMsgIndex = this.history.length;
+                this.history.push({ role: 'user', content: localUrl });
+
+                this.loading = true;
+                this.scrollDown();
+
+                let processedFile = file;
+                if (typeof compressImage === 'function' && file.size > 100 * 1024) {
+                    try {
+                        processedFile = await compressImage(file, { targetSize: 800 * 1024 });
+                        console.log(`[AI识图] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                    } catch (e) {
+                        console.warn('[AI识图] 压缩失败，使用原图:', e);
+                    }
+                }
+
+                const fd = new FormData();
+                fd.append('file', processedFile);
+
+                try {
+                    // 2. 调用后端识别接口
+                    const res = await axios.post('/api/medicine/identify', fd, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+
+                    console.log('后端返回数据:', res.data);
+
+                    // 3. 获取后端返回的正式图片URL（如果后端存储了图片）
+                    let finalImageUrl = localUrl; // 默认使用本地预览
+                    let analysisResult = "";
+
+                    if (typeof res.data === 'string') {
+                        // 如果后端直接返回字符串，就当作分析结果
+                        analysisResult = res.data;
+                    } else if (res.data && typeof res.data === 'object') {
+                        // 如果后端返回JSON对象
+                        if (res.data.imageUrl) {
+                            // 有服务器图片URL，用它替换本地预览
+                            finalImageUrl = res.data.imageUrl;
+                        }
+                        // 获取分析结果
+                        analysisResult = res.data.analysis || res.data.content || res.data.message || "";
+                    }
+
+                    // 4. 更新用户消息的图片URL（如果后端提供了正式URL）
+                    if (finalImageUrl !== localUrl) {
+                        this.history[userMsgIndex].content = finalImageUrl;
+                    }
+
+                    // 5. 添加AI的分析结果
+                    const reply = analysisResult || "我已经看到了药盒图片，正在分析中...";
+                    this.history.push({ role: 'ai', content: reply });
+                    this.speak(reply);
+
+                } catch (error) {
+                    console.error("上传识别失败:", error);
+
+                    // 保持本地预览URL，显示失败提示
+                    this.history.push({
+                        role: 'ai',
+                        content: "抱歉，小智暂时没能识别出这个药盒。您可以尝试：\n1. 确保图片清晰、光线充足\n2. 对准药盒的主要文字部分\n3. 换个角度重新拍摄"
+                    });
+                } finally {
+                    this.loading = false;
+                    this.scrollDown();
+                    event.target.value = ''; // 清空文件选择器，允许再次选择同一文件
+
+                    // 清理本地预览URL（可选，避免内存泄漏）
+                    setTimeout(() => URL.revokeObjectURL(localUrl), 10000);
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI小智 - 解尘颐安养老平台</title>
+
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+
+    <script src="lib/js/recorder.mp3.min.js"></script>
+    <script src="lib/js/wav.js"></script>
+
+    <style>
+        :root {
+            --primary: #4361EE;
+            --primary-light: #4895EF;
+            --glass-bg: rgba(255, 255, 255, 0.2);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --blur-val: 45px;
+            --ai-bubble-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        /* --- 基础布局 --- */
+        * { scrollbar-width: none; -ms-overflow-style: none; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            margin: 0; padding: 0;
+            background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
+            height: 100vh; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex; flex-direction: column;
+            height: 133.33vh; width: 133.33vw;
+            transform: scale(0.75); transform-origin: top left;
+            position: relative;
+        }
+
+        /* --- 顶部导航栏 (恢复模糊感) --- */
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 110px;
+            padding: 0 50px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            border-bottom: 1px solid var(--glass-border); z-index: 9999;
+        }
+
+        .main-container { display: flex; height: 100%; box-sizing: border-box; }
+
+        /* --- 聊天区域 --- */
+        .content-area {
+            flex: 1; overflow-y: auto; padding: 0 50px 350px; scroll-behavior: smooth;
+        }
+        .scroll-spacer { height: 130px; width: 100%; flex-shrink: 0; }
+
+        .msg-row { display: flex; margin-bottom: 45px; width: 100%; }
+        .msg-ai { flex-direction: row; animation: slideInLeft 0.5s forwards; }
+        .msg-user { flex-direction: row-reverse; animation: slideInRight 0.5s forwards; }
+
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+        .avatar-box img { width: 85px; height: 85px; border-radius: 50%; border: 4px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .bubble {
+            padding: 24px 35px; border-radius: 30px; background: white; font-size: 28px; font-weight: 600;
+            color: #1E293B; box-shadow: 0 12px 35px rgba(0,0,0,0.07); word-break: break-all; margin: 0 20px; line-height: 1.5;
+        }
+        .msg-ai .bubble { background: var(--ai-bubble-bg); border-left: 8px solid var(--primary); }
+        .msg-user .bubble { background: var(--primary); color: white; border: none; }
+
+        /* --- 右侧机器人小智卡片 (恢复展示) --- */
+        .ai-sidebar {
+            width: 420px; background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-val)); -webkit-backdrop-filter: blur(var(--blur-val));
+            border-left: 1px solid var(--glass-border); padding: 130px 35px 35px; overflow-y: auto;
+        }
+        .ai-info-card {
+            background: rgba(255, 255, 255, 0.4); border-radius: 30px; padding: 30px;
+            text-align: center; margin-bottom: 40px; border: 1px solid var(--glass-border);
+        }
+        .suggest-item {
+            background: rgba(255, 255, 255, 0.25); padding: 25px; border-radius: 25px;
+            margin-bottom: 20px; font-size: 24px; font-weight: bold; color: #1E3A8A;
+            cursor: pointer; transition: 0.3s; border: 2px solid transparent;
+        }
+        .suggest-item:hover { background: white; border-color: var(--primary); transform: translateX(-10px); }
+
+        /* --- 底部输入栏 (流光平滑切换) --- */
+        .bottom-container { position: fixed; bottom: 50px; left: 50px; right: 470px; z-index: 9000; }
+        .record-tip { text-align: center; color: var(--primary); font-size: 24px; font-weight: bold; margin-bottom: 12px; height: 30px; }
+
+        .input-box-glass {
+            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+            padding: 15px 25px; border-radius: 80px; display: flex; align-items: center;
+            border: 1px solid var(--glass-border); box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            position: relative; overflow: hidden; transition: all 0.4s ease;
+        }
+
+        /* 录音时的蓝色渐变流光 */
+        .input-box-glass::before {
+            content: ''; position: absolute; left: 50%; top: 0; width: 0; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(67, 97, 238, 0.15), transparent);
+            transition: all 0.5s ease; z-index: 0; pointer-events: none;
+        }
+        .input-box-glass.recording-active { border-color: var(--primary); transform: scale(1.02); }
+        .input-box-glass.recording-active::before { left: 0; width: 100%; }
+
+        .mode-switch-btn {
+            width: 75px; height: 75px; border-radius: 50%; border: none; background: rgba(0,0,0,0.05);
+            color: #64748b; font-size: 35px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;
+        }
+
+        .input-main-area { flex: 1; margin: 0 20px; height: 90px; position: relative; display: flex; align-items: center; z-index: 10; }
+
+        /* 按住说话按钮 */
+        .voice-btn {
+            width: 100%; height: 100%; border-radius: 50px; border: 1px solid rgba(0,0,0,0.05);
+            background: white; font-size: 30px; font-weight: 900; color: #1E3A8A;
+            cursor: pointer; user-select: none; transition: 0.2s;
+        }
+        .voice-btn:active, .voice-btn.active { background: var(--primary); color: white; transform: scale(0.97); }
+
+        .text-input { width: 100%; height: 100%; border: none; background: transparent; font-size: 28px; font-weight: 600; outline: none; }
+
+        .send-btn {
+            background: var(--primary); color: white; border: none; padding: 0 45px; height: 85px;
+            border-radius: 45px; font-size: 26px; font-weight: bold; cursor: pointer; z-index: 10;
+        }
+
+        /* 平滑过渡动画 */
+        .mode-fade-enter-active, .mode-fade-leave-active { transition: all 0.3s ease; }
+        .mode-fade-enter-from { opacity: 0; transform: translateY(10px); }
+        .mode-fade-leave-to { opacity: 0; transform: translateY(-10px); }
+
+        [v-cloak] { display: none; }
+
+        /* --- 底部免责声明 --- */
+        .footer-disclaimer {
+            position: fixed; bottom: 10px; left: 50px; right: 470px; z-index: 8000;
+            text-align: center; font-size: 18px; color: #999; padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <header class="top-bar">
+        <a href="javascript:void(0)" @click="goBack" style="text-decoration: none; color: #1E3A8A; font-weight: bold; font-size: 42px;">
+            <i class="fa fa-angle-left"></i> 返回
+        </a>
+        <h1 style="color: #1E3A8A; font-size: 44px; font-weight: 900; margin: 0;">AI 智能助理</h1>
+
+        <div style="display: flex; align-items: center;">
+            <div @click="clearChat" style="margin-right: 30px; cursor: pointer; color: #ef4444; font-size: 40px;">
+                <i class="fa fa-trash-o"></i>
+            </div>
+            <div style="text-align: right">
+                <div style="font-size: 48px; font-weight: 900; color: var(--primary);">{{ currentTime }}</div>
+                <div style="font-size: 20px; color: #64748b; font-weight: 800; margin-top: 5px;">{{ currentDate }}</div>
+            </div>
+        </div>
+    </header>
+    <main class="main-container">
+        <section class="content-area" id="chat-box">
+            <div class="scroll-spacer"></div>
+            <div v-for="(msg, index) in history" :key="index"
+                 :class="['msg-row', msg.role === 'ai' ? 'msg-ai' : 'msg-user']">
+                <div class="avatar-box">
+                    <img :src="msg.role === 'ai' ? 'https://cdn-icons-png.flaticon.com/512/2593/2593635.png' : userAvatar">
+                </div>
+                <div class="msg-content" style="max-width: 75%;">
+                    <div class="bubble">
+                        <!-- 判断是否为图片消息（支持 blob: 和 http/https/上传路径） -->
+                        <div v-if="msg.content && (msg.content.startsWith('http://') || msg.content.startsWith('https://') || msg.content.startsWith('/uploads/') || msg.content.startsWith('blob:'))"
+                             style="margin-bottom: 10px;">
+                            <img :src="msg.content"
+                                 style="max-width: 300px; max-height: 300px; border-radius: 15px; display: block; cursor: zoom-in; box-shadow: 0 4px 12px rgba(0,0,0,0.1); object-fit: contain;"
+                                 @click="window.open(msg.content.startsWith('/') ? window.location.origin + msg.content : msg.content)">
+                        </div>
+
+                        <!-- 否则显示为文本 -->
+                        <div v-else>{{ msg.content }}</div>
+
+                        <!-- AI消息且不是图片时才显示朗读按钮 -->
+                        <div v-if="msg.role === 'ai' && msg.content && !(msg.content.startsWith('http://') || msg.content.startsWith('https://') || msg.content.startsWith('/uploads/') || msg.content.startsWith('blob:'))"
+                             @click="speak(msg.content)"
+                             style="margin-top:12px; font-size:22px; color:var(--primary); cursor:pointer; font-weight:bold;">
+                            <i class="fa fa-volume-up"></i> 点击朗读
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="loading" class="msg-row msg-ai">
+                <div class="avatar-box"><img src="https://cdn-icons-png.flaticon.com/512/2593/2593635.png"></div>
+                <div class="bubble"><i class="fa fa-circle-o-notch fa-spin"></i> 正在思考...</div>
+            </div>
+        </section>
+
+        <aside class="ai-sidebar">
+            <div class="ai-info-card">
+                <img src="https://cdn-icons-png.flaticon.com/512/2593/2593635.png" style="width: 130px;">
+                <h2 style="font-size: 34px; color: #1E3A8A; margin: 15px 0 5px;">我是小智</h2>
+                <p style="font-size: 24px; color: #64748b;">您的贴身健康管家</p>
+            </div>
+
+            <div style="font-size: 26px; font-weight: 900; color: #1E3A8A; margin-bottom: 25px;">您可以这样问我：</div>
+            <div v-for="q in prompts" @click="quickAsk(q)" class="suggest-item">
+                <i class="fa fa-lightbulb-o" style="margin-right:10px;"></i> {{ q }}
+            </div>
+        </aside>
+    </main>
+
+    <div class="bottom-container">
+        <div class="record-tip" v-show="isRecording">● 正在倾听...</div>
+        <div :class="['input-box-glass', { 'recording-active': isRecording }]">
+            <button class="mode-switch-btn" @click="isVoiceMode = !isVoiceMode">
+                <i :class="['fa', isVoiceMode ? 'fa-keyboard-o' : 'fa-microphone']"></i>
+            </button>
+
+            <!-- 新增：相机按钮用于图片上传 -->
+            <button class="mode-switch-btn" @click="triggerUpload" style="margin-left: 10px; color: var(--primary);">
+                <i class="fa fa-camera"></i>
+            </button>
+            <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" style="display: none;">
+
+            <div class="input-main-area">
+                <transition name="mode-fade" mode="out-in">
+                    <button v-if="isVoiceMode"
+                            class="voice-btn"
+                            :class="{active: isRecording}"
+                            @mousedown.prevent="startVoice"
+                            @touchstart.prevent="startVoice"
+                            @mouseup.prevent="stopVoice"
+                            @touchend.prevent="stopVoice">
+                        {{ isRecording ? '松开 结束' : '按住 说话' }}
+                    </button>
+                    <input v-else v-model="userInput"
+                           class="text-input"
+                           placeholder="输入您的问题..."
+                           @keyup.enter="askAI">
+                </transition>
+            </div>
+
+            <transition name="mode-fade">
+                <button v-if="!isVoiceMode" class="send-btn" @click="askAI">发送</button>
+            </transition>
+        </div>
+    </div>
+
+    <footer class="footer-disclaimer">
+        回答内容由AI生成，请注意甄别，小智也可能会犯错哦~
+    </footer>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                currentTime: '',
+                currentDate: '',
+                userInput: '',
+                loading: false,
+                isVoiceMode: true,
+                isRecording: false,
+                userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=family',
+                history: [{ role: 'ai', content: '您好！我是您的AI助理小智。您可以问我天气、健康常识，或者跟我聊聊家常。' }],
+                prompts: ["今天天气怎么样？", "给我讲个开心的故事", "怎样吃才更健康？", "现在几点了？"],
+                rec: null,
+                lastUploadTime: 0 // 用于防止重复上传
+            }
+        },
+        mounted() {
+            this.updateClock();
+            setInterval(this.updateClock, 1000);
+            this.fetchUser();
+            // 获取与AI的聊天记录
+            this.loadHistory();
+            // 全局释放
+            window.addEventListener('mouseup', this.stopVoice);
+            window.addEventListener('touchend', this.stopVoice);
+        },
+        methods: {
+            updateClock() {
+                const d = new Date();
+                // 显示 时分 (如 09:05 带补0)
+                this.currentTime = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                // 显示 月日 + 星期几 (如 1月13日 星期二)
+                this.currentDate = (d.getMonth() + 1).toString().padStart(2, '0') + '月' + d.getDate().toString().padStart(2, '0') + '日 ' + ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+            },
+            // 获取聊天记录的方法
+            async loadHistory() {
+                try {
+                    const res = await axios.get('/history'); // 对应后端的接口
+                    if (res.data && res.data.length > 0) {
+                        // 把查到的记录直接换掉原本的欢迎语
+                        this.history = res.data;
+                        this.scrollDown(); // 滚到底部显示最新的话
+                    }
+                } catch (e) {
+                    console.log("加载历史记录失败", e);
+                }
+            },
+            async fetchUser() {
+                try {
+                    const res = await axios.get('/api/user/info');
+                    if(res.data.code === 200) this.userAvatar = res.data.data.avatar;
+                } catch(e) {}
+            },
+            quickAsk(q) {
+                this.userInput = q;
+                this.askAI();
+            },
+            async askAI() {
+                if (!this.userInput.trim() || this.loading) return;
+                const text = this.userInput;
+                // 1.把用户输入的内容，追加到聊天记录里（显示用户气泡）
+                this.history.push({ role: 'user', content: text });
+                this.userInput = ''; // 清空输入框
+                this.loading = true; // 显示加载中
+                this.scrollDown(); // 滚动到底部
+
+                try {
+                    // ✅核心修改：GET请求 + 正确地址/ask + 传参名msg 完全匹配后端
+                    const res = await axios.get('/ask', {
+                        params: { msg: text } // GET请求传参格式，后端用String msg接收
+                    });
+                    // ✅后端直接返回字符串，无需解析data.data，直接用res.data即可
+                    const reply = res.data || "您好，我没听清您的问题，能再说一次吗？";
+                    // 2.把AI返回的内容，追加到聊天记录里（显示AI气泡）
+                    this.history.push({ role: 'ai', content: reply });
+                    this.speak(reply); // 朗读AI回复（老人友好，保留这个功能）
+                } catch (e) {
+                    // 请求失败提示
+                    this.history.push({ role: 'ai', content: "哎呀，网络有点慢，再试一下吧～" });
+                    console.log("请求异常：", e); // 控制台看错误，方便排查
+                } finally {
+                    this.loading = false; // 关闭加载中
+                    this.scrollDown(); // 滚动到底部
+                }
+            },
+            // --- 录音功能 ---
+            startVoice() {
+                if(this.isRecording) return;
+                this.rec = Recorder({ type: "wav", sampleRate: 16000, bitRate: 16 });
+                this.rec.open(() => {
+                    this.rec.start();
+                    this.isRecording = true;
+                }, (msg) => console.error(msg));
+            },
+            async clearChat() {
+                if (confirm("长辈，您确定要删除所有的聊天记录吗？")) {
+                    try {
+                        const res = await axios.post('/clearHistory'); // 告诉后端删掉数据库里的记录
+                        this.history = [{ role: 'ai', content: '记录已扫除干净，咱们重新开始聊吧！' }];
+                    } catch (e) {
+                        alert("扫除失败了，请稍后再试");
+                    }
+                }
+            },
+            stopVoice() {
+                if (!this.isRecording) return;
+                this.isRecording = false;
+                if (this.rec) {
+                    this.rec.stop((blob, duration) => {
+                        if (duration < 800) return;
+                        const fd = new FormData();
+                        fd.append('file', blob, 'audio.wav');
+                        axios.post('/api/asr/translate', fd).then(res => {
+                            if (res.data.code === 200 && res.data.data) {
+                                this.userInput = res.data.data;
+                                this.askAI();
+                            }
+                        });
+                        this.rec.close();
+                    }, () => this.rec.close());
+                }
+            },
+            scrollDown() {
+                setTimeout(() => {
+                    const el = document.getElementById('chat-box');
+                    if (el) el.scrollTop = el.scrollHeight;
+                }, 100);
+            },
+            speak(txt) {
+                const url = `/api/tts/speak?text=${encodeURIComponent(txt)}&t=${Date.now()}`;
+                new Audio(url).play().catch(e => console.log(e));
+            },
+            goBack() { window.location.href = 'index.html'; },
+
+            // 新增：看图识药功能
+            // 触发隐藏的文件上传
+            triggerUpload() {
+                this.$refs.fileInput.click();
+            },
+
+            // 处理图片上传和识别 - 优化版
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // 防抖处理：3秒内不允许重复上传
+                const now = Date.now();
+                if (now - this.lastUploadTime < 3000) {
+                    alert("请稍等，正在处理上一张图片...");
+                    event.target.value = '';
+                    return;
+                }
+                this.lastUploadTime = now;
+
+                // 显示上传状态
+                this.history.push({
+                    role: 'ai',
+                    content: "正在上传并识别图片，请稍候..."
+                });
+                this.scrollDown();
+
+                // 1. 创建本地预览URL，立即显示在聊天框中
+                const localUrl = URL.createObjectURL(file);
+
+                // 记录这条消息的索引，用于后续更新
+                const userMsgIndex = this.history.length;
+                this.history.push({ role: 'user', content: localUrl });
+
+                this.loading = true;
+                this.scrollDown();
+
+                const fd = new FormData();
+                fd.append('file', file);
+
+                try {
+                    // 2. 调用后端识别接口
+                    const res = await axios.post('/api/medicine/identify', fd, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+
+                    console.log('后端返回数据:', res.data);
+
+                    // 3. 获取后端返回的正式图片URL（如果后端存储了图片）
+                    let finalImageUrl = localUrl; // 默认使用本地预览
+                    let analysisResult = "";
+
+                    if (typeof res.data === 'string') {
+                        // 如果后端直接返回字符串，就当作分析结果
+                        analysisResult = res.data;
+                    } else if (res.data && typeof res.data === 'object') {
+                        // 如果后端返回JSON对象
+                        if (res.data.imageUrl) {
+                            // 有服务器图片URL，用它替换本地预览
+                            finalImageUrl = res.data.imageUrl;
+                        }
+                        // 获取分析结果
+                        analysisResult = res.data.analysis || res.data.content || res.data.message || "";
+                    }
+
+                    // 4. 更新用户消息的图片URL（如果后端提供了正式URL）
+                    if (finalImageUrl !== localUrl) {
+                        this.history[userMsgIndex].content = finalImageUrl;
+                    }
+
+                    // 5. 添加AI的分析结果
+                    const reply = analysisResult || "我已经看到了药盒图片，正在分析中...";
+                    this.history.push({ role: 'ai', content: reply });
+                    this.speak(reply);
+
+                } catch (error) {
+                    console.error("上传识别失败:", error);
+
+                    // 保持本地预览URL，显示失败提示
+                    this.history.push({
+                        role: 'ai',
+                        content: "抱歉，小智暂时没能识别出这个药盒。您可以尝试：\n1. 确保图片清晰、光线充足\n2. 对准药盒的主要文字部分\n3. 换个角度重新拍摄"
+                    });
+                } finally {
+                    this.loading = false;
+                    this.scrollDown();
+                    event.target.value = ''; // 清空文件选择器，允许再次选择同一文件
+
+                    // 清理本地预览URL（可选，避免内存泄漏）
+                    setTimeout(() => URL.revokeObjectURL(localUrl), 10000);
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>通话</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="lib/js/livekit-client.umd.min.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --danger: #FA5151;
+            --danger-dark: #E64545;
+            --text: #191919;
+            --text-secondary: #888888;
+            --bg-dark: #191919;
+            --bg-darker: #0D0D0D;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        [v-cloak] { display: none; }
+
+        .call-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: var(--bg-dark);
+        }
+
+        .video-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+
+        .remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: var(--bg-darker);
+        }
+
+        .local-video-container {
+            position: absolute;
+            top: 80px;
+            right: 16px;
+            width: 100px;
+            height: 140px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.15);
+            z-index: 10;
+        }
+
+        .local-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .voice-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+        }
+
+        .avatar-container {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .caller-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.3);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .caller-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-ring {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border: 3px solid var(--primary);
+            border-radius: 50%;
+            opacity: 0;
+            animation: ring-expand 1.5s ease-out infinite;
+        }
+
+        .avatar-ring:nth-child(2) { animation-delay: 0.5s; }
+        .avatar-ring:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes ring-expand {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .caller-name {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .call-status {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            text-align: center;
+        }
+
+        .call-timer {
+            font-size: 20px;
+            font-weight: 500;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            color: var(--primary);
+            text-align: center;
+            min-height: 28px;
+        }
+
+        .call-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 16px;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 40px 20px;
+            padding-bottom: calc(40px + env(safe-area-inset-bottom));
+            z-index: 20;
+        }
+
+        .controls-main {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .control-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .control-btn-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .control-btn-circle i { color: white; }
+
+        .control-btn-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .btn-end {
+            background: var(--danger);
+            width: 72px;
+            height: 72px;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .btn-secondary.active {
+            background: var(--danger);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .error-icon {
+            font-size: 56px;
+            color: var(--danger);
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .retry-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 24px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <audio ref="callAudio" loop preload="auto">
+            <source src="http://t9se9imi4.hn-bkt.clouddn.com/call.mp3" type="audio/mpeg">
+        </audio>
+        <audio ref="emergencyAudio" loop preload="auto">
+            <source src="http://t9se9imi4.hn-bkt.clouddn.com/warning.mp3" type="audio/mpeg">
+        </audio>
+        <audio ref="endAudio" preload="auto">
+            <source src="http://t9se9imi4.hn-bkt.clouddn.com/hangup.mp3" type="audio/mpeg">
+        </audio>
+
+        <div class="call-container">
+            <div v-if="isLoading" class="overlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">{{ loadingText }}</div>
+            </div>
+
+            <div v-if="errorMessage && !isConnected" class="overlay">
+                <i class="fa fa-exclamation-circle error-icon"></i>
+                <div class="error-title">通话失败</div>
+                <div class="error-message">{{ errorMessage }}</div>
+                <button class="retry-btn" @click="goBack">返回</button>
+            </div>
+
+            <template v-if="!isLoading && !errorMessage">
+                <div v-if="callType === 'video'" class="video-view">
+                    <video ref="remoteVideo" class="remote-video" autoplay playsinline></video>
+                    <div v-show="localTracks.some(t => t.kind === 'video')" class="local-video-container">
+                        <video ref="localVideo" class="local-video" autoplay playsinline muted></video>
+                    </div>
+                    <div v-if="!isConnected" class="voice-view" :style="{ background: isEmergency ? 'rgba(247, 37, 133, 0.3)' : 'rgba(0,0,0,0.8)' }">
+                        <div v-if="isRinging" class="avatar-container">
+                            <div class="avatar-ring" :style="{ borderColor: isEmergency ? '#F72585' : '' }"></div>
+                            <div class="avatar-ring" :style="{ borderColor: isEmergency ? '#F72585' : '' }"></div>
+                            <div class="avatar-ring" :style="{ borderColor: isEmergency ? '#F72585' : '' }"></div>
+                            <div class="caller-avatar" :style="{ background: isEmergency ? 'linear-gradient(135deg, #F72585 0%, #FF6B6B 100%)' : '' }">
+                                <img v-if="peerAvatar" :src="peerAvatar" :alt="peerName">
+                                <i v-else class="fa fa-user"></i>
+                            </div>
+                        </div>
+                        <div v-else class="avatar-container">
+                            <div class="caller-avatar" :style="{ background: isEmergency ? 'linear-gradient(135deg, #F72585 0%, #FF6B6B 100%)' : '' }">
+                                <img v-if="peerAvatar" :src="peerAvatar" :alt="peerName">
+                                <i v-else class="fa fa-user"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="caller-name">{{ peerName }}</div>
+                        <div class="call-status">{{ callStatusText }}</div>
+                        <div v-if="isConnected" class="call-timer">{{ formatDuration(callDuration) }}</div>
+                        
+                        <div class="call-type-badge" :style="{ background: isEmergency ? 'rgba(247, 37, 133, 0.4)' : '' }">
+                            <i :class="isEmergency ? 'fa fa-exclamation-triangle' : 'fa fa-video-camera'"></i>
+                            <span>{{ isEmergency ? '🔥 紧急呼叫 🔥' : '视频通话' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="callType === 'voice'" class="voice-view" :style="{ background: isEmergency ? 'linear-gradient(180deg, rgba(247, 37, 133, 0.2) 0%, #0d0d0d 100%)' : '' }">
+                    <div v-if="isRinging" class="avatar-container">
+                        <div class="avatar-ring" :style="{ borderColor: isEmergency ? '#F72585' : '' }"></div>
+                        <div class="avatar-ring" :style="{ borderColor: isEmergency ? '#F72585' : '' }"></div>
+                        <div class="avatar-ring" :style="{ borderColor: isEmergency ? '#F72585' : '' }"></div>
+                        <div class="caller-avatar" :style="{ background: isEmergency ? 'linear-gradient(135deg, #F72585 0%, #FF6B6B 100%)' : '' }">
+                            <img v-if="peerAvatar" :src="peerAvatar" :alt="peerName">
+                            <i v-else class="fa fa-user"></i>
+                        </div>
+                    </div>
+                    <div v-else class="avatar-container">
+                        <div class="caller-avatar" :style="{ background: isEmergency ? 'linear-gradient(135deg, #F72585 0%, #FF6B6B 100%)' : '' }">
+                            <img v-if="peerAvatar" :src="peerAvatar" :alt="peerName">
+                            <i v-else class="fa fa-user"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="caller-name">{{ peerName }}</div>
+                    <div class="call-status">{{ callStatusText }}</div>
+                    <div v-if="isConnected" class="call-timer">{{ formatDuration(callDuration) }}</div>
+                    
+                    <div class="call-type-badge" :style="{ background: isEmergency ? 'rgba(247, 37, 133, 0.4)' : '' }">
+                        <i :class="isEmergency ? 'fa fa-exclamation-triangle' : (callType === 'video' ? 'fa fa-video-camera' : 'fa fa-phone')"></i>
+                        <span>{{ isEmergency ? '🔥 紧急呼叫 🔥' : (callType === 'video' ? '视频通话' : '语音通话') }}</span>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <template v-if="isConnected">
+                        <div class="controls-main">
+                            <div class="control-btn" @click="toggleMute">
+                                <div class="control-btn-circle btn-secondary" :class="{ active: isMuted }">
+                                    <i :class="isMuted ? 'fa fa-microphone-slash' : 'fa fa-microphone'"></i>
+                                </div>
+                                <span class="control-btn-label">{{ isMuted ? '已静音' : '静音' }}</span>
+                            </div>
+                            
+                            <div class="control-btn" @click="endCall">
+                                <div class="control-btn-circle btn-end">
+                                    <i class="fa fa-phone" style="transform: rotate(135deg);"></i>
+                                </div>
+                                <span class="control-btn-label">挂断</span>
+                            </div>
+
+                            <div v-if="callType === 'video'" class="control-btn" @click="toggleCamera">
+                                <div class="control-btn-circle btn-secondary" :class="{ active: isCameraOff }">
+                                    <i class="fa fa-video-camera"></i>
+                                </div>
+                                <span class="control-btn-label">{{ isCameraOff ? '已关闭' : '摄像头' }}</span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="controls-main">
+                            <div class="control-btn" @click="cancelCall">
+                                <div class="control-btn-circle btn-end">
+                                    <i class="fa fa-phone" style="transform: rotate(135deg);"></i>
+                                </div>
+                                <span class="control-btn-label">取消</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const { Room, RoomEvent, createLocalTracks } = LivekitClient;
+
+        const SIGNALING_URL = window.location.origin;
+
+        createApp({
+            data() {
+                return {
+                    socket: null,
+                    room: null,
+                    localTracks: [],
+                    
+                    currentUserId: null,
+                    peerUserId: null,
+                    peerName: '',
+                    peerAvatar: '',
+                    myName: '',
+                    myAvatar: '',
+                    callType: 'voice',
+                    isIncoming: false,
+                    isEmergency: false,
+                    
+                    livekitToken: '',
+                    roomName: '',
+                    wsUrl: '',
+                    
+                    isLoading: true,
+                    loadingText: '正在初始化...',
+                    errorMessage: '',
+                    
+                    isRinging: false,
+                    isConnected: false,
+                    isMuted: false,
+                    isCameraOff: false,
+                    showNetworkWarning: false,
+                    
+                    callStartTime: null,
+                    callDuration: 0,
+                    timerInterval: null,
+                    ringingTimeout: null,
+                    
+                    callStatus: 'connecting',
+                    ringtoneConfig: {}
+                };
+            },
+            computed: {
+                callStatusText() {
+                    const map = {
+                        'connecting': '正在连接...',
+                        'ringing': '正在呼叫...',
+                        'waiting': '等待对方接听...',
+                        'connecting_p2p': '建立连接...',
+                        'connected': '通话中',
+                        'ended': '通话结束',
+                        'rejected': '对方已拒绝',
+                        'timeout': '无人接听',
+                        'cancelled': '已取消',
+                        'failed': '连接失败',
+                        'busy': '对方忙线中'
+                    };
+                    return map[this.callStatus] || '连接中...';
+                }
+            },
+            async mounted() {
+                console.log('[通话] 页面加载');
+                console.log('[通话] 完整URL:', window.location.href);
+                
+                await this.loadRingtoneConfig();
+                
+                const params = new URLSearchParams(window.location.search);
+                this.currentUserId = params.get('userId');
+                this.peerUserId = params.get('peerId');
+                this.peerName = params.get('peerName') || '用户';
+                this.peerAvatar = params.get('peerAvatar') || '';
+                this.myName = params.get('myName') || '用户';
+                this.myAvatar = params.get('myAvatar') || '';
+                this.callType = params.get('type') || 'voice';
+                this.isIncoming = params.get('incoming') === 'true';
+                this.isEmergency = params.get('isEmergency') === 'true';
+
+                console.log('[通话] 参数:', { 
+                    currentUserId: this.currentUserId, 
+                    peerUserId: this.peerUserId, 
+                    isIncoming: this.isIncoming, 
+                    callType: this.callType,
+                    isEmergency: this.isEmergency
+                });
+                console.log('[通话] URL参数type值:', params.get('type'));
+
+                if (!this.currentUserId || !this.peerUserId) {
+                    this.errorMessage = '缺少通话参数';
+                    this.isLoading = false;
+                    return;
+                }
+
+                try {
+                    await this.init();
+                } catch (e) {
+                    console.error('[通话] 初始化失败:', e);
+                    this.errorMessage = e.message || '初始化失败';
+                    this.isLoading = false;
+                }
+            },
+            beforeUnmount() {
+                this.cleanup();
+            },
+            methods: {
+                async loadRingtoneConfig() {
+                    try {
+                        const res = await fetch('/api/qiniu/ringtones');
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success && data.items) {
+                                this.ringtoneConfig = {};
+                                data.items.forEach(item => {
+                                    this.ringtoneConfig[item.type] = item.url;
+                                });
+                                this.updateAudioSources();
+                            }
+                        }
+                    } catch (e) {
+                        console.log('[通话] 加载铃声配置失败:', e);
+                    }
+                },
+                updateAudioSources() {
+                    const callAudio = this.$refs.callAudio;
+                    const emergencyAudio = this.$refs.emergencyAudio;
+                    if (callAudio && this.ringtoneConfig.call) {
+                        callAudio.src = this.ringtoneConfig.call;
+                    }
+                    if (emergencyAudio && this.ringtoneConfig.emergency) {
+                        emergencyAudio.src = this.ringtoneConfig.emergency;
+                    }
+                },
+                async init() {
+                    this.loadingText = '连接服务器...';
+                    await this.connectSignaling();
+                    
+                    this.loadingText = '获取通话凭证...';
+                    await this.getToken();
+                    
+                    this.isLoading = false;
+
+                    if (this.isIncoming) {
+                        await this.handleIncoming();
+                    } else {
+                        await this.handleOutgoing();
+                    }
+                },
+
+                async connectSignaling() {
+                    return new Promise((resolve, reject) => {
+                        console.log('[信令] 开始连接...');
+                        this.socket = io(SIGNALING_URL, {
+                            path: '/socket.io',
+                            transports: ['websocket', 'polling']
+                        });
+
+                        this.socket.on('connect', () => {
+                            console.log('[信令] Socket已连接，开始登录');
+                            this.socket.emit('login', {
+                                userId: this.currentUserId,
+                                nickname: this.myName,
+                                avatar: this.myAvatar
+                            });
+                        });
+
+                        this.socket.on('loginSuccess', (msg) => {
+                            console.log('[信令] 登录成功:', msg);
+                            resolve();
+                        });
+
+                        this.socket.on('connect_error', (e) => {
+                            console.error('[信令] 连接失败:', e);
+                            reject(new Error('无法连接服务器'));
+                        });
+
+                        this.socket.on('callAnswered', async (data) => {
+                            console.log('[信令] 收到callAnswered:', data);
+                            this.isRinging = false;
+                            this.stopRingtone();
+                            this.callStatus = 'connecting_p2p';
+                            if (this.ringingTimeout) clearTimeout(this.ringingTimeout);
+                        });
+
+                        this.socket.on('calleeReady', async (data) => {
+                            console.log('[信令] 收到calleeReady:', data);
+                            this.callStatus = 'connecting_p2p';
+                            await this.joinRoom();
+                        });
+
+                        this.socket.on('callRejected', (data) => {
+                            console.log('[信令] 收到callRejected:', data);
+                            this.stopRingtone();
+                            this.callStatus = 'rejected';
+                            this.playEndSound();
+                            setTimeout(() => this.goBack(), 1500);
+                        });
+
+                        this.socket.on('callBusy', (data) => {
+                            console.log('[信令] 收到callBusy:', data);
+                            this.stopRingtone();
+                            this.errorMessage = '对方正在通话中';
+                        });
+
+                        this.socket.on('callFailed', (msg) => {
+                            console.log('[信令] 收到callFailed:', msg);
+                            this.stopRingtone();
+                            this.errorMessage = msg || '对方不在线';
+                            this.isLoading = false;
+                        });
+
+                        this.socket.on('hangup', (data) => {
+                            console.log('[信令] 收到hangup:', data);
+                            this.stopRingtone();
+                            this.playEndSound();
+                            this.endSession();
+                        });
+                    });
+                },
+
+                async getToken() {
+                    const res = await axios.post('/api/livekit/token', {
+                        userId: parseInt(this.currentUserId),
+                        userName: this.myName,
+                        callerId: parseInt(this.currentUserId),
+                        calleeId: parseInt(this.peerUserId)
+                    });
+                    
+                    if (res.data.code === 200) {
+                        this.livekitToken = res.data.data.token;
+                        this.roomName = res.data.data.roomName;
+                        this.wsUrl = res.data.data.wsUrl;
+                        console.log('[LiveKit] Token获取成功, 房间:', this.roomName);
+                    } else {
+                        throw new Error(res.data.msg || '获取Token失败');
+                    }
+                },
+
+                async handleOutgoing() {
+                    console.log('[通话] 主叫方流程');
+                    
+                    // 紧急呼叫已经在 index.html 中通过 emergencyCall 事件通知了联系人
+                    // 这里不需要再发送 call 事件，直接加入房间等待对方
+                    if (this.isEmergency) {
+                        console.log('[通话] 紧急呼叫模式：跳过发送call事件，直接加入房间');
+                        this.callStatus = 'connecting_p2p';
+                    } else {
+                        this.isRinging = true;
+                        this.callStatus = 'ringing';
+                        this.playRingtone();
+                        
+                        console.log('[通话] 发送call事件');
+                        this.socket.emit('call', {
+                            toUserId: this.peerUserId,
+                            fromUserId: this.currentUserId,
+                            type: this.callType,
+                            fromUserName: this.myName,
+                            fromUserAvatar: this.myAvatar,
+                            isEmergency: false
+                        });
+
+                        this.ringingTimeout = setTimeout(() => {
+                            if (this.isRinging && !this.isConnected) {
+                                console.log('[通话] 呼叫超时');
+                                this.socket.emit('hangup', { toUserId: this.peerUserId });
+                                this.stopRingtone();
+                                this.callStatus = 'timeout';
+                                this.playEndSound();
+                                setTimeout(() => this.goBack(), 1500);
+                            }
+                        }, 45000);
+                    }
+                    
+                    console.log('[通话] 主叫方加入房间...');
+                    await this.joinRoom();
+                },
+
+                async handleIncoming() {
+                    console.log('[通话] 被叫方流程');
+                    this.callStatus = 'connecting_p2p';
+                    
+                    console.log('[通话] 发送calleeReady事件');
+                    this.socket.emit('calleeReady', {
+                        toUserId: this.peerUserId,
+                        fromUserId: this.currentUserId
+                    });
+                    
+                    console.log('[通话] 被叫方加入房间...');
+                    await this.joinRoom();
+                },
+
+                async joinRoom() {
+                    try {
+                        console.log('[LiveKit] 连接房间:', this.roomName);
+                        
+                        this.room = new Room();
+                        
+                        this.room.on(RoomEvent.ParticipantConnected, (participant) => {
+                            console.log('[LiveKit] 对方加入:', participant.identity);
+                            this.onConnected();
+                        });
+
+                        this.room.on(RoomEvent.TrackSubscribed, (track) => {
+                            console.log('[LiveKit] 收到Track:', track.kind);
+                            if (track.kind === 'video') {
+                                track.attach(this.$refs.remoteVideo);
+                            } else if (track.kind === 'audio') {
+                                const el = document.createElement('audio');
+                                document.body.appendChild(el);
+                                track.attach(el);
+                                el.play().catch(e => console.log('音频播放失败:', e));
+                            }
+                        });
+
+                        this.room.on(RoomEvent.ParticipantDisconnected, () => {
+                            console.log('[LiveKit] 对方断开');
+                            this.endSession();
+                        });
+
+                        this.room.on(RoomEvent.Disconnected, () => {
+                            console.log('[LiveKit] 房间断开');
+                            if (this.isConnected) this.endSession();
+                        });
+
+                        const options = { audio: true, video: this.callType === 'video' };
+                        
+                        console.log('[LiveKit] 尝试获取媒体设备, callType:', this.callType, 'options:', options);
+                        
+                        try {
+                            this.localTracks = await createLocalTracks(options);
+                            console.log('[LiveKit] 获取到本地tracks:', this.localTracks.map(t => t.kind));
+                        } catch (e) {
+                            console.error('[LiveKit] 获取本地track失败:', e, 'e.name:', e.name, 'e.message:', e.message);
+                            if (this.callType === 'video') {
+                                console.log('[LiveKit] 视频获取失败，尝试仅获取音频');
+                                this.localTracks = await createLocalTracks({ audio: true, video: false });
+                                console.log('[LiveKit] 仅获取到音频tracks:', this.localTracks.map(t => t.kind));
+                            } else {
+                                throw e;
+                            }
+                        }
+
+                        await this.room.connect(this.wsUrl, this.livekitToken);
+                        console.log('[LiveKit] 已连接');
+
+                        for (const track of this.localTracks) {
+                            await this.room.localParticipant.publishTrack(track);
+                            if (track.kind === 'video') {
+                                this.$nextTick(() => {
+                                    if (this.$refs.localVideo) {
+                                        track.attach(this.$refs.localVideo);
+                                    }
+                                });
+                            }
+                        }
+                        
+                        if (this.room.remoteParticipants && this.room.remoteParticipants.size > 0) {
+                            console.log('[LiveKit] 对方已在房间，直接建立连接');
+                            this.onConnected();
+                        }
+                        
+                    } catch (e) {
+                        console.error('[LiveKit] 连接失败:', e);
+                        this.errorMessage = '连接失败: ' + (e.message || e);
+                    }
+                },
+
+                onConnected() {
+                    if (this.isConnected) {
+                        console.log('[通话] 已经是连接状态，忽略重复调用');
+                        return;
+                    }
+                    console.log('[通话] 通话建立');
+                    this.isConnected = true;
+                    this.callStatus = 'connected';
+                    this.callStartTime = Date.now();
+                    
+                    if (this.isRinging) {
+                        this.isRinging = false;
+                        this.stopRingtone();
+                    }
+                    
+                    if (this.ringingTimeout) {
+                        clearTimeout(this.ringingTimeout);
+                    }
+                    
+                    this.timerInterval = setInterval(() => {
+                        this.callDuration = Math.floor((Date.now() - this.callStartTime) / 1000);
+                    }, 1000);
+                },
+
+                endCall() {
+                    this.socket.emit('hangup', { toUserId: this.peerUserId });
+                    this.playEndSound();
+                    this.endSession();
+                },
+
+                cancelCall() {
+                    this.stopRingtone();
+                    this.socket.emit('hangup', { toUserId: this.peerUserId });
+                    this.goBack();
+                },
+
+                endSession() {
+                    if (this.isConnected && this.callStartTime) {
+                        this.saveLog('completed');
+                    }
+                    this.isConnected = false;
+                    this.callStatus = 'ended';
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+                    if (this.ringingTimeout) clearTimeout(this.ringingTimeout);
+                    setTimeout(() => this.goBack(), 1200);
+                },
+
+                async saveLog(status) {
+                    const duration = this.callStartTime ? Math.floor((Date.now() - this.callStartTime) / 1000) : 0;
+                    try {
+                        await axios.post('/api/call/logs', {
+                            fromId: this.isIncoming ? this.peerUserId : this.currentUserId,
+                            toId: this.isIncoming ? this.currentUserId : this.peerUserId,
+                            type: this.callType,
+                            duration: duration,
+                            status: status === 'completed' ? 1 : 2,
+                            direction: this.isIncoming ? 'incoming' : 'outgoing'
+                        });
+                    } catch (e) {
+                        console.error('[API] 保存记录失败:', e);
+                    }
+                },
+
+                toggleMute() {
+                    const track = this.localTracks.find(t => t.kind === 'audio');
+                    if (track) {
+                        if (this.isMuted) track.unmute();
+                        else track.mute();
+                        this.isMuted = !this.isMuted;
+                    }
+                },
+
+                toggleCamera() {
+                    const track = this.localTracks.find(t => t.kind === 'video');
+                    if (track) {
+                        if (this.isCameraOff) {
+                            track.unmute();
+                            this.$nextTick(() => {
+                                if (this.$refs.localVideo) {
+                                    track.attach(this.$refs.localVideo);
+                                }
+                            });
+                        } else {
+                            track.mute();
+                        }
+                        this.isCameraOff = !this.isCameraOff;
+                    }
+                },
+
+                playRingtone() {
+                    this.$nextTick(() => {
+                        if (this.isEmergency && this.$refs.emergencyAudio) {
+                            this.$refs.emergencyAudio.currentTime = 0;
+                            this.$refs.emergencyAudio.play().catch(() => {});
+                        } else if (this.$refs.callAudio) {
+                            this.$refs.callAudio.currentTime = 0;
+                            this.$refs.callAudio.play().catch(() => {});
+                        }
+                    });
+                },
+
+                stopRingtone() {
+                    if (this.$refs.callAudio) {
+                        this.$refs.callAudio.pause();
+                        this.$refs.callAudio.currentTime = 0;
+                    }
+                    if (this.$refs.emergencyAudio) {
+                        this.$refs.emergencyAudio.pause();
+                        this.$refs.emergencyAudio.currentTime = 0;
+                    }
+                },
+
+                playEndSound() {
+                    if (this.$refs.endAudio) {
+                        this.$refs.endAudio.currentTime = 0;
+                        this.$refs.endAudio.play().catch(() => {});
+                    }
+                },
+
+                formatDuration(s) {
+                    return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+                },
+
+                cleanup() {
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+                    if (this.ringingTimeout) clearTimeout(this.ringingTimeout);
+                    this.localTracks.forEach(t => t.stop());
+                    if (this.room) this.room.disconnect();
+                    if (this.socket) this.socket.disconnect();
+                    this.stopRingtone();
+                },
+
+                goBack() {
+                    this.cleanup();
+                    window.history.back();
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+
+

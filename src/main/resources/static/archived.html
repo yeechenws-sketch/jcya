@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>归档消息 - 解尘颐安养老平台</title>
+
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="/js/global-mqtt-manager.js"></script>
+    <script src="/js/global-message-center.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #4361EE;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --blur-val: 45px;
+        }
+
+        * { scrollbar-width: none; -ms-overflow-style: none; box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            margin: 0; padding: 0;
+            background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
+            height: 100vh; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        #app {
+            display: flex; flex-direction: column;
+            height: 133.33vh; width: 133.33vw;
+            transform: scale(0.75); transform-origin: top left;
+            position: relative;
+        }
+
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0; height: 110px;
+            padding: 0 50px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--glass-bg); backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--blur-val)) saturate(180%);
+            border-bottom: 1px solid var(--glass-border); z-index: 9999;
+        }
+
+        .main-container { display: flex; height: 100%; box-sizing: border-box; }
+
+        .content-area {
+            flex: 1; overflow-y: auto;
+            padding: 130px 50px 100px;
+            scroll-behavior: smooth;
+        }
+
+        .scroll-spacer { height: 130px; width: 100%; flex-shrink: 0; }
+
+        .msg-row { display: flex; margin-bottom: 45px; width: 100%; opacity: 0; }
+        .msg-left { flex-direction: row; animation: slideInLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .msg-right { flex-direction: row-reverse; animation: slideInRight 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px) scale(0.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px) scale(0.9); } to { opacity: 1; transform: translateX(0) scale(1); } }
+
+        .avatar-box img {
+            width: 80px; height: 80px; border-radius: 50%;
+            border: 4px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .msg-row:hover .avatar-box img { transform: scale(1.1); }
+
+        .msg-content { max-width: 65%; margin: 0 30px; display: flex; flex-direction: column; }
+
+        .msg-bubble-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .msg-right .msg-bubble-wrapper {
+            align-items: flex-end;
+        }
+
+        .bubble {
+            padding: 24px 35px; border-radius: 30px; background: white;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.07); font-size: 28px; font-weight: 600;
+            color: #1E293B; border: 1px solid rgba(255,255,255,0.8); word-break: break-all;
+            transition: all 0.3s;
+        }
+        .bubble:hover { transform: translateY(-3px); box-shadow: 0 15px 45px rgba(0,0,0,0.1); }
+        .msg-right .bubble { background: var(--primary); color: white; border: none; }
+
+        .media-obj { width: 100%; max-width: 500px; border-radius: 25px; display: block; box-shadow: 0 8px 20px rgba(0,0,0,0.1); cursor: pointer; }
+
+        .voice-bubble {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; min-width: 160px; max-width: 500px;
+            background: var(--primary); color: white;
+            padding: 20px 30px; border-radius: 30px;
+            position: relative;
+        }
+        .voice-bubble-left {
+            background: white; color: #1E293B;
+        }
+        .voice-info {
+            display: flex; align-items: center; gap: 15px;
+            position: absolute;
+            left: 30px;
+            z-index: 2;
+        }
+        .voice-icon { font-size: 36px; }
+        .voice-duration {
+            font-size: 28px; font-weight: 800;
+            min-width: 60px;
+        }
+
+        .voice-wave-container {
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            margin-left: 100px;
+            flex: 1;
+        }
+
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            gap: 3px;
+        }
+
+        .wave-bar {
+            width: 3px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 1.5px;
+        }
+
+        .voice-bubble-left .wave-bar {
+            background-color: rgba(67, 97, 238, 0.6);
+        }
+
+        .control-sidebar {
+            width: 420px; background: var(--glass-bg); backdrop-filter: blur(var(--blur-val));
+            -webkit-backdrop-filter: blur(var(--blur-val));
+            border-left: 1px solid var(--glass-border); padding: 130px 35px 35px; overflow-y: auto;
+        }
+
+        .contact-card {
+            display: flex; align-items: center; gap: 25px; padding: 28px;
+            background: rgba(255, 255, 255, 0.25); border-radius: 30px; margin-bottom: 20px;
+            cursor: pointer; position: relative; transition: all 0.4s;
+            border: 2px solid transparent;
+        }
+        .contact-card.active {
+            background: white; border-color: var(--primary);
+            transform: translateX(-15px); box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        .contact-card:hover:not(.active) { background: rgba(255, 255, 255, 0.4); }
+
+        .archive-badge {
+            background: var(--warning); color: white; min-width: 32px; height: 32px;
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: bold; position: absolute; right: 25px;
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 60%; color: #64748b;
+        }
+        .empty-state i { font-size: 120px; margin-bottom: 30px; opacity: 0.3; }
+        .empty-state div { font-size: 32px; font-weight: 600; }
+
+        .archive-info {
+            background: rgba(245, 158, 11, 0.1); border: 2px dashed var(--warning);
+            border-radius: 25px; padding: 20px; margin-bottom: 30px; text-align: center;
+        }
+        .archive-info-title {
+            font-size: 24px; font-weight: 900; color: var(--warning);
+            margin-bottom: 10px;
+        }
+        .archive-info-desc {
+            font-size: 20px; color: #64748b;
+        }
+
+        .msg-time {
+            font-size: 18px; color: #94a3b8;
+            margin-top: 8px;
+        }
+        .msg-left .msg-time {
+            text-align: left;
+        }
+        .msg-right .msg-time {
+            text-align: right;
+        }
+
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <header class="top-bar">
+        <a href="javascript:void(0)" @click="goBack" style="text-decoration: none; color: #1E3A8A; font-weight: bold; font-size: 42px;">
+            <i class="fa fa-angle-left" style="margin-right: 10px;"></i>返回
+        </a>
+        <h1 style="color: #1E3A8A; font-size: 44px; font-weight: 900; margin: 0; letter-spacing: 2px;">
+            <i class="fa fa-archive" style="margin-right: 15px;"></i>{{ currentTargetName || '归档消息' }}
+        </h1>
+        <div style="text-align: right;">
+            <div style="font-size: 48px; font-weight: 900; color: var(--primary);">{{ currentTime }}</div>
+            <div style="font-size: 20px; color: #64748b; font-weight: 800; margin-top: 5px;">{{ currentDate }}</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="content-area" id="chat-box">
+            <div class="scroll-spacer"></div>
+
+            <div v-if="messageList.length === 0 && currentTargetId" class="empty-state">
+                <i class="fa fa-comments-o"></i>
+                <div>暂无归档消息</div>
+            </div>
+
+            <div v-for="(msg, index) in messageList" :key="index"
+                 :class="['msg-row', msg.fromId == (currentUser?currentUser.id:0) ? 'msg-right' : 'msg-left']">
+                <div class="avatar-box"><img :src="getAvatar(msg.fromId)"></div>
+                <div class="msg-content">
+                    <div class="msg-bubble-wrapper">
+                        <template v-if="!msg.msgType || msg.msgType === 'text'">
+                            <div class="bubble">{{ msg.content }}</div>
+                            <button v-if="msg.fromId != currentUser?.id" @click="speak(msg.content)"
+                                    style="margin-top:12px; background:white; border:none; color:var(--primary); padding:10px 24px; border-radius:18px; font-size:20px; font-weight:bold; cursor:pointer; align-self: flex-start; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                                <i class="fa fa-volume-up"></i> 朗读
+                            </button>
+                        </template>
+                        <template v-else-if="msg.msgType === 'voice'">
+                            <div class="bubble" :class="msg.fromId == currentUser?.id ? 'voice-bubble' : 'voice-bubble voice-bubble-left'"
+                                 @click="playVoice(msg.content, msg.fromId)"
+                                 :style="{ width: (160 + (msg.duration ? Number(msg.duration) * 15 : 30)) + 'px' }">
+                                <div class="voice-info">
+                                    <i class="fa fa-volume-up voice-icon"></i>
+                                    <span class="voice-duration">{{ msg.duration || '2' }}''</span>
+                                </div>
+                                <div class="voice-wave-container">
+                                    <div class="voice-wave">
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                        <span class="wave-bar"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <template v-else-if="msg.msgType === 'image'">
+                            <img :src="msg.content" class="media-obj" @click="openFull(msg.content)">
+                        </template>
+                        <template v-else-if="msg.msgType === 'video'">
+                            <video :src="msg.content" controls class="media-obj"></video>
+                        </template>
+                        <div class="msg-time" v-if="msg.createTime">{{ formatTime(msg.createTime) }}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="control-sidebar">
+            <div class="archive-info">
+                <div class="archive-info-title"><i class="fa fa-info-circle"></i> 归档消息说明</div>
+                <div class="archive-info-desc">这里保存您搬离社区时备份的聊天记录</div>
+            </div>
+
+            <div style="font-size: 26px; font-weight: 900; color: #1E3A8A; margin-bottom: 35px; opacity: 0.8;">
+                归档联系人 ({{ contacts.length }})
+            </div>
+
+            <div v-if="contacts.length === 0" style="text-align: center; color: #94a3b8; padding: 40px;">
+                <i class="fa fa-inbox" style="font-size: 60px; margin-bottom: 20px;"></i>
+                <div style="font-size: 24px;">暂无归档记录</div>
+            </div>
+
+            <div v-for="user in contacts" :key="user.id" @click="selectContact(user)"
+                 :class="['contact-card', currentTargetId === user.id ? 'active' : '']">
+                <img :src="user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed='+user.id" style="width: 75px; height: 75px; border-radius: 50%;">
+                <div style="flex:1">
+                    <div style="font-weight: 800; font-size: 28px; color: #334155;">{{ user.nickname }}</div>
+                    <div style="font-size: 20px; color: #64748b; margin-top: 5px;">
+                        <i class="fa fa-archive"></i> 已归档
+                    </div>
+                </div>
+                <div class="archive-badge">
+                    <i class="fa fa-archive"></i>
+                </div>
+            </div>
+        </aside>
+    </main>
+</div>
+
+<script>
+    const {createApp} = Vue;
+    createApp({
+        data() {
+            return {
+                currentUser: null,
+                currentTargetId: null,
+                contacts: [],
+                messageList: [],
+                currentTime: '',
+                currentDate: '',
+                currentPlayingVoice: null
+            }
+        },
+        mounted() {
+            this.updateTime();
+            setInterval(this.updateTime, 1000);
+            this.checkLogin();
+        },
+        computed: {
+            currentTargetName() {
+                if (!this.currentTargetId) return '归档消息';
+                const contact = this.contacts.find(c => c.id === this.currentTargetId);
+                return contact ? contact.nickname : '归档消息';
+            }
+        },
+        methods: {
+            updateTime() {
+                const d = new Date();
+                this.currentTime = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                const date = d.getDate().toString().padStart(2, '0');
+                this.currentDate = `${month}月${date}日 ` + ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+            },
+            async checkLogin() {
+                const res = await axios.get('/api/user/info');
+                if (res.data.code === 200) {
+                    this.currentUser = res.data.data;
+                    this.loadContacts();
+                } else {
+                    window.location.href = 'login.html';
+                }
+            },
+            loadContacts() {
+                axios.get('/api/msg/archive/contacts').then(res => {
+                    if (res.data.code === 200) {
+                        this.contacts = res.data.data || [];
+                        if (this.contacts.length > 0) {
+                            this.selectContact(this.contacts[0]);
+                        }
+                    }
+                });
+            },
+            selectContact(contact) {
+                this.currentTargetId = contact.id;
+                axios.get(`/api/msg/archive/history?otherId=${contact.id}`).then(res => {
+                    if (res.data.code === 200) {
+                        this.messageList = res.data.data || [];
+                        this.goBottom(300);
+                    }
+                });
+            },
+            goBottom(delay = 50) {
+                setTimeout(() => {
+                    const el = document.getElementById('chat-box');
+                    if (el) el.scrollTop = el.scrollHeight;
+                }, delay);
+            },
+            playVoice(url, fromId) {
+                if (this.currentPlayingVoice) {
+                    this.currentPlayingVoice.pause();
+                    this.currentPlayingVoice = null;
+                }
+
+                const audio = new Audio(url);
+                audio.volume = 1.0;
+                audio.play();
+                this.currentPlayingVoice = audio;
+
+                audio.onended = () => {
+                    this.currentPlayingVoice = null;
+                };
+
+                audio.onerror = () => {
+                    this.currentPlayingVoice = null;
+                    console.error("语音播放失败");
+                };
+            },
+            speak(txt) {
+                const oldAudio = document.getElementById('baidu-tts-player');
+                if (oldAudio) {
+                    oldAudio.pause();
+                    oldAudio.remove();
+                }
+
+                const url = `/api/tts/speak?text=${encodeURIComponent(txt)}&t=${Date.now()}`;
+
+                const audio = new Audio(url);
+                audio.id = 'baidu-tts-player';
+                audio.volume = 1.0;
+                audio.play().catch(err => {
+                    console.error("百度语音播报失败:", err);
+                });
+            },
+            openFull(url) {
+                window.open(url, '_blank');
+            },
+            getAvatar(id) {
+                if (this.currentUser && id == this.currentUser.id) return this.currentUser.avatar;
+                const u = this.contacts.find(c => c.id == id);
+                return u ? (u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`) : 'https://api.dicebear.com/7.x/avataaars/svg?seed=family';
+            },
+            formatTime(timeStr) {
+                if (!timeStr) return '';
+                let date;
+                if (Array.isArray(timeStr)) {
+                    date = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5]);
+                } else {
+                    date = new Date(timeStr);
+                }
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const hour = date.getHours().toString().padStart(2, '0');
+                const minute = date.getMinutes().toString().padStart(2, '0');
+                return `${month}-${day} ${hour}:${minute}`;
+            },
+            goBack() {
+                window.location.href = 'msg.html';
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+
+

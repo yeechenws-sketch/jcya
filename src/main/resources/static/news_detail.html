@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <title>新闻详情 - 解尘颐安养老平台</title>
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="/js/global-message-center.js"></script>
+    <script src="/js/user-settings-manager.js"></script>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+
+        :root{
+            --primary: #4361EE;
+            --primary-600: #3759d9;
+            --primary-light: rgba(67, 97, 238, 0.2);
+            --glass-bg: rgba(255,255,255,0.20);
+            --glass-border: rgba(255,255,255,0.45);
+            --blur: 45px;
+            --card-radius: 22px;
+            --text: #1E293B;
+            --muted: #64748b;
+            --max-width: 1320px;
+            --gap: 22px;
+            font-family: 'PingFang SC','Microsoft YaHei',system-ui,Arial,Helvetica;
+        }
+        .page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(231, 238, 248, 0.9); /* 配合页面背景色 */
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--primary-light);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+
+
+        *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+        html,body{
+            height:100%;margin:0;padding:0;
+            background:linear-gradient(135deg,#e7eef8 0%,#f6fbff 100%);
+            color:var(--text);overflow-y:auto;
+        }
+        button{font-family:inherit;border:none;cursor:pointer;background:transparent}
+        a{text-decoration: none; color: inherit;}
+
+
+        .topbar{
+            position:fixed;left:0;right:0;top:0;
+            height:96px;
+            display:flex;align-items:center;justify-content:space-between;
+            padding:0 28px;
+            background:var(--glass-bg);
+            backdrop-filter:blur(var(--blur)) saturate(160%);
+            border-bottom:1px solid var(--glass-border);
+            z-index:1200;
+        }
+        .top-left{display:flex;align-items:center;gap:16px}
+        .btn-back{color:#16317a;font-size:34px;font-weight:700;padding:6px 8px}
+        .logo{font-size:34px;font-weight:900;color:#16317a;letter-spacing:1px}
+        .top-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+        .time{font-weight:900;font-size:36px;color:var(--primary);line-height:1}
+        .date{color:var(--muted);font-weight:700;font-size:14px}
+
+
+
+        .container {
+            max-width:var(--max-width);
+            margin:120px auto 60px;
+            padding:0 20px;
+        }
+
+
+        .card{
+            background:var(--glass-bg);
+            border-radius:var(--card-radius);
+            padding:30px;
+            box-shadow:0 18px 48px rgba(24,39,75,0.06);
+            border:1px solid var(--glass-border);
+            margin-bottom:var(--gap);
+        }
+
+
+        .loading-box {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+
+        .news-content {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            color: var(--text);
+            margin: 30px 0;
+            word-break: break-all;
+        }
+
+        .font-size-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 16px;
+        }
+        .font-size-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .font-size-btn.active {
+            color: var(--primary);
+            border-color: var(--primary-light);
+            background: var(--primary-light);
+        }
+        .font-size-btn:hover {
+            color: var(--primary);
+        }
+        /* 正文字号预设 */
+        .news-content.font-size-sm { font-size: 16px; }
+        .news-content.font-size-md { font-size: 18px; }
+        .news-content.font-size-lg { font-size: 20px; }
+        /* 小智总结气泡字号预设 */
+        .bubble-content.font-size-sm { font-size: 14px; }
+        .bubble-content.font-size-md { font-size: 15px; }
+        .bubble-content.font-size-lg { font-size: 16px; }
+
+        /* 标题/元信息 */
+        h1 {
+            font-size: 32px;
+            color: var(--text);
+            margin-bottom: 15px;
+            font-weight: 900;
+            line-height: 1.3;
+        }
+        .meta {
+            color: var(--muted);
+            font-size: 14px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .meta span { margin-right: 20px; }
+
+        /* 阅读原文按钮（适配风格） */
+        .original-link-bar { margin-top: 15px; }
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 8px 0;
+            transition: color 0.2s;
+        }
+        .link-btn svg {
+            width:16px;height:16px;
+            vertical-align:middle;
+            margin-right:4px;
+        }
+        .link-btn:hover {
+            color: var(--primary-600);
+            text-decoration: underline;
+        }
+
+        /* 修复：点赞按钮改为主题色（替换原红色） */
+        .btn-like {
+            padding: 12px 35px;
+            border-radius: 999px;
+            border: 1px solid var(--primary);
+            background: var(--glass-bg);
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+        .btn-like.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow:0 8px 24px var(--primary-light);
+        }
+
+        /* 修复：分区标题改为主题色（替换原红色） */
+        .section-title {
+            font-size: 22px;
+            border-left: 4px solid var(--primary);
+            padding-left: 12px;
+            margin: 40px 0 20px;
+            font-weight: 900;
+            color: var(--text);
+        }
+
+        /* 推荐新闻项（复用news.html的列表样式） */
+        .rec-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 14px;
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .rec-item:hover{
+            transform:translateX(8px);
+            background:rgba(255,255,255,0.5);
+        }
+        .rec-item img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+        .rec-item p {
+            margin:0;
+        }
+        .rec-item p:first-child {
+            font-weight:bold;
+            color:var(--text);
+            font-size: 16px;
+        }
+        .rec-item p:last-child {
+            margin:5px 0;
+            font-size:12px;
+            color:var(--muted);
+        }
+
+        /* 评论区样式（适配玻璃拟态） */
+        .comment-item {
+            border-bottom: 1px solid var(--glass-border);
+            padding: 20px 0;
+        }
+        .comment-user {
+            font-weight: bold;
+            color: var(--primary); /* 保持主题色 */
+            margin-bottom: 5px;
+        }
+        .reply-list {
+            background: var(--glass-bg);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 14px;
+            font-size: 14px;
+            border:1px solid var(--glass-border);
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            box-sizing: border-box;
+            background: var(--glass-bg);
+            font-family: inherit;
+            font-size: 16px;
+            color: var(--text);
+        }
+        textarea::placeholder {
+            color: var(--muted);
+        }
+
+        /* 提交按钮（适配风格） */
+        .btn-submit {
+            margin-top: 10px;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            float: right;
+            font-weight: 700;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover {
+            background: var(--primary-600);
+        }
+
+        /* 评论列表（修复浮动+兜底） */
+        .comment-list {
+            clear: both;
+            margin-top: 40px;
+            padding-top: 20px;
+        }
+        .empty-comment {
+            text-align: center;
+            padding: 30px;
+            color: var(--muted);
+            font-size: 16px;
+        }
+
+        /* 回复输入框/按钮 */
+        .reply-input-wrap {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .reply-input-wrap input {
+            flex:1;
+            padding: 12px;
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            background: var(--glass-bg);
+            color: var(--text);
+        }
+        .reply-input-wrap button {
+            padding: 0 20px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 999px;
+            font-weight: 700;
+            transition: background 0.2s;
+        }
+        .reply-input-wrap button:hover {
+            background: var(--primary-600);
+        }
+        .reply-action {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--primary);
+        }
+        .reply-action span {
+            cursor:pointer;
+            font-weight: 700;
+            margin-right: 15px;
+            transition: color 0.2s;
+        }
+        .reply-action span:hover {
+            color: var(--primary-600);
+        }
+
+        .ai-summary-btn {
+            position: fixed;
+            bottom: 50px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4361EE, #3a0ca3); /* 保持主色调 */
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            cursor: pointer;
+            z-index: 9999;
+            transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .ai-summary-btn:hover {
+            transform: scale(1.1) rotate(-5deg);
+        }
+        .ai-summary-btn i { font-size: 20px; margin-bottom: 2px; }
+        .ai-summary-btn span { font-size: 10px; }
+
+        /* --- 总结内容气泡框 --- */
+        .summary-bubble {
+            position: fixed;
+            bottom: 120px;
+            right: 30px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px 15px 5px 15px; /* 左下角尖角，模仿气泡 */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            padding: 20px;
+            z-index: 9999;
+            border: 1px solid rgba(67, 97, 238, 0.2);
+            animation: slideUp 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bubble-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .bubble-title { font-weight: bold; color: var(--primary); font-size: 16px; }
+        .bubble-close { cursor: pointer; color: #999; padding: 5px; }
+
+        .bubble-content {
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 15px;
+            max-height: 250px;
+            overflow-y: auto; /* 内容过长可滚动 */
+        }
+
+        /* 语音按钮 */
+        .btn-voice {
+            background: var(--primary-light);
+            color: var(--primary);
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-voice:hover { background: var(--primary); color: white; }
+        .btn-voice.playing {
+            background: var(--primary); color: white;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(67, 97, 238, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
+        }
+    </style>
+</head>
+<body>
+<!-- 顶部栏（和news.html保持一致） -->
+<header class="topbar">
+    <div class="top-left">
+        <button class="btn-back" onclick="history.back()">
+            <i class="fa fa-angle-left"></i> 返回
+        </button>
+    </div>
+    <div class="logo">新闻详情</div>
+    <div class="top-right">
+        <div class="time" id="timeNow">00:00</div>
+        <div class="date" id="dateNow">01月01日 星期一</div>
+    </div>
+</header>
+
+<!-- 主体容器：AI总结按钮/气泡框移到#app内部 -->
+<div id="app" class="container">
+    <div v-if="news" class="card">
+        <header>
+            <h1>{{ news.title }}</h1>
+            <div class="meta">
+                <div>
+                    <span>来源：{{ news.source }}</span>
+                    <span>发布：{{ formatDate(news.publishTime) }}</span>
+                    <span>阅读：{{ news.viewCount }}</span>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <!-- 字号选择控件 -->
+                    <div class="font-size-control">
+                        <span style="font-size: 14px; color: var(--muted);">字号：</span>
+                        <button class="font-size-btn" :class="{active: fontSize === 'sm'}" @click="changeFontSize('sm')">小</button>
+                        <button class="font-size-btn" :class="{active: fontSize === 'md'}" @click="changeFontSize('md')">中</button>
+                        <button class="font-size-btn" :class="{active: fontSize === 'lg'}" @click="changeFontSize('lg')">大</button>
+                    </div>
+                    <!-- 阅读原文按钮 -->
+                    <a :href="news.originalUrl" target="_blank" class="link-btn" v-if="news.originalUrl">
+                        <svg style="width:16px;height:16px;vertical-align:middle;margin-right:4px;" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z" />
+                        </svg>
+                        阅读原文
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- 正文区域绑定字号类 -->
+        <div class="news-content" :class="`font-size-${fontSize}`">{{ news.content || '暂无新闻内容' }}</div>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <button class="btn-like" :class="{active: isLiked}" @click="handleLike">
+                👍 {{ isLiked ? '已点赞' : '点赞' }} {{ news.likeCount }}
+            </button>
+        </div>
+
+        <div class="section-title">猜你喜欢</div>
+        <!-- 只渲染处理后的3条推荐数据 -->
+        <div v-for="item in filteredRecommendList" :key="item.id" class="rec-item" @click="changeNews(item.id)">
+            <img :src="item.localImagePath || 'https://via.placeholder.com/120x80?text=News'">
+            <div>
+                <p style="margin:0; font-weight:bold;">{{ item.title }}</p>
+                <p style="margin:5px 0; font-size:12px; color:var(--muted);">{{ item.category }} · {{ item.source }}</p>
+            </div>
+        </div>
+
+        <div class="section-title">发表评论</div>
+        <textarea v-model="myComment" placeholder="写下你的看法..."></textarea>
+        <button class="btn-submit" @click="submitComment(null)">提交评论</button>
+
+        <!-- 评论列表 -->
+        <div class="comment-list">
+            <div v-if="commentList && commentList.length > 0">
+                <div v-for="c in commentList" :key="c.id" class="comment-item">
+                    <div class="comment-user">用户 {{ c.userId }}</div>
+                    <div>{{ c.content }}</div>
+
+                    <div class="reply-list" v-if="c.replies && c.replies.length > 0">
+                        <div v-for="r in c.replies" :key="r.id" style="margin-bottom:5px;">
+                            <strong>用户 {{ r.userId }}:</strong> {{ r.content }}
+                        </div>
+                    </div>
+
+                    <div class="reply-action">
+                        <span @click="activeReplyId = (activeReplyId === c.id ? null : c.id)">回复</span>
+                        <span>👍 {{ c.likeCount }}</span>
+                    </div>
+
+                    <div v-if="activeReplyId === c.id" class="reply-input-wrap">
+                        <input v-model="myReply" :placeholder="'回复用户 '+c.userId">
+                        <button @click="submitComment(c.id)">发送</button>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="empty-comment">
+                暂无评论，快来抢沙发吧~
+            </div>
+        </div>
+    </div>
+
+    <div v-else class="loading-box">
+        正在获取新闻中...
+    </div>
+
+    <!-- ========== 关键修改1：AI总结按钮移到#app内部 ========== -->
+    <div class="ai-summary-btn" @click="toggleSummary">
+        <i class="fa fa-magic"></i>
+        <span>小智总结</span>
+    </div>
+
+    <!-- ========== 关键修改2：总结气泡框移到#app内部 ========== -->
+    <div class="summary-bubble" v-if="showSummary">
+        <div class="bubble-header">
+            <span class="bubble-title">小智为您读新闻</span>
+            <i class="fa fa-times bubble-close" @click="closeSummary"></i>
+        </div>
+
+        <!-- 总结气泡绑定字号类 -->
+        <div class="bubble-content" :class="`font-size-${fontSize}`">
+            <div v-if="summaryLoading" style="text-align: center; color: #666; padding: 20px;">
+                <i class="fa fa-spinner fa-spin fa-2x"></i>
+                <p style="margin-top:10px; font-size:12px;">正在阅读全文并总结...</p>
+            </div>
+            <div v-else>
+                {{ summaryText || '暂无总结内容' }}
+            </div>
+        </div>
+
+        <button v-if="!summaryLoading && summaryText"
+                class="btn-voice"
+                :class="{ playing: isSpeaking }"
+                @click="toggleVoice">
+            <i class="fa" :class="isSpeaking ? 'fa-stop-circle' : 'fa-volume-up'"></i>
+            {{ isSpeaking ? '停止朗读' : '语音播报' }}
+        </button>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted, computed } = Vue;
+    const API_BASE = "/api";
+    axios.defaults.withCredentials = true; // 允许携带 Cookie/Session
+
+    // 修复：添加时间实时更新逻辑（可选，增强体验）
+    function updateDateTime() {
+        const now = new Date();
+        // 格式化时间
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        // 格式化日期
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const weekDay = weekDays[now.getDay()];
+
+        document.getElementById('timeNow').textContent = `${hours}:${minutes}`;
+        document.getElementById('dateNow').textContent = `${month}月${day}日 ${weekDay}`;
+    }
+
+    function hideLoader() {
+        const loader = document.getElementById('loader');
+        if (loader) {
+            // 先修改opacity触发过渡动画，再延迟隐藏display
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 500); // 匹配CSS中page-loader的transition时长0.5s
+        }
+    }
+
+
+    // 初始化时间并实时更新
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+
+
+    createApp({
+        setup() {
+            const news = ref(null);
+            const recommendList = ref([]);
+            const commentList = ref([]);
+            const isLiked = ref(false);
+            const myComment = ref('');
+            const myReply = ref('');
+            const activeReplyId = ref(null);
+            const showSummary = ref(false);
+            const summaryText = ref("");
+            const summaryLoading = ref(false);
+            const isSpeaking = ref(false);
+            let audioPlayer = null; // 用于控制音频对象
+
+            // 新增：字号控制变量（默认中号）
+            const fontSize = ref('md');
+            // 新增：切换字号方法
+            const changeFontSize = (size) => {
+                fontSize.value = size;
+            };
+
+            // ========== 关键修改4：计算属性筛选3条推荐（1条相关+2条用户浏览类） ==========
+            const filteredRecommendList = computed(() => {
+                if (!recommendList.value.length) return [];
+
+                // 1. 筛选出和当前新闻相关的1条（假设后端返回的列表中isRelated=true标识相关新闻）
+                const relatedItem = recommendList.value.filter(item => item.isRelated === true).slice(0, 1);
+                // 2. 筛选出用户浏览过的种类的新闻（假设后端返回的列表中isUserHistory=true标识）
+                const historyItems = recommendList.value.filter(item => item.isUserHistory === true).slice(0, 2);
+                // 3. 合并并确保总数为3条（兜底：如果数量不足，补充普通推荐）
+                const combined = [...relatedItem, ...historyItems];
+                if (combined.length < 3) {
+                    const otherItems = recommendList.value.filter(item => !item.isRelated && !item.isUserHistory);
+                    combined.push(...otherItems.slice(0, 3 - combined.length));
+                }
+                return combined.slice(0, 3); // 最终只保留3条
+            });
+
+            // 加载数据（保留原有逻辑，新增推荐列表容错）
+            const loadData = async (id) => {
+                const newsId = id || new URLSearchParams(window.location.search).get('id');
+                if (!newsId) {
+                    alert("新闻ID不存在！");
+                    hideLoader(); // ID不存在时立即隐藏遮罩
+                    return;
+                }
+                try {
+                    const [newsRes, recRes, comRes] = await Promise.allSettled([
+                        axios.get(`${API_BASE}/news/detail/${newsId}`),
+                        axios.get(`${API_BASE}/news/guess-like?currentNewsId=${newsId}`),
+                        axios.get(`${API_BASE}/news/comments/${newsId}`)
+                    ]);
+                    if(newsRes.status === 'fulfilled') news.value = newsRes.value.data;
+                    else console.error("新闻详情加载失败：", newsRes.reason);
+
+                    if(recRes.status === 'fulfilled') {
+                        recommendList.value = recRes.value.data || []; // 兜底空数组
+                    } else {
+                        console.error("推荐列表加载失败：", recRes.reason);
+                        recommendList.value = [];
+                    }
+
+                    if(comRes.status === 'fulfilled') commentList.value = comRes.value.data || [];
+                    else console.error("评论列表加载失败：", comRes.reason);
+                } catch (err) {
+                    console.error("数据加载异常:", err);
+                    alert("数据加载失败，请稍后重试");
+                } finally {
+                    hideLoader(); // 无论成功/失败，最终都隐藏遮罩
+                }
+            };
+
+            // 点赞功能（保留原有逻辑）
+            const handleLike = async () => {
+                try {
+                    const res = await axios.post(`${API_BASE}/news/like?newsId=${news.value.id}`);
+                    if (res.data === '点赞成功') {
+                        news.value.likeCount++;
+                        isLiked.value = true;
+                    } else if(res.data === '取消点赞成功') { // 这里的字符串必须和后端返回的一模一样
+                        news.value.likeCount--;
+                        isLiked.value = false;
+                    } else {
+                        alert(res.data);
+                    }
+                }catch (err) {
+                    console.error("点赞失败：", err);
+                    alert("点赞操作失败，请稍后重试");
+                }
+            };
+
+            // 提交评论（保留原有逻辑）
+            const submitComment = async (parentId) => {
+                const content = parentId ? myReply.value : myComment.value;
+                const trimContent = content?.trim();
+                if (!trimContent) {
+                    alert("评论内容不能为空！");
+                    return;
+                }
+
+                try {
+                    const res = await axios.post(`${API_BASE}/news/comment/add`, {
+                        newsId: news.value.id,
+                        content: trimContent,
+                        parentId: parentId
+                    });
+
+                    if (res.data === "请先登录") {
+                        alert("请先登录后再评论！");
+                        return;
+                    }
+                    alert(parentId ? "回复成功！" : "评论成功！");
+                    myComment.value = '';
+                    myReply.value = '';
+                    activeReplyId.value = null;
+                    await loadData(news.value.id);
+                } catch (e) {
+                    console.error("评论失败：", e);
+                    alert("评论失败：请检查是否登录或后端服务是否正常");
+                }
+            };
+
+            // ========== 关键修改3：优化changeNews的平滑回顶逻辑 ==========
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth',
+                block: 'start' // 确保滚动到视口最顶端
+            });
+            const changeNews = (id) => {
+                // 1. 停止语音
+                if (isSpeaking.value) {
+                    stopVoice();
+                }
+
+                // 2. 显示加载遮罩（如果原本是隐藏的）
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.display = 'flex';
+                    loader.style.opacity = '1';
+                }
+
+                // 3. 执行刷新跳转
+                window.location.href = `news_detail.html?id=${id}`;
+            };
+
+
+            // ========== 关键修改3：修复AI总结函数（加API_BASE+边界判断） ==========
+            const toggleSummary = async () => {
+                // 先判断新闻是否加载完成
+                if (!news.value) {
+                    alert("新闻内容未加载完成，无法总结！");
+                    return;
+                }
+                showSummary.value = !showSummary.value;
+
+                // 如果打开了框，且没有内容，就开始请求 AI
+                if (showSummary.value && !summaryText.value) {
+                    summaryLoading.value = true;
+                    try {
+                        // 修复：添加API_BASE前缀，确保请求地址正确
+                        const res = await axios.get(`/news/summary/${news.value.id}`);
+                        summaryText.value = res.data || '暂无总结内容';
+                    } catch (e) {
+                        console.error("AI总结请求失败：", e);
+                        summaryText.value = "抱歉，小智现在有点累，连接不上服务器了。";
+                    } finally {
+                        summaryLoading.value = false;
+                    }
+                }
+            };
+
+            // 关闭总结框
+            const closeSummary = () => {
+                showSummary.value = false;
+                // 关闭时如果正在读，建议停止
+                if (isSpeaking.value) {
+                    stopVoice();
+                }
+            };
+
+            // 语音播报控制
+            const toggleVoice = () => {
+                if (isSpeaking.value) {
+                    stopVoice();
+                } else {
+                    playVoice();
+                }
+            };
+
+            // 播放逻辑（可选：语音接口也加上API_BASE）
+            const playVoice = () => {
+                if (!summaryText.value) return;
+
+                // 修复：语音接口也加上API_BASE前缀
+                const text = encodeURIComponent(summaryText.value);
+                const url = `${API_BASE}/tts/speak?text=${text}&t=${Date.now()}`;
+
+                audioPlayer = new Audio(url);
+                isSpeaking.value = true;
+
+                audioPlayer.play().catch(e => {
+                    console.error("播放失败", e);
+                    isSpeaking.value = false;
+                });
+
+                // 播放结束监听
+                audioPlayer.onended = () => {
+                    isSpeaking.value = false;
+                };
+            };
+
+            // 停止逻辑
+            const stopVoice = () => {
+                if (audioPlayer) {
+                    audioPlayer.pause();
+                    audioPlayer = null;
+                }
+                isSpeaking.value = false;
+            };
+
+            // 日期格式化（保留原有逻辑）
+            const formatDate = (dateStr) => {
+                if (!dateStr) return "未知时间";
+                let date = new Date(dateStr);
+                if(isNaN(date.getTime())) return dateStr;
+                const y = date.getFullYear();
+                const m = (date.getMonth()+1).toString().padStart(2,0);
+                const d = date.getDate().toString().padStart(2,0);
+                const h = date.getHours().toString().padStart(2,0);
+                const min = date.getMinutes().toString().padStart(2,0);
+                return `${y}-${m}-${d} ${h}:${min}`;
+            };
+
+            onMounted(() => loadData());
+
+            return {
+                news, recommendList, commentList, isLiked, myComment, myReply,
+                activeReplyId, handleLike, submitComment, changeNews, formatDate,
+                showSummary, summaryText, summaryLoading, isSpeaking,
+                toggleSummary, closeSummary, toggleVoice,
+                filteredRecommendList,
+                // 暴露字号相关变量和方法
+                fontSize,
+                changeFontSize
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+

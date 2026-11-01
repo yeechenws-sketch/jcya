@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>住户信息管理 · 解尘颐安智慧社区管理平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f9ff;
+            color: #1f2a3f;
+            padding: 24px 32px;
+            line-height: 1.5;
+        }
+        .app-container { max-width: 1600px; margin: 0 auto; }
+        .navbar {
+            background: rgba(11, 42, 65, 0.95);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            box-shadow: 0 15px 30px -10px rgba(0, 30, 60, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .navbar-left h1 {
+            font-weight: 500;
+            font-size: 1.6rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            letter-spacing: -0.3px;
+        }
+        .community-badge {
+            background: #244b6b;
+            border-radius: 40px;
+            padding: 5px 20px;
+            font-size: 0.9rem;
+            color: #e1effa;
+            border: 1px solid #3f6b91;
+            font-weight: 400;
+        }
+        .time-panel {
+            background: #153e5a;
+            padding: 8px 28px;
+            border-radius: 40px;
+            color: #cbd5e1;
+            text-align: right;
+            border: 1px solid #2f5575;
+        }
+        .time-panel .date { font-size: 0.9rem; color: #b0c9e0; }
+        .time-panel .clock { font-size: 1.7rem; font-weight: 350; color: white; line-height: 1.2; }
+        .tabs {
+            display: flex;
+            gap: 40px;
+            border-bottom: 1px solid rgba(0, 50, 90, 0.1);
+            margin-bottom: 24px;
+            padding-left: 8px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 14px 2px 10px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #576f88;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            margin-bottom: -1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn.active {
+            color: #0d4e7c;
+            border-bottom-color: #0d4e7c;
+            font-weight: 600;
+        }
+        .tab-count {
+            background: #e3eaf1;
+            border-radius: 30px;
+            padding: 2px 14px;
+            font-size: 0.85rem;
+            color: #2b4054;
+        }
+        .filter-card {
+            background: #ffffffd9;
+            backdrop-filter: blur(10px);
+            border-radius: 26px;
+            border: 1px solid #ffffff70;
+            padding: 20px 28px;
+            margin-bottom: 28px;
+            box-shadow: 0 12px 28px -10px rgba(0, 45, 80, 0.15);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 18px 28px;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f0f7fe;
+            padding: 6px 16px 6px 12px;
+            border-radius: 40px;
+            border: 1px solid #d2e2f5;
+        }
+        .filter-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #1f4970;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .filter-select, .filter-input {
+            background: white;
+            border: 1px solid #c5daf2;
+            border-radius: 30px;
+            padding: 7px 18px;
+            font-size: 0.95rem;
+            min-width: 140px;
+            outline: none;
+            transition: 0.15s;
+        }
+        .filter-input { min-width: 180px; }
+        .filter-select:focus, .filter-input:focus {
+            border-color: #1d5a8b;
+            box-shadow: 0 0 0 3px rgba(29,90,139,0.15);
+        }
+        .disease-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .disease-tag {
+            background: #f0f6fe;
+            border: 1px solid #b9cfec;
+            padding: 5px 18px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1b3a57;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .disease-tag.selected {
+            background: #1d5a8b;
+            border-color: #1d5a8b;
+            color: white;
+        }
+        .sort-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .sort-btn {
+            background: #f0f7fe;
+            border: 1px solid #c5daf2;
+            border-radius: 30px;
+            padding: 6px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1e3b58;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .sort-btn.active-sort {
+            background: #1d5a8b;
+            border-color: #1d5a8b;
+            color: white;
+        }
+        .reset-btn {
+            background: white;
+            border: 1px solid #c5daf2;
+            border-radius: 30px;
+            padding: 8px 28px;
+            color: #1e3b58;
+            cursor: pointer;
+            margin-left: auto;
+            font-weight: 500;
+            transition: 0.15s;
+        }
+        .reset-btn:hover { background: #e3f0ff; border-color: #1d5a8b; }
+        .table-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e0ebf7;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -12px rgba(0, 45, 80, 0.2);
+        }
+        .table-wrapper { overflow-x: auto; border-radius: 28px 28px 0 0; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; }
+        th {
+            background: #f0f7fe;
+            text-align: left;
+            padding: 20px 14px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #0f3a5c;
+            border-bottom: 1px solid #d0e1f2;
+            white-space: nowrap;
+        }
+        td {
+            padding: 18px 14px;
+            border-bottom: 1px solid #e8f0fa;
+            color: #1f3249;
+            font-size: 0.95rem;
+            vertical-align: middle;
+            background: white;
+        }
+        tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: #f9fdff; }
+        .expand-cell {
+            text-align: center;
+            cursor: pointer;
+            color: #3f79b0;
+            font-size: 1.3rem;
+            transition: 0.1s;
+        }
+        .expand-cell:hover { color: #1d5a8b; transform: scale(1.1); }
+        .history-badge {
+            background: #e4f0fa;
+            border: 1px solid #afcef0;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin: 0 4px 4px 0;
+            color: #0a3b62;
+            font-weight: 500;
+        }
+        .btn-archive {
+            background: #1d5a8b;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 6px 18px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.15s;
+        }
+        .btn-archive:hover { background: #0a3b62; }
+        .health-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: help;
+        }
+        .health-red { background: #d32f2f; }
+        .health-orange { background: #f57c00; }
+        .health-yellow { background: #fbc02d; color: #1e2b3c; }
+        .health-green { background: #2e7d32; }
+        .chat-btn-wrapper { position: relative; display: inline-block; }
+        .chat-btn {
+            background: white;
+            border: 1px solid #c5daf2;
+            border-radius: 30px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            color: #1d5a8b;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-btn:hover { background: #e3f0ff; border-color: #1d5a8b; }
+        .unread-chat-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #e74c3c;
+            color: white;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            box-shadow: 0 2px 6px rgba(231, 76, 60, 0.4);
+        }
+        .expand-row td {
+            background: #f7fcff;
+            padding: 24px 28px;
+            border-bottom: 1px solid #c0daf5;
+        }
+        .emergency-grid { display: flex; flex-wrap: wrap; gap: 24px; }
+        .emergency-card {
+            background: white;
+            border-radius: 22px;
+            border: 1px solid #d3e5f8;
+            padding: 18px 22px;
+            width: 250px;
+            box-shadow: 0 8px 18px -6px rgba(29,90,139,0.1);
+        }
+        .emergency-card .name {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #1b4c7c;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .emergency-card .detail {
+            font-size: 0.9rem;
+            color: #3a5670;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .emergency-card .phone {
+            font-family: 'Inter', monospace;
+            background: #ecf3fa;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+        }
+        .no-emergency {
+            color: #8aa0b8;
+            font-style: italic;
+            padding: 12px 24px;
+            background: #f4faff;
+            border-radius: 60px;
+        }
+        .moved-search-bar {
+            display: flex;
+            align-items: center;
+            padding: 16px 26px;
+            border-bottom: 1px solid #d0e1f2;
+            background: #f8fcff;
+            gap: 18px;
+        }
+        .moved-search-bar input {
+            flex: 1;
+            max-width: 280px;
+            background: white;
+            border: 1px solid #c5daf2;
+            border-radius: 40px;
+            padding: 9px 18px;
+            outline: none;
+        }
+        .clear-search { color: #7f9ab9; cursor: pointer; font-size: 1.2rem; }
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 28px;
+            background: white;
+            border-top: 1px solid #e0ebf7;
+            gap: 20px;
+        }
+        .pagination-info { color: #4f6379; font-size: 0.95rem; }
+        .pagination-controls { display: flex; gap: 8px; }
+        .page-btn {
+            background: #f0f7fe;
+            border: 1px solid #c5daf2;
+            border-radius: 12px;
+            min-width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .page-btn.active-page {
+            background: #1d5a8b;
+            border-color: #1d5a8b;
+            color: white;
+        }
+        .page-btn:hover:not(:disabled) { background: #e3f0ff; border-color: #1d5a8b; }
+        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .rows-per-page { display: flex; align-items: center; gap: 12px; }
+        .rows-per-page select {
+            background: #f0f7fe;
+            border: 1px solid #c5daf2;
+            border-radius: 30px;
+            padding: 7px 16px;
+            outline: none;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 36px;
+            width: 580px;
+            max-width: 95%;
+            max-height: 85vh;
+            box-shadow: 0 30px 60px rgba(0,20,40,0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            border-bottom: 1px solid #e0e9f2;
+            background: #f8fcff;
+        }
+        .modal-header h3 { font-weight: 600; color: #0d4e7c; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            line-height: 1;
+            cursor: pointer;
+            color: #7f9ab9;
+            transition: 0.1s;
+        }
+        .close-btn:hover { color: #1d5a8b; }
+        .modal-body {
+            padding: 24px 28px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            background: #f5faff;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            max-height: 350px;
+            min-height: 200px;
+        }
+        .chat-msg {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-msg.self { align-items: flex-end; }
+        .chat-msg.other { align-items: flex-start; }
+        .chat-bubble {
+            max-width: 75%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            word-break: break-word;
+        }
+        .chat-msg.self .chat-bubble { background: #1d5a8b; color: white; border-bottom-right-radius: 4px; }
+        .chat-msg.other .chat-bubble { background: white; color: #1f3249; border-bottom-left-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .chat-msg-time { font-size: 0.75rem; color: #8aa0b8; margin-top: 4px; }
+        .chat-media { max-width: 200px; border-radius: 12px; cursor: pointer; }
+        .chat-voice {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; min-width: 100px;
+        }
+        .chat-voice i { font-size: 1.1rem; }
+        .chat-input-area {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #e0e9f2;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #c5daf2;
+            border-radius: 25px;
+            outline: none;
+            font-size: 0.95rem;
+        }
+        .chat-input-area input:focus { border-color: #1d5a8b; }
+        .chat-send-btn {
+            background: #1d5a8b;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .chat-send-btn:hover { background: #0a3b62; }
+        .chat-send-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        .jump-link { margin-top: 16px; text-align: right; font-size: 0.95rem; }
+        .jump-link a { color: #1d5a8b; text-decoration: none; font-weight: 500; }
+        .jump-link a:hover { text-decoration: underline; }
+        .note-tip {
+            font-size: 0.8rem;
+            color: #7f9ab9;
+            margin-top: 12px;
+            border-top: 1px dashed #d6e2f0;
+            padding-top: 12px;
+        }
+        .note { margin-top: 20px; font-size: 0.8rem; color: #7f9ab9; text-align: right; }
+        [v-cloak] { display: none; }
+        .phone-td { font-family: 'Inter', monospace; letter-spacing: 0.3px; font-weight: 500; color: #145388; }
+        .empty-row td { text-align: center; color: #8aa0b8; padding: 40px; font-style: italic; background: #f9fdff; }
+        .loading { text-align: center; padding: 40px; color: #5f7d9c; }
+        .back-link {
+            color: #a8ceff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .back-link:hover { color: white; }
+        .ws-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #a8ceff;
+            margin-left: 15px;
+        }
+        .ws-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        .ws-dot.connected { background: #22c55e; }
+        .ws-dot.disconnected { background: #ef4444; animation: none; }
+        .ws-dot.connecting { background: #f59e0b; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak class="app-container">
+    <header class="navbar">
+        <div class="navbar-left">
+            <h1>
+                <a href="admin_index.html" class="back-link"><i class="fa fa-angle-left"></i></a>
+                <i class="fa fa-building-o" style="color:#a8ceff;"></i> 住户信息管理 
+                <span class="community-badge"><i class="fa fa-map-marker"></i> {{ communityName }}</span>
+            </h1>
+        </div>
+        <div class="time-panel">
+            <div class="date">{{ currentDate }}</div>
+            <div class="clock">{{ currentTime }}</div>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn" :class="{ active: activeTab === 'current' }" @click="switchTab('current')">
+            <i class="fa fa-users"></i> 在住居民 <span class="tab-count">{{ totalCurrent }}</span>
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'moved' }" @click="switchTab('moved')">
+            <i class="fa fa-history"></i> 已搬离 <span class="tab-count">{{ totalMoved }}</span>
+        </button>
+        <div class="ws-status">
+            <span :class="['ws-dot', wsStatus]"></span>
+            {{ wsStatusText }}
+        </div>
+    </div>
+
+    <div class="filter-card" v-if="activeTab === 'current'">
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa fa-search"></i> 姓名</span>
+            <input type="text" class="filter-input" v-model="filters.keyword" @keyup.enter="searchByName" placeholder="输入姓名后回车搜索">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa fa-tags"></i> 小区</span>
+            <select class="filter-select" v-model="filters.neighborhoodId" @change="onFilterChange">
+                <option value="">全部小区</option>
+                <option v-for="n in neighborhoods" :key="n.id" :value="n.id">{{ n.name }}</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa fa-venus-mars"></i> 性别</span>
+            <select class="filter-select" v-model="filters.gender" @change="onFilterChange">
+                <option value="">全部</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa fa-notes-medical"></i> 病史</span>
+            <div class="disease-tags">
+                <span v-for="d in medicalDict" :key="d.id" class="disease-tag" 
+                      :class="{ selected: selectedDiseases.includes(d.id) }" 
+                      @click="toggleDisease(d.id)">{{ d.name }}</span>
+            </div>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa fa-sort"></i> 排序</span>
+            <div class="sort-btns">
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'nameAsc' }" @click="setSort('nameAsc')">姓名 A→Z</button>
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'nameDesc' }" @click="setSort('nameDesc')">姓名 Z→A</button>
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'ageAsc' }" @click="setSort('ageAsc')">年龄 ↑</button>
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'ageDesc' }" @click="setSort('ageDesc')">年龄 ↓</button>
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'moveInAsc' }" @click="setSort('moveInAsc')">入住 ↑</button>
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'moveInDesc' }" @click="setSort('moveInDesc')">入住 ↓</button>
+                <button class="sort-btn" :class="{ 'active-sort': sortBy === 'healthDesc' }" @click="setSort('healthDesc')">健康度 ↓</button>
+            </div>
+        </div>
+        <button class="reset-btn" @click="resetFilters"><i class="fa fa-refresh"></i> 重置</button>
+    </div>
+
+    <div class="table-card" v-if="activeTab === 'current'">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px"></th>
+                        <th>姓名</th><th>性别</th><th>年龄</th><th>联系电话</th><th>小区</th><th>具体地址</th>
+                        <th>过往病史</th><th>入住日期</th><th>健康状态</th><th>沟通</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template v-if="loading"><tr><td colspan="11" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr></template>
+                    <template v-else>
+                        <template v-for="(item, idx) in currentTableData" :key="item.userId">
+                            <tr>
+                                <td class="expand-cell" @click="toggleExpand(item.userId)">
+                                    <i :class="expandedRows.has(item.userId) ? 'fa fa-chevron-up' : 'fa fa-chevron-down'"></i>
+                                </td>
+                                <td><strong>{{ item.realName }}</strong></td>
+                                <td>{{ item.gender }}</td>
+                                <td>{{ item.age }}</td>
+                                <td class="phone-td">{{ item.phone || '—' }}</td>
+                                <td>{{ item.neighborhoodName }}</td>
+                                <td>{{ item.addressDetail || '—' }}</td>
+                                <td>
+                                    <span v-for="d in item.historyList" :key="d" class="history-badge">{{ d }}</span>
+                                    <span v-if="item.customHistory" class="history-badge" style="background:#fcf2db; border-color:#f4d9a8;">其它:{{ item.customHistory }}</span>
+                                    <span v-if="(!item.historyList || item.historyList.length === 0) && !item.customHistory">无</span>
+                                </td>
+                                <td>{{ item.moveInTime }}</td>
+                                <td>
+                                    <span v-if="item.healthStatus" class="health-badge" :class="{
+                                        'health-red': item.healthStatus.level === 3,
+                                        'health-orange': item.healthStatus.level === 2,
+                                        'health-yellow': item.healthStatus.level === 1,
+                                        'health-green': item.healthStatus.level === 0
+                                    }" :title="item.healthStatus.tooltip">
+                                        {{ item.healthStatus.level === 0 ? '✓' : '!' }}
+                                    </span>
+                                    <span v-else class="health-badge health-green" title="今日无预警">✓</span>
+                                </td>
+                                <td>
+                                    <div class="chat-btn-wrapper">
+                                        <button class="chat-btn" @click="openChatModal(item.userId, item.realName)">
+                                            <i class="fa fa-commenting"></i> 沟通
+                                        </button>
+                                        <span v-if="getUnreadCount(item.userId) > 0" class="unread-chat-badge">
+                                            {{ getUnreadCount(item.userId) > 9 ? '9+' : getUnreadCount(item.userId) }}
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="expandedRows.has(item.userId)" class="expand-row">
+                                <td colspan="11">
+                                    <div class="emergency-grid">
+                                        <div v-for="ec in getEmergencyContacts(item.userId)" :key="ec.contactUserId" class="emergency-card">
+                                            <div class="name"><i class="fa fa-user-circle"></i> {{ ec.contactName }}</div>
+                                            <div class="detail"><i class="fa fa-venus-mars"></i> {{ ec.gender || '未知' }}</div>
+                                            <div class="detail"><i class="fa fa-phone"></i> <span class="phone">{{ ec.contactPhone }}</span></div>
+                                        </div>
+                                        <div v-if="getEmergencyContacts(item.userId).length === 0" class="no-emergency">暂无紧急联系人 (已过滤社区工作人员)</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr v-if="currentTableData.length === 0 && !loading" class="empty-row"><td colspan="11">暂无符合条件的在住居民</td></tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-bar" v-if="pagination.total > 0">
+            <span class="pagination-info">共 {{ pagination.total }} 条，第 {{ pagination.page }}/{{ pagination.pages }} 页</span>
+            <div class="pagination-controls">
+                <button class="page-btn" :disabled="pagination.page === 1" @click="changePage(pagination.page - 1)"><i class="fa fa-angle-left"></i></button>
+                <button v-for="p in pageNumbers" :key="p" class="page-btn" :class="{ 'active-page': p === pagination.page }" @click="changePage(p)">{{ p }}</button>
+                <button class="page-btn" :disabled="pagination.page === pagination.pages" @click="changePage(pagination.page + 1)"><i class="fa fa-angle-right"></i></button>
+            </div>
+            <div class="rows-per-page">
+                <span>每页</span>
+                <select v-model="pagination.pageSize" @change="handlePageSizeChange">
+                    <option :value="5">5</option><option :value="10">10</option><option :value="20">20</option><option :value="50">50</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card" v-if="activeTab === 'moved'">
+        <div class="moved-search-bar">
+            <span class="filter-label"><i class="fa fa-search"></i> 姓名搜索</span>
+            <input type="text" v-model="movedSearchKeyword" @input="debounceMovedSearch" placeholder="输入姓名">
+            <span v-if="movedSearchKeyword" class="clear-search" @click="clearMovedSearch"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>姓名</th><th>性别</th><th>年龄</th><th>搬入日期</th><th>搬离日期</th><th>归档</th></tr></thead>
+                <tbody>
+                    <template v-if="loadingMoved"><tr><td colspan="6" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr></template>
+                    <template v-else>
+                        <tr v-for="rec in movedTableData" :key="rec.recordId">
+                            <td><strong>{{ rec.realName }}</strong></td>
+                            <td>{{ rec.gender }}</td>
+                            <td>{{ rec.age }}</td>
+                            <td>{{ rec.moveInTime }}</td>
+                            <td>{{ rec.moveOutTime }}</td>
+                            <td><a :href="'admin_archived.html?recordId='+rec.recordId" target="_blank" class="btn-archive"><i class="fa fa-file-archive-o"></i> 归档</a></td>
+                        </tr>
+                        <tr v-if="movedTableData.length === 0" class="empty-row"><td colspan="6">暂无已搬离记录</td></tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="note">* 健康状态基于今日health_alerts预警等级：🔴严重3，🟠中度2，🟡警告1，🟢正常。点击沟通可查看聊天弹窗。</div>
+
+    <div v-if="showChatModal" class="modal-overlay" @click.self="closeChatModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa fa-comments"></i> 聊天 - 【{{ chatUserName }}】</h3>
+                <button class="close-btn" @click="closeChatModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-messages" ref="chatBox">
+                    <div v-for="(msg, idx) in chatMessages" :key="idx" 
+                         :class="['chat-msg', msg.fromId === currentUserId ? 'self' : 'other']">
+                        <div class="chat-bubble">
+                            <template v-if="!msg.msgType || msg.msgType === 'text'">{{ msg.content }}</template>
+                            <template v-else-if="msg.msgType === 'image'">
+                                <img :src="msg.content" class="chat-media" @click="openFull(msg.content)">
+                            </template>
+                            <template v-else-if="msg.msgType === 'video'">
+                                <video :src="msg.content" controls class="chat-media"></video>
+                            </template>
+                            <template v-else-if="msg.msgType === 'voice'">
+                                <div class="chat-voice" @click="playVoice(msg.content)">
+                                    <i class="fa fa-volume-up"></i>
+                                    <span>{{ msg.duration || 0 }}''</span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="chat-msg-time">{{ formatTime(msg.createTime) }}</div>
+                    </div>
+                    <div v-if="chatMessages.length === 0" style="text-align:center;color:#8aa0b8;padding:30px;">
+                        暂无聊天记录
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" v-model="chatInput" @keyup.enter="sendChatMsg" placeholder="输入文本消息...">
+                    <button class="chat-send-btn" @click="sendChatMsg" :disabled="!chatInput.trim()">发送</button>
+                </div>
+                <div class="jump-link">
+                    <a :href="'admin_msg.html?targetUserId=' + currentChatUserId" target="_blank">
+                        跳转聊天详情页 <i class="fa fa-external-link"></i>
+                    </a>
+                </div>
+                <div class="note-tip">
+                    <i class="fa fa-info-circle"></i> 当前仅支持文本消息发送，图片/视频消息请在详情页查看。社区端不支持语音视频通话。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
+
+createApp({
+    setup() {
+        const communityId = ref(null);
+        const communityName = ref('');
+        const neighborhoods = ref([]);
+        const medicalDict = ref([]);
+        
+        const currentTime = ref('');
+        const currentDate = ref('');
+        const updateTime = () => {
+            const d = new Date();
+            currentTime.value = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+            const w = ['周日','周一','周二','周三','周四','周五','周六'];
+            currentDate.value = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+w[d.getDay()];
+        };
+
+        const activeTab = ref('current');
+        const loading = ref(false);
+        const loadingMoved = ref(false);
+        
+        const filters = reactive({ neighborhoodId: '', gender: '', keyword: '' });
+        const selectedDiseases = ref([]);
+        const sortBy = ref('moveInDesc');
+        
+        const pagination = ref({ page: 1, pageSize: 10, total: 0, pages: 1 });
+        const currentTableData = ref([]);
+        const totalCurrent = ref(0);
+        
+        const movedSearchKeyword = ref('');
+        const movedTableData = ref([]);
+        const totalMoved = ref(0);
+        
+        const expandedRows = ref(new Set());
+        const emergencyContactsMap = ref(new Map());
+        
+        const showChatModal = ref(false);
+        const chatUserName = ref('');
+        const currentChatUserId = ref(null);
+        const chatMessages = ref([]);
+        const chatInput = ref('');
+        const chatBox = ref(null);
+        
+        const currentUserId = ref(null);
+        const socket = ref(null);
+        const wsStatus = ref('disconnected');
+        const unreadMap = ref(new Map());
+        let heartbeatTimer = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        let connectionTimeout = null;
+        
+        const wsStatusText = computed(() => {
+            const map = { 'connected': '已连接', 'disconnected': '已断开', 'connecting': '连接中' };
+            return map[wsStatus.value] || '未知';
+        });
+
+        let searchTimer = null;
+        const searchByName = () => {
+            pagination.value.page = 1;
+            fetchResidentList();
+        };
+        
+        const onFilterChange = () => {
+            pagination.value.page = 1;
+            fetchResidentList();
+        };
+        
+        let movedSearchTimer = null;
+        const debounceMovedSearch = () => {
+            clearTimeout(movedSearchTimer);
+            movedSearchTimer = setTimeout(() => fetchMovedOutList(), 300);
+        };
+
+        const pageNumbers = computed(() => {
+            const { pages, page } = pagination.value;
+            if (pages <= 5) return Array.from({length: pages}, (_, i) => i + 1);
+            if (page <= 3) return [1,2,3,4,5];
+            if (page >= pages - 2) return [pages-4, pages-3, pages-2, pages-1, pages];
+            return [page-2, page-1, page, page+1, page+2];
+        });
+
+        const fetchCommunityInfo = async () => {
+            try {
+                const res = await fetch('/api/admin/community/info');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    communityId.value = data.data.communityId;
+                    communityName.value = data.data.communityName;
+                    neighborhoods.value = data.data.neighborhoods || [];
+                }
+            } catch (e) { console.error('获取社区信息失败', e); }
+        };
+
+        const fetchMedicalDict = async () => {
+            try {
+                const res = await fetch('/api/admin/medical-dict');
+                const data = await res.json();
+                if (data.code === 200) {
+                    medicalDict.value = data.data || [];
+                }
+            } catch (e) { console.error('获取病史字典失败', e); }
+        };
+
+        const fetchResidentList = async () => {
+            loading.value = true;
+            try {
+                const params = new URLSearchParams();
+                if (filters.neighborhoodId && filters.neighborhoodId !== '') {
+                    params.append('neighborhoodId', filters.neighborhoodId);
+                }
+                if (filters.gender && filters.gender !== '') {
+                    params.append('gender', filters.gender);
+                }
+                if (filters.keyword && filters.keyword.trim() !== '') {
+                    params.append('keyword', filters.keyword.trim());
+                }
+                if (selectedDiseases.value.length > 0) {
+                    params.append('historyIds', selectedDiseases.value.join(','));
+                }
+                params.append('sortType', sortBy.value);
+                params.append('page', pagination.value.page);
+                params.append('pageSize', pagination.value.pageSize);
+                
+                const res = await fetch('/api/admin/resident/list?' + params.toString());
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    currentTableData.value = data.data.list || [];
+                    pagination.value.total = data.data.total;
+                    pagination.value.pages = data.data.pages;
+                    totalCurrent.value = data.data.total;
+                }
+            } catch (e) { console.error('获取住户列表失败', e); }
+            finally { loading.value = false; }
+        };
+
+        const fetchMovedOutList = async () => {
+            loadingMoved.value = true;
+            try {
+                const params = new URLSearchParams();
+                if (movedSearchKeyword.value) params.append('keyword', movedSearchKeyword.value);
+                
+                const res = await fetch('/api/admin/resident/moved-out?' + params.toString());
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    movedTableData.value = data.data.list || [];
+                    totalMoved.value = data.data.total;
+                }
+            } catch (e) { console.error('获取已搬离列表失败', e); }
+            finally { loadingMoved.value = false; }
+        };
+
+        const fetchEmergencyContacts = async (userId) => {
+            try {
+                const res = await fetch('/api/admin/resident/emergency-contacts?userId=' + userId);
+                const data = await res.json();
+                if (data.code === 200) {
+                    emergencyContactsMap.value.set(userId, data.data || []);
+                }
+            } catch (e) { console.error('获取紧急联系人失败', e); }
+        };
+
+        const getEmergencyContacts = (userId) => {
+            return emergencyContactsMap.value.get(userId) || [];
+        };
+
+        const toggleExpand = async (userId) => {
+            const s = new Set(expandedRows.value);
+            if (s.has(userId)) {
+                s.delete(userId);
+            } else {
+                s.add(userId);
+                if (!emergencyContactsMap.value.has(userId)) {
+                    await fetchEmergencyContacts(userId);
+                }
+            }
+            expandedRows.value = s;
+        };
+
+        const toggleDisease = (id) => {
+            const idx = selectedDiseases.value.indexOf(id);
+            if (idx >= 0) selectedDiseases.value.splice(idx, 1);
+            else selectedDiseases.value.push(id);
+            pagination.value.page = 1;
+            fetchResidentList();
+        };
+
+        const setSort = (type) => {
+            sortBy.value = type;
+            pagination.value.page = 1;
+            fetchResidentList();
+        };
+
+        const resetFilters = () => {
+            filters.neighborhoodId = '';
+            filters.gender = '';
+            filters.keyword = '';
+            selectedDiseases.value = [];
+            sortBy.value = 'moveInDesc';
+            pagination.value.page = 1;
+            fetchResidentList();
+        };
+
+        const switchTab = (tab) => {
+            activeTab.value = tab;
+            if (tab === 'current') {
+                pagination.value.page = 1;
+                fetchResidentList();
+            } else {
+                fetchMovedOutList();
+            }
+        };
+
+        const changePage = (p) => {
+            if (p < 1 || p > pagination.value.pages) return;
+            pagination.value.page = p;
+            fetchResidentList();
+        };
+
+        const handlePageSizeChange = () => {
+            pagination.value.page = 1;
+            fetchResidentList();
+        };
+
+        const clearMovedSearch = () => {
+            movedSearchKeyword.value = '';
+            fetchMovedOutList();
+        };
+
+        const getUnreadCount = (userId) => {
+            return unreadMap.value.get(userId) || 0;
+        };
+
+        const initWebSocket = (uid) => {
+            if (socket.value && socket.value.readyState === WebSocket.OPEN) {
+                return;
+            }
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/chat/${uid}`;
+            
+            wsStatus.value = 'connecting';
+            
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+            }
+            
+            if (connectionTimeout) {
+                clearTimeout(connectionTimeout);
+                connectionTimeout = null;
+            }
+            
+            try {
+                socket.value = new WebSocket(wsUrl);
+                
+                connectionTimeout = setTimeout(() => {
+                    if (socket.value && socket.value.readyState !== WebSocket.OPEN) {
+                        console.warn('WebSocket连接超时');
+                        wsStatus.value = 'disconnected';
+                        socket.value.close();
+                    }
+                }, 10000);
+                
+                socket.value.onopen = () => {
+                    console.log('WebSocket连接成功');
+                    wsStatus.value = 'connected';
+                    reconnectAttempts = 0;
+                    
+                    if (connectionTimeout) {
+                        clearTimeout(connectionTimeout);
+                        connectionTimeout = null;
+                    }
+                    
+                    heartbeatTimer = setInterval(() => {
+                        if (socket.value && socket.value.readyState === WebSocket.OPEN) {
+                            socket.value.send(JSON.stringify({ type: 'heartbeat', timestamp: Date.now() }));
+                        }
+                    }, 30000);
+                };
+                
+                socket.value.onmessage = (e) => {
+                    const m = JSON.parse(e.data);
+                    
+                    if (m.type === 'heartbeat' || m.type === 'pong') {
+                        return;
+                    }
+                    
+                    if (m.msgType === 'USER_STATUS') {
+                        return;
+                    }
+                    
+                    if (m.msgType === 'FRIEND_DELETE' || m.msgType === 'FRIEND_REQUEST' || m.msgType === 'FRIEND_ACCEPT') {
+                        return;
+                    }
+                    
+                    if (m.fromId !== currentUserId.value) {
+                        if (showChatModal.value && currentChatUserId.value === m.fromId) {
+                            chatMessages.value.push(m);
+                            scrollToBottom();
+                            axios.post(`/api/msg/read?fromId=${m.fromId}`);
+                        } else {
+                            const current = unreadMap.value.get(m.fromId) || 0;
+                            unreadMap.value.set(m.fromId, current + 1);
+                            playNotice();
+                        }
+                    }
+                };
+                
+                socket.value.onclose = (event) => {
+                    console.log('WebSocket连接关闭, code:', event.code);
+                    wsStatus.value = 'disconnected';
+                    
+                    if (heartbeatTimer) {
+                        clearInterval(heartbeatTimer);
+                        heartbeatTimer = null;
+                    }
+                    
+                    if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        console.log(`尝试重连 (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                        setTimeout(() => {
+                            if (currentUserId.value) initWebSocket(currentUserId.value);
+                        }, Math.min(5000 * reconnectAttempts, 30000));
+                    }
+                };
+                
+                socket.value.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                    wsStatus.value = 'disconnected';
+                };
+                
+            } catch (error) {
+                console.error('WebSocket初始化失败:', error);
+                wsStatus.value = 'disconnected';
+            }
+        };
+
+        const loadUnreadCounts = async () => {
+            try {
+                const res = await fetch('/api/msg/unread/detail');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    const map = new Map();
+                    data.data.forEach(item => {
+                        const senderId = item.senderId || item.from_id;
+                        const count = item.count || item['count(*)'] || 0;
+                        if (senderId) map.set(senderId, count);
+                    });
+                    unreadMap.value = map;
+                }
+            } catch (e) { console.error('获取未读消息失败', e); }
+        };
+
+        const fetchChatHistory = async (otherId) => {
+            try {
+                const res = await fetch(`/api/msg/history?otherId=${otherId}`);
+                const data = await res.json();
+                if (data.code === 200) {
+                    chatMessages.value = data.data || [];
+                    scrollToBottom();
+                }
+            } catch (e) { console.error('获取聊天记录失败', e); }
+        };
+
+        const openChatModal = async (userId, userName) => {
+            currentChatUserId.value = userId;
+            chatUserName.value = userName;
+            showChatModal.value = true;
+            chatInput.value = '';
+            
+            await fetchChatHistory(userId);
+            
+            axios.post(`/api/msg/read?fromId=${userId}`);
+            unreadMap.value.set(userId, 0);
+        };
+
+        const closeChatModal = () => {
+            showChatModal.value = false;
+            currentChatUserId.value = null;
+            chatMessages.value = [];
+        };
+
+        const sendChatMsg = () => {
+            if (!chatInput.value.trim() || !currentChatUserId.value || !socket.value) return;
+            
+            const msg = {
+                fromId: currentUserId.value,
+                toId: currentChatUserId.value,
+                content: chatInput.value.trim(),
+                msgType: 'text'
+            };
+            
+            socket.value.send(JSON.stringify(msg));
+            chatMessages.value.push(msg);
+            chatInput.value = '';
+            scrollToBottom();
+        };
+
+        const scrollToBottom = () => {
+            nextTick(() => {
+                if (chatBox.value) {
+                    chatBox.value.scrollTop = chatBox.value.scrollHeight;
+                }
+            });
+        };
+
+        const formatTime = (timeStr) => {
+            if (!timeStr) return '';
+            const d = new Date(timeStr);
+            return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+        };
+
+        const playNotice = () => {
+            try {
+                const audio = new Audio('http://192.168.10.151/music/notice.wav');
+                audio.volume = 0.5;
+                audio.play().catch(() => {});
+            } catch (e) {}
+        };
+
+        const playVoice = (url) => {
+            const audio = new Audio(url);
+            audio.play().catch(e => console.error('播放失败', e));
+        };
+
+        const openFull = (url) => {
+            window.open(url, '_blank');
+        };
+
+        const checkLogin = async () => {
+            try {
+                const res = await fetch('/api/user/info');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    currentUserId.value = data.data.id;
+                    localStorage.setItem('user_id', currentUserId.value);
+                    localStorage.setItem('user_role', data.data.role || 'admin');
+                    initWebSocket(currentUserId.value);
+                    await loadUnreadCounts();
+                    console.log('[住户信息页面] WebSocket 初始化成功，用户 ID:', currentUserId.value);
+                } else {
+                    window.location.href = 'login.html';
+                }
+            } catch (e) {
+                console.error('检查登录失败', e);
+            }
+        };
+
+        onMounted(async () => {
+            updateTime();
+            setInterval(updateTime, 1000);
+            await checkLogin();
+            await fetchCommunityInfo();
+            await fetchMedicalDict();
+            await Promise.all([fetchResidentList(), fetchMovedOutList()]);
+        });
+
+        return {
+            communityId, communityName, neighborhoods, medicalDict,
+            currentTime, currentDate, activeTab, loading, loadingMoved,
+            filters, selectedDiseases, sortBy, pagination, currentTableData, totalCurrent,
+            movedSearchKeyword, movedTableData, totalMoved, pageNumbers,
+            expandedRows, showChatModal, chatUserName, currentChatUserId,
+            chatMessages, chatInput, chatBox, currentUserId, wsStatus, wsStatusText,
+            searchByName, onFilterChange, debounceMovedSearch, getEmergencyContacts, toggleExpand,
+            toggleDisease, setSort, resetFilters, switchTab, changePage, 
+            handlePageSizeChange, clearMovedSearch, openChatModal, closeChatModal,
+            sendChatMsg, getUnreadCount, formatTime, playVoice, openFull
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
+
+
+

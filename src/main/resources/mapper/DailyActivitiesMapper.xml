@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.DailyActivitiesMapper">
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.DailyActivities">
+        INSERT INTO daily_activities (user_id, record_date, steps, sleep_hours, calories, distance, update_time)
+        VALUES (#{userId}, #{recordDate}, #{steps}, #{sleepHours}, #{calories}, #{distance}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.chat.older.xiechen.model.DailyActivities">
+        UPDATE daily_activities
+        SET steps = #{steps}, sleep_hours = #{sleepHours}, calories = #{calories}, distance = #{distance}, update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" parameterType="java.lang.Long" resultType="com.chat.older.xiechen.model.DailyActivities">
+        SELECT * FROM daily_activities WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserIdAndDate" resultType="com.chat.older.xiechen.model.DailyActivities">
+        SELECT * FROM daily_activities
+        WHERE user_id = #{userId} AND DATE(record_date) = DATE(#{recordDate})
+    </select>
+
+    <select id="selectByUserIdAndDateRange" resultType="com.chat.older.xiechen.model.DailyActivities">
+        SELECT * FROM daily_activities
+        WHERE user_id = #{userId} AND record_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY record_date ASC
+    </select>
+
+    <insert id="upsert" parameterType="com.chat.older.xiechen.model.DailyActivities">
+        INSERT INTO daily_activities (user_id, record_date, steps, sleep_hours, calories, distance, update_time)
+        VALUES (#{userId}, #{recordDate}, #{steps}, #{sleepHours}, #{calories}, #{distance}, #{updateTime})
+        ON DUPLICATE KEY UPDATE
+        steps = VALUES(steps),
+        sleep_hours = VALUES(sleep_hours),
+        calories = VALUES(calories),
+        distance = VALUES(distance),
+        update_time = VALUES(update_time)
+    </insert>
+</mapper>

@@ -1,0 +1,22 @@
+-- =============================================================
+-- 解尘颐安 · 数据库表结构（占位文件）
+--
+-- 说明：仓库暂未包含真实建表脚本（作者本地库为准）。
+-- 如果你已有运行中的 chat 库，执行下面命令导出表结构并替换本文件：
+--   mysqldump -uroot -p --no-data --skip-add-drop-table chat > docs/schema.sql
+--
+-- 部署顺序建议：
+--   1) CREATE DATABASE chat DEFAULT CHARACTER SET utf8mb4;
+--   2) 导入本文件中的表结构
+--   3) 启动应用（会自动初始化少量社区示例数据）
+--
+-- 主要数据表（节选）：
+--   users / user_profiles / user_community / communities
+--   health_vital_signs / health_alerts / health_advice / daily_activities
+--   medicine_info / user_medicines / medication_logs / medicine_stock_alert
+--   medicine_box / medicine_draft / medicine_operation_log
+--   emergency_contacts / emergency_call_records / call_log
+--   news / community_news / community_news_read
+--   friendships / message / message_archive / chat_record
+--   system_config / system_operation_log / mqtt_simulation_config
+-- =============================================================

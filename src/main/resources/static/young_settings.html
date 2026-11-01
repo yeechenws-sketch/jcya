@@ -1,0 +1,2707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>个人设置 - 解尘颐安</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --primary-light: #3B82F6;
+            --primary-lighter: #60A5FA;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --text-light: #94A3B8;
+            --bg-light: #EFF6FF;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --bg-page: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+            --shadow-lg: 0 8px 30px rgba(37, 99, 235, 0.2);
+            --border: #E2E8F0;
+            --border-light: #F1F5F9;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-page);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .back-btn i {
+            font-size: 18px;
+            color: white;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 28px 0;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 4px solid var(--primary-light);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+            object-fit: cover;
+        }
+
+        .avatar-edit-btn {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .avatar-edit-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .avatar-edit-btn i {
+            font-size: 16px;
+            color: white;
+        }
+
+        .user-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .user-role {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 18px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-size: 16px;
+            color: var(--text);
+            background: white;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-input:disabled {
+            background: var(--bg-light);
+            color: var(--text-secondary);
+        }
+
+        .form-input.error {
+            border-color: var(--danger);
+        }
+
+        .form-error {
+            font-size: 13px;
+            color: var(--danger);
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-hint {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 8px;
+        }
+
+        .gender-options {
+            display: flex;
+            gap: 12px;
+        }
+
+        .gender-option {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .gender-option:hover {
+            border-color: var(--primary-light);
+        }
+
+        .gender-option.active {
+            border-color: var(--primary);
+            background: var(--bg-light);
+        }
+
+        .gender-option i {
+            font-size: 24px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .gender-option.male i { color: var(--primary); }
+        .gender-option.female i { color: #EC4899; }
+        .gender-option.secret i { color: var(--text-secondary); }
+
+        .gender-option span {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .password-strength {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .strength-bar {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            transition: all 0.3s;
+        }
+
+        .strength-bar.weak { background: var(--danger); }
+        .strength-bar.medium { background: var(--warning); }
+        .strength-bar.strong { background: var(--success); }
+
+        .strength-text {
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .strength-text.weak { color: var(--danger); }
+        .strength-text.medium { color: var(--warning); }
+        .strength-text.strong { color: var(--success); }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border-radius: 16px;
+            border: none;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #E2E8F0;
+        }
+
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #FECACA;
+        }
+
+        .elder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .elder-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: var(--bg-light);
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .elder-item:hover {
+            background: #DBEAFE;
+            transform: translateX(4px);
+        }
+
+        .elder-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-light);
+            object-fit: cover;
+        }
+
+        .elder-info {
+            flex: 1;
+        }
+
+        .elder-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .elder-relation {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .elder-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .elder-action-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .elder-action-btn.edit {
+            background: var(--primary-lighter);
+            color: var(--primary);
+        }
+
+        .elder-action-btn.edit:hover {
+            background: var(--primary-light);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .elder-action-btn.delete {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .elder-action-btn.delete:hover {
+            background: var(--danger);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .elder-action-btn.emergency {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .elder-action-btn.emergency.active {
+            background: var(--warning);
+            color: white;
+        }
+
+        .elder-action-btn i {
+            font-size: 18px;
+        }
+
+        .add-elder-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            background: var(--bg-light);
+            border: 2px dashed var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .add-elder-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: white;
+            transform: scale(1.02);
+        }
+
+        .add-elder-btn i {
+            font-size: 20px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--border);
+        }
+
+        .modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-footer .btn {
+            flex: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            opacity: 0.5;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border);
+            transition: 0.3s;
+            border-radius: 28px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .switch input:checked + .switch-slider {
+            background-color: var(--primary);
+        }
+
+        .switch input:checked + .switch-slider:before {
+            transform: translateX(22px);
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .setting-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .relation-select {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .relation-option {
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+        }
+
+        .relation-option:hover {
+            border-color: var(--primary-light);
+        }
+
+        .relation-option.active {
+            border-color: var(--primary);
+            background: var(--bg-light);
+            color: var(--primary);
+        }
+
+        .emergency-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--warning-light);
+            color: var(--warning);
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .tab-nav {
+            display: flex;
+            background: var(--bg-light);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .tab-item {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-item.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-item:hover:not(.active) {
+            color: var(--text);
+        }
+
+        .info-hint {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .info-hint i {
+            color: var(--primary);
+            font-size: 18px;
+            margin-top: 2px;
+        }
+
+        .info-hint-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .info-hint-text strong {
+            color: var(--text);
+        }
+
+        .selectable-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .selectable-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-light);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .selectable-item:hover {
+            background: #DBEAFE;
+        }
+
+        .selectable-item.selected {
+            border-color: var(--primary);
+            background: var(--bg-light);
+        }
+
+        .selectable-item-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            object-fit: cover;
+        }
+
+        .selectable-item-info {
+            flex: 1;
+        }
+
+        .selectable-item-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .selectable-item-relation {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .selectable-item-check {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .selectable-item.selected .selectable-item-check {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .selectable-item-check i {
+            font-size: 12px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .selectable-item.selected .selectable-item-check i {
+            opacity: 1;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                max-width: 750px;
+                margin: 0 auto;
+                padding: 28px;
+                padding-bottom: 100px;
+            }
+
+            .section {
+                padding: 32px;
+                margin-bottom: 24px;
+            }
+
+            .avatar-section {
+                padding: 36px 0;
+            }
+
+            .avatar {
+                width: 130px;
+                height: 130px;
+            }
+
+            .avatar-edit-btn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .avatar-edit-btn i {
+                font-size: 18px;
+            }
+
+            .user-name {
+                font-size: 26px;
+            }
+
+            .user-role {
+                font-size: 15px;
+            }
+
+            .form-label {
+                font-size: 15px;
+            }
+
+            .form-input {
+                padding: 18px 20px;
+                font-size: 17px;
+            }
+
+            .section-title {
+                font-size: 19px;
+            }
+
+            .elder-item {
+                padding: 24px;
+            }
+
+            .elder-avatar {
+                width: 68px;
+                height: 68px;
+            }
+
+            .elder-name {
+                font-size: 18px;
+            }
+
+            .elder-relation {
+                font-size: 14px;
+            }
+
+            .elder-action-btn {
+                width: 48px;
+                height: 48px;
+                border-radius: 14px;
+            }
+
+            .elder-action-btn i {
+                font-size: 20px;
+            }
+
+            .btn {
+                padding: 20px;
+                font-size: 18px;
+            }
+
+            .add-elder-btn {
+                padding: 24px;
+                font-size: 16px;
+            }
+
+            .gender-option {
+                padding: 20px;
+            }
+
+            .gender-option i {
+                font-size: 32px;
+            }
+
+            .gender-option span {
+                font-size: 16px;
+            }
+
+            .tab-nav {
+                padding: 8px;
+            }
+
+            .tab-item {
+                padding: 18px;
+                font-size: 16px;
+            }
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 16px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active i,
+        .nav-item.active span {
+            color: var(--primary);
+        }
+
+        .nav-item:hover i,
+        .nav-item:hover span {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--danger);
+            color: white;
+            border-radius: 8px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .main-content {
+                padding: 16px 24px;
+                padding-bottom: 70px;
+            }
+
+            .section {
+                padding: 16px;
+                margin-bottom: 12px;
+            }
+
+            .avatar-section {
+                padding: 12px 0;
+            }
+
+            .avatar {
+                width: 70px;
+                height: 70px;
+            }
+
+            .avatar-edit-btn {
+                width: 30px;
+                height: 30px;
+            }
+
+            .avatar-edit-btn i {
+                font-size: 14px;
+            }
+
+            .user-name {
+                font-size: 16px;
+            }
+
+            .user-role {
+                font-size: 12px;
+            }
+
+            .form-group {
+                margin-bottom: 12px;
+            }
+
+            .form-label {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .form-input {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+
+            .btn {
+                padding: 14px;
+                font-size: 15px;
+            }
+
+            .gender-option {
+                padding: 10px;
+            }
+
+            .gender-option i {
+                font-size: 20px;
+            }
+
+            .gender-option span {
+                font-size: 12px;
+            }
+
+            .tab-nav {
+                margin-bottom: 10px;
+            }
+
+            .tab-item {
+                padding: 8px;
+                font-size: 13px;
+            }
+
+            .bottom-nav {
+                padding: 4px 0 calc(4px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item i {
+                font-size: 18px;
+            }
+
+            .nav-item span {
+                font-size: 9px;
+            }
+
+            .modal {
+                max-height: 90vh;
+            }
+
+            /* 确保底栏不覆盖内容 */
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 12px 24px;
+            }
+
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 20px 32px;
+                padding-bottom: 100px;
+            }
+
+            .tab-nav {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .section {
+                max-width: 1400px;
+                margin: 0 auto 16px auto;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+
+            .header-title {
+                font-size: 16px;
+            }
+
+            .main-content {
+                padding: 12px 16px;
+                padding-bottom: 60px; /* 进一步减小底部留白 */
+            }
+
+            .section {
+                padding: 10px;
+                margin-bottom: 8px;
+            }
+
+            .avatar-section {
+                padding: 8px 0;
+            }
+
+            .avatar {
+                width: 50px;
+                height: 50px;
+            }
+
+            .avatar-edit-btn {
+                width: 24px;
+                height: 24px;
+            }
+
+            .avatar-edit-btn i {
+                font-size: 12px;
+            }
+
+            .user-name {
+                font-size: 14px;
+            }
+
+            .user-role {
+                font-size: 10px;
+            }
+
+            .form-group {
+                margin-bottom: 8px;
+            }
+
+            .form-input {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .btn {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .gender-option {
+                padding: 6px;
+            }
+
+            .gender-option i {
+                font-size: 16px;
+            }
+
+            .gender-option span {
+                font-size: 10px;
+            }
+
+            .tab-item {
+                padding: 6px;
+                font-size: 12px;
+            }
+
+            .bottom-nav {
+                padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+            }
+
+            .nav-item i {
+                font-size: 16px;
+            }
+
+            .nav-item span {
+                font-size: 8px;
+            }
+
+            .modal {
+                max-height: 85vh;
+            }
+        }
+
+        .medicine-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .medicine-modal-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .medicine-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .medicine-modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .medicine-modal-header h3 i {
+            color: var(--primary);
+        }
+
+        .medicine-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .medicine-modal-close:hover {
+            background: #E0E7FF;
+        }
+
+        .medicine-modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .medicine-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .medicine-option:hover {
+            background: #E0E7FF;
+            border-color: var(--primary-light);
+        }
+
+        .medicine-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .medicine-option-icon.review {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        .medicine-option-icon.monitor {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        }
+
+        .medicine-option-icon.box {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .medicine-option-icon i {
+            font-size: 22px;
+            color: white;
+        }
+
+        .medicine-option-info {
+            flex: 1;
+        }
+
+        .medicine-option-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .medicine-option-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-option-arrow {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <button class="back-btn" @click="goBack">
+                    <i class="fa fa-arrow-left"></i>
+                </button>
+                <span class="header-title">个人设置</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="tab-nav">
+                <div :class="['tab-item', activeTab === 'profile' ? 'active' : '']" @click="activeTab = 'profile'">
+                    <i class="fa fa-user"></i> 个人信息
+                </div>
+                <div :class="['tab-item', activeTab === 'elders' ? 'active' : '']" @click="activeTab = 'elders'">
+                    <i class="fa fa-users"></i> 长辈管理
+                </div>
+            </div>
+
+            <div v-show="activeTab === 'profile'">
+                <div class="section">
+                    <div class="avatar-section">
+                        <div class="avatar-wrapper">
+                            <img :src="form.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'" class="avatar">
+                            <label class="avatar-edit-btn">
+                                <i class="fa fa-camera"></i>
+                                <input type="file" accept="image/*" @change="handleAvatarChange" style="display: none;">
+                            </label>
+                        </div>
+                        <div class="user-name">{{ form.nickname || '用户' }}</div>
+                        <div class="user-role">
+                            <i class="fa fa-shield"></i> 子女端用户
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa fa-id-card-o"></i>
+                            基本信息
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">昵称</label>
+                        <input type="text" class="form-input" v-model="form.nickname" placeholder="请输入昵称" maxlength="20">
+                        <p class="form-hint">昵称将显示在您的个人主页</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">姓名</label>
+                        <input type="text" class="form-input" v-model="form.realName" placeholder="请输入真实姓名" maxlength="20">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">性别</label>
+                        <div class="gender-options">
+                            <div :class="['gender-option', 'male', form.gender === '男' ? 'active' : '']" @click="form.gender = '男'">
+                                <i class="fa fa-mars"></i>
+                                <span>男</span>
+                            </div>
+                            <div :class="['gender-option', 'female', form.gender === '女' ? 'active' : '']" @click="form.gender = '女'">
+                                <i class="fa fa-venus"></i>
+                                <span>女</span>
+                            </div>
+                            <div :class="['gender-option', 'secret', form.gender === '保密' ? 'active' : '']" @click="form.gender = '保密'">
+                                <i class="fa fa-user-secret"></i>
+                                <span>保密</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">手机号码</label>
+                        <input type="tel" class="form-input" v-model="form.phone" placeholder="请输入手机号" maxlength="11" :class="{ error: phoneError }">
+                        <p v-if="phoneError" class="form-error"><i class="fa fa-exclamation-circle"></i> {{ phoneError }}</p>
+                        <p class="form-hint">用于接收重要通知和找回密码</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa fa-lock"></i>
+                            修改密码
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">原密码</label>
+                        <input type="password" class="form-input" v-model="passwordForm.oldPassword" placeholder="请输入原密码">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">新密码</label>
+                        <input type="password" class="form-input" v-model="passwordForm.newPassword" placeholder="请输入新密码（至少8位）" @input="checkPasswordStrength">
+                        <div class="password-strength">
+                            <div :class="['strength-bar', passwordStrength >= 1 ? strengthClass : '']"></div>
+                            <div :class="['strength-bar', passwordStrength >= 2 ? strengthClass : '']"></div>
+                            <div :class="['strength-bar', passwordStrength >= 3 ? strengthClass : '']"></div>
+                        </div>
+                        <p v-if="passwordForm.newPassword" :class="['strength-text', strengthClass]">
+                            <i :class="strengthIcon"></i> 密码强度：{{ strengthText }}
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">确认新密码</label>
+                        <input type="password" class="form-input" v-model="passwordForm.confirmPassword" placeholder="请再次输入新密码">
+                        <p v-if="passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword" class="form-error">
+                            <i class="fa fa-exclamation-circle"></i> 两次密码输入不一致
+                        </p>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
+                    <i class="fa fa-spinner fa-spin" v-if="saving"></i>
+                    <i class="fa fa-check" v-else></i>
+                    {{ saving ? '保存中...' : '保存修改' }}
+                </button>
+
+                <button class="btn btn-danger" @click="logout" style="margin-top: 16px;">
+                    <i class="fa fa-sign-out"></i>
+                    退出登录
+                </button>
+            </div>
+
+            <div v-show="activeTab === 'elders'">
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa fa-users"></i>
+                            我的家人
+                        </div>
+                    </div>
+
+                    <div v-if="elders.length === 0" class="empty-state">
+                        <i class="fa fa-user-plus"></i>
+                        <p>暂无关联的长辈<br>请添加您的家人</p>
+                    </div>
+
+                    <div v-else class="elder-list">
+                        <div v-for="elder in elders" :key="elder.id" class="elder-item">
+                            <img :src="elder.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + elder.id" class="elder-avatar">
+                            <div class="elder-info">
+                                <div class="elder-name">
+                                    {{ elder.remark || elder.nickname }}
+                                    <span v-if="elder.isEmergency" class="emergency-badge">
+                                            <i class="fa fa-star"></i> 您的紧急联系人
+                                        </span>
+                                </div>
+                                <div class="elder-relation">{{ elder.relationship || '家人' }} · {{ elder.phone || '未绑定手机' }}</div>
+                            </div>
+                            <div class="elder-actions">
+                                <button class="elder-action-btn edit" @click.stop="editElder(elder)" title="编辑">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button class="elder-action-btn emergency" @click.stop="openHealthConfigModal(elder)" title="健康阈值">
+                                    <i class="fa fa-heartbeat"></i>
+                                </button>
+                                <button class="elder-action-btn delete" @click.stop="deleteElder(elder)" title="删除">
+                                    <i class="fa fa-trash-o"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="add-elder-btn" @click="openAddElderModal">
+                        <i class="fa fa-plus-circle"></i>
+                        添加长辈联系人
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa fa-paper-plane"></i>
+                            申请成为紧急联系人
+                        </div>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">
+                        成为长辈的紧急联系人后，当长辈遇到紧急情况时，您将第一时间收到通知。
+                    </p>
+                    <div v-if="elders.length === 0" class="empty-state" style="padding: 20px;">
+                        <i class="fa fa-user-plus" style="font-size: 32px;"></i>
+                        <p>暂无关联的长辈</p>
+                    </div>
+                    <div v-else class="elder-list">
+                        <div v-for="elder in elders" :key="elder.id" class="elder-item" style="cursor: default;">
+                            <img :src="elder.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + elder.id" class="elder-avatar">
+                            <div class="elder-info">
+                                <div class="elder-name">
+                                    {{ elder.remark || elder.nickname }}
+                                </div>
+                                <div class="elder-relation">{{ elder.relationship || '家人' }}</div>
+                            </div>
+                            <button v-if="elder.isElderEmergency"
+                                    class="btn btn-secondary"
+                                    style="width: auto; padding: 10px 16px; font-size: 13px; cursor: default;"
+                                    disabled>
+                                <i class="fa fa-check"></i>
+                                已成为紧急联系人
+                            </button>
+                            <button v-else
+                                    class="btn btn-primary"
+                                    style="width: auto; padding: 10px 16px; font-size: 13px;"
+                                    @click="requestToBeEmergency(elder)"
+                                    :disabled="elder.requesting">
+                                <i class="fa fa-spinner fa-spin" v-if="elder.requesting"></i>
+                                <i class="fa fa-paper-plane" v-else></i>
+                                {{ elder.requesting ? '申请中...' : '申请成为紧急联系人' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <div class="nav-item" @click="goToPage('home')">
+                <i class="fa fa-home"></i>
+                <span>首页</span>
+            </div>
+            <div class="nav-item" @click="showMedicineModal = true">
+                <i class="fa fa-medkit"></i>
+                <span>用药</span>
+            </div>
+            <div class="nav-item" @click="goToPage('health')">
+                <i class="fa fa-heartbeat"></i>
+                <span>健康</span>
+            </div>
+            <div class="nav-item" @click="goToPage('msg')">
+                <i class="fa fa-commenting-o"></i>
+                <span>消息</span>
+                <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+            </div>
+            <div class="nav-item active" @click="goToPage('profile')">
+                <i class="fa fa-user"></i>
+                <span>我的</span>
+            </div>
+        </nav>
+    </div>
+
+    <div v-if="showAddElderModal" class="modal-overlay" @click.self="closeAddElderModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">{{ editingElder ? '编辑长辈' : '添加长辈' }}</span>
+                <button class="modal-close" @click="closeAddElderModal">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div v-if="!editingElder" class="form-group">
+                    <label class="form-label">搜索用户名</label>
+                    <div style="display: flex; gap: 12px;">
+                        <input type="text" class="form-input" v-model="searchUsername" placeholder="输入用户名搜索" @keyup.enter="searchUser">
+                        <button class="btn btn-primary" style="width: auto; padding: 14px 20px;" @click="searchUser" :disabled="searching">
+                            <i class="fa fa-spinner fa-spin" v-if="searching"></i>
+                            <i class="fa fa-search" v-else></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="searchedUser" class="form-group">
+                    <label class="form-label">找到的用户</label>
+                    <div class="elder-item" style="cursor: default;">
+                        <img :src="searchedUser.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + searchedUser.id" class="elder-avatar">
+                        <div class="elder-info">
+                            <div class="elder-name">{{ searchedUser.nickname }}</div>
+                            <div class="elder-relation">@{{ searchedUser.username }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="editingElder || searchedUser" class="form-group">
+                    <label class="form-label">备注名称</label>
+                    <input type="text" class="form-input" v-model="elderForm.remark" placeholder="给长辈起个备注名" maxlength="20">
+                </div>
+
+                <div v-if="editingElder || searchedUser" class="form-group">
+                    <label class="form-label">与您的关系</label>
+                    <div class="relation-select">
+                        <div :class="['relation-option', elderForm.relationship === '父亲' ? 'active' : '']" @click="elderForm.relationship = '父亲'">父亲</div>
+                        <div :class="['relation-option', elderForm.relationship === '母亲' ? 'active' : '']" @click="elderForm.relationship = '母亲'">母亲</div>
+                        <div :class="['relation-option', elderForm.relationship === '爷爷' ? 'active' : '']" @click="elderForm.relationship = '爷爷'">爷爷</div>
+                        <div :class="['relation-option', elderForm.relationship === '奶奶' ? 'active' : '']" @click="elderForm.relationship = '奶奶'">奶奶</div>
+                        <div :class="['relation-option', elderForm.relationship === '外公' ? 'active' : '']" @click="elderForm.relationship = '外公'">外公</div>
+                        <div :class="['relation-option', elderForm.relationship === '外婆' ? 'active' : '']" @click="elderForm.relationship = '外婆'">外婆</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeAddElderModal">取消</button>
+                <button class="btn btn-primary" @click="saveElder" :disabled="savingElder || (!editingElder && !searchedUser)">
+                    <i class="fa fa-spinner fa-spin" v-if="savingElder"></i>
+                    {{ savingElder ? '保存中...' : '确认' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showEmergencyModal" class="modal-overlay" @click.self="showEmergencyModal = false">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">设置紧急联系人</span>
+                <button class="modal-close" @click="showEmergencyModal = false">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="info-hint">
+                    <i class="fa fa-info-circle"></i>
+                    <div class="info-hint-text">
+                        选择一位好友作为您的紧急联系人。当您遇到紧急情况时，系统会第一时间通知该联系人。
+                    </div>
+                </div>
+
+                <div v-if="nonElderFriends.length === 0" class="empty-state">
+                    <i class="fa fa-users"></i>
+                    <p>暂无可选的好友<br>请先添加好友</p>
+                </div>
+
+                <div v-else class="selectable-list">
+                    <div v-for="friend in nonElderFriends"
+                         :key="friend.id"
+                         :class="['selectable-item', selectedEmergencyElder && selectedEmergencyElder.id === friend.id ? 'selected' : '']"
+                         @click="selectedEmergencyElder = friend">
+                        <img :src="friend.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + friend.id" class="selectable-item-avatar">
+                        <div class="selectable-item-info">
+                            <div class="selectable-item-name">{{ friend.remark || friend.nickname }}</div>
+                            <div class="selectable-item-relation">{{ friend.isEmergency ? '已是紧急联系人' : '好友' }}</div>
+                        </div>
+                        <div class="selectable-item-check">
+                            <i class="fa fa-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="showEmergencyModal = false">取消</button>
+                <button class="btn btn-primary" @click="saveEmergencyContact" :disabled="!selectedEmergencyElder || savingEmergency">
+                    <i class="fa fa-spinner fa-spin" v-if="savingEmergency"></i>
+                    {{ savingEmergency ? '保存中...' : '确认设置' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+        <div class="modal" style="max-width: 340px;">
+            <div class="modal-header">
+                <span class="modal-title">确认删除</span>
+                <button class="modal-close" @click="showDeleteModal = false">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 30px 20px;">
+                <i class="fa fa-exclamation-triangle" style="font-size: 48px; color: var(--warning); margin-bottom: 16px;"></i>
+                <p style="font-size: 15px; color: var(--text);">确定要删除与 {{ deletingElder?.remark || deletingElder?.nickname }} 的关联吗？</p>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">删除后将无法查看该长辈的健康和用药信息</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
+                <button class="btn btn-danger" @click="confirmDeleteElder" :disabled="deleting">
+                    <i class="fa fa-spinner fa-spin" v-if="deleting"></i>
+                    确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showHealthConfigModal" class="modal-overlay" @click.self="showHealthConfigModal = false">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <span class="modal-title">
+                    <i class="fa fa-heartbeat" style="color: var(--primary);"></i>
+                    健康阈值设置 - {{ selectedElderForConfig?.remark || selectedElderForConfig?.nickname }}
+                </span>
+                <button class="modal-close" @click="showHealthConfigModal = false">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="info-hint">
+                    <i class="fa fa-info-circle"></i>
+                    <div class="info-hint-text">
+                        修改后，长辈将收到<strong>阈值变更通知</strong>。请确保设置合理范围。
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa fa-heart" style="color: #ef4444; margin-right: 6px;"></i>心率范围 (次/分钟)</label>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <input type="number" class="form-input" v-model.number="healthConfigForm.hr_min" placeholder="最低" min="30" max="100" style="flex: 1;">
+                        <span style="color: var(--text-secondary);">—</span>
+                        <input type="number" class="form-input" v-model.number="healthConfigForm.hr_max" placeholder="最高" min="60" max="200" style="flex: 1;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa fa-tint" style="color: #3b82f6; margin-right: 6px;"></i>血氧最低值 (%)</label>
+                    <input type="number" class="form-input" v-model.number="healthConfigForm.bo_min" placeholder="正常值≥95%" min="70" max="100">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa fa-arrow-up" style="color: #f59e0b; margin-right: 6px;"></i>收缩压上限 (mmHg)</label>
+                    <input type="number" class="form-input" v-model.number="healthConfigForm.bp_sys_max" placeholder="正常值<140" min="90" max="250">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa fa-arrow-down" style="color: #8b5cf6; margin-right: 6px;"></i>舒张压上限 (mmHg)</label>
+                    <input type="number" class="form-input" v-model.number="healthConfigForm.bp_dia_max" placeholder="正常值<90" min="50" max="150">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fa fa-flask" style="color: #10b981; margin-right: 6px;"></i>空腹血糖上限 (mmol/L)</label>
+                    <input type="number" class="form-input" v-model.number="healthConfigForm.bg_fasting_max" placeholder="正常值<6.1" min="3" max="20" step="0.1">
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label"><i class="fa fa-walking" style="color: #ec4899; margin-right: 6px;"></i>步数目标</label>
+                        <input type="number" class="form-input" v-model.number="healthConfigForm.step_target" placeholder="6000" min="1000" max="30000" step="500">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label"><i class="fa fa-bed" style="color: #6366f1; margin-right: 6px;"></i>睡眠目标(小时)</label>
+                        <input type="number" class="form-input" v-model.number="healthConfigForm.sleep_target" placeholder="7" min="4" max="12" step="0.5">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="resetHealthConfigForm" :disabled="savingHealthConfig">
+                    <i class="fa fa-refresh"></i> 恢复默认
+                </button>
+                <button class="btn btn-primary" @click="saveHealthConfigForElder" :disabled="savingHealthConfig">
+                    <i class="fa fa-spinner fa-spin" v-if="savingHealthConfig"></i>
+                    <i class="fa fa-check" v-else></i>
+                    {{ savingHealthConfig ? '保存中...' : '保存设置' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div v-if="showMedicineModal" class="medicine-modal" @click.self="showMedicineModal = false">
+        <div class="medicine-modal-content">
+            <div class="medicine-modal-header">
+                <h3><i class="fa fa-medkit"></i> 用药功能</h3>
+                <button class="medicine-modal-close" @click="showMedicineModal = false">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="medicine-options">
+                <div class="medicine-option" @click="selectMedicineOption('review')">
+                    <div class="medicine-option-icon review">
+                        <i class="fa fa-check-square-o"></i>
+                    </div>
+                    <div class="medicine-option-info">
+                        <div class="medicine-option-title">用药审核</div>
+                        <div class="medicine-option-desc">审核长辈用药草稿</div>
+                    </div>
+                    <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                </div>
+                <div class="medicine-option" @click="selectMedicineOption('monitor')">
+                    <div class="medicine-option-icon monitor">
+                        <i class="fa fa-medkit"></i>
+                    </div>
+                    <div class="medicine-option-info">
+                        <div class="medicine-option-title">用药监控</div>
+                        <div class="medicine-option-desc">查看长辈用药记录</div>
+                    </div>
+                    <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                </div>
+                <div class="medicine-option" @click="selectMedicineOption('box')">
+                    <div class="medicine-option-icon box">
+                        <i class="fa fa-cube"></i>
+                    </div>
+                    <div class="medicine-option-info">
+                        <div class="medicine-option-title">智能药盒</div>
+                        <div class="medicine-option-desc">监看长辈服药情况</div>
+                    </div>
+                    <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="pageLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                pageLoading: true,
+                activeTab: 'profile',
+                currentUser: null,
+                saving: false,
+                savingElder: false,
+                savingEmergency: false,
+                searching: false,
+                deleting: false,
+
+                form: {
+                    avatar: '',
+                    nickname: '',
+                    realName: '',
+                    gender: '保密',
+                    phone: ''
+                },
+
+                passwordForm: {
+                    oldPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                },
+                passwordStrength: 0,
+
+                phoneError: '',
+
+                elders: [],
+                nonElderFriends: [],
+                showAddElderModal: false,
+                showDeleteModal: false,
+                showEmergencyModal: false,
+                editingElder: null,
+                deletingElder: null,
+                searchUsername: '',
+                searchedUser: null,
+                selectedEmergencyElder: null,
+
+                elderForm: {
+                    remark: '',
+                    relationship: ''
+                },
+                showMedicineModal: false,
+                totalUnread: 0,
+
+                showHealthConfigModal: false,
+                selectedElderForConfig: null,
+                savingHealthConfig: false,
+                healthConfigForm: {
+                    hr_min: 50,
+                    hr_max: 120,
+                    bo_min: 90,
+                    bp_sys_max: 140,
+                    bp_dia_max: 90,
+                    bg_fasting_max: 7.0,
+                    step_target: 6000,
+                    sleep_target: 7
+                }
+            };
+        },
+        computed: {
+            strengthClass() {
+                if (this.passwordStrength === 1) return 'weak';
+                if (this.passwordStrength === 2) return 'medium';
+                if (this.passwordStrength === 3) return 'strong';
+                return '';
+            },
+            strengthText() {
+                if (this.passwordStrength === 1) return '弱';
+                if (this.passwordStrength === 2) return '中';
+                if (this.passwordStrength === 3) return '强';
+                return '';
+            },
+            strengthIcon() {
+                if (this.passwordStrength === 1) return 'fa fa-frown-o';
+                if (this.passwordStrength === 2) return 'fa fa-meh-o';
+                if (this.passwordStrength === 3) return 'fa fa-smile-o';
+                return '';
+            }
+        },
+        mounted() {
+            this.checkLogin();
+            this.setupMessageCallbacks();
+        },
+        methods: {
+            setupMessageCallbacks() {
+                if (window.YoungMessageCenter) {
+                    YoungMessageCenter.onElderUpdate((msg) => {
+                        if (msg.msgType === 'EMERGENCY_CONTACT_ACCEPTED') {
+                            this.showToast(`【紧急联系人】${msg.elderName}已同意您成为紧急联系人`, 'success');
+                            this.loadElders();
+                        } else if (msg.msgType === 'EMERGENCY_CONTACT_REJECTED') {
+                            this.showToast(`【紧急联系人】${msg.elderName}拒绝了您的申请`, 'error');
+                        } else if (msg.msgType === 'BECOME_EMERGENCY_CONTACT') {
+                            this.showToast(`【紧急联系人】${msg.message}`, 'success');
+                            this.loadElders();
+                        } else if (msg.msgType === 'REMOVED_EMERGENCY_CONTACT') {
+                            this.showToast(`【紧急联系人】${msg.message}`, 'error');
+                            this.loadElders();
+                        } else if (msg.msgType === 'MEDICINE_DRAFT') {
+                            this.showToast(`【用药草稿待审核】${msg.elderName}新增了药品信息`);
+                        }
+                    });
+
+                    YoungMessageCenter.onMessage((msg, contact) => {
+                        if (msg.fromId && msg.fromId != this.currentUser?.id) {
+                            this.totalUnread++;
+                        }
+                    });
+                }
+            },
+
+            async checkLogin() {
+                try {
+                    const res = await axios.get('/api/user/info');
+                    if (res.data.code === 200) {
+                        this.currentUser = res.data.data;
+                        await this.loadProfile();
+                        await this.loadElders();
+                        this.loadUnreadCount();
+                    } else {
+                        window.location.href = 'login.html';
+                    }
+                } catch (e) {
+                    console.error('获取用户信息失败', e);
+                    window.location.href = 'login.html';
+                } finally {
+                    this.pageLoading = false;
+                }
+            },
+
+            async loadProfile() {
+                try {
+                    const res = await axios.get('/api/profile/settings');
+                    if (res.data.code === 200) {
+                        const data = res.data.data;
+                        if (data.user) {
+                            this.form.avatar = data.user.avatar || '';
+                            this.form.nickname = data.user.nickname || '';
+                        }
+                        if (data.profile) {
+                            this.form.realName = data.profile.realName || '';
+                            this.form.gender = data.profile.gender || '保密';
+                            this.form.phone = data.profile.userPhone || '';
+                        }
+                    }
+                } catch (e) {
+                    console.error('加载个人资料失败', e);
+                }
+            },
+
+            async loadElders() {
+                try {
+                    const res = await axios.get('/api/friend/list/ordered');
+                    if (res.data.code === 200) {
+                        const friends = res.data.data || [];
+
+                        const emergencyRes = await axios.get('/api/emergency/list');
+                        const emergencyContacts = emergencyRes.data.code === 200 ? (emergencyRes.data.data || []) : [];
+                        const emergencyIds = new Set(emergencyContacts.map(c => c.contactUserId));
+
+                        const elderEmergencyRes = await axios.get('/api/emergency/elders-where-i-am-emergency');
+                        const elderEmergencyMap = elderEmergencyRes.data.code === 200 ? (elderEmergencyRes.data.data || {}) : {};
+
+                        this.elders = friends.filter(f => f.role === 'older').map(f => ({
+                            id: f.id,
+                            nickname: f.nickname,
+                            avatar: f.avatar,
+                            remark: f.remark,
+                            relationship: f.relationship || '',
+                            phone: f.phone || '',
+                            isEmergency: emergencyIds.has(f.id),
+                            isElderEmergency: elderEmergencyMap[f.id] === true
+                        }));
+
+                        this.nonElderFriends = friends.filter(f => f.role !== 'older').map(f => ({
+                            id: f.id,
+                            nickname: f.nickname,
+                            avatar: f.avatar,
+                            remark: f.remark,
+                            phone: f.phone || '',
+                            isEmergency: emergencyIds.has(f.id)
+                        }));
+                    }
+                } catch (e) {
+                    console.error('加载家人列表失败', e);
+                }
+            },
+
+            handleAvatarChange(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                    this.showToast('请选择图片文件', 'error');
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    this.showToast('图片大小不能超过5MB', 'error');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                axios.post('/api/user/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                }).then(res => {
+                    if (res.data.code === 200) {
+                        this.form.avatar = res.data.data.url;
+                        this.showToast('头像更新成功', 'success');
+                    } else {
+                        this.showToast(res.data.msg || '上传失败', 'error');
+                    }
+                }).catch(e => {
+                    this.showToast('上传失败', 'error');
+                });
+            },
+
+            checkPasswordStrength() {
+                const pwd = this.passwordForm.newPassword;
+                let strength = 0;
+
+                if (pwd.length >= 8) strength++;
+                if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++;
+                if (/\d/.test(pwd)) strength++;
+                if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) strength++;
+
+                this.passwordStrength = Math.min(strength, 3);
+            },
+
+            debounceTimer: null,
+            saveProfile() {
+                if (this.debounceTimer) {
+                    clearTimeout(this.debounceTimer);
+                }
+
+                this.debounceTimer = setTimeout(() => {
+                    this.doSaveProfile();
+                }, 500);
+            },
+
+            async doSaveProfile() {
+                if (this.saving) return;
+
+                if (this.passwordForm.newPassword) {
+                    if (this.passwordForm.newPassword.length < 8) {
+                        this.showToast('密码长度至少8位', 'error');
+                        return;
+                    }
+                    if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+                        this.showToast('两次密码输入不一致', 'error');
+                        return;
+                    }
+                    if (!this.passwordForm.oldPassword) {
+                        this.showToast('请输入原密码', 'error');
+                        return;
+                    }
+                }
+
+                this.saving = true;
+
+                try {
+                    const dto = {
+                        user: {
+                            avatar: this.form.avatar,
+                            nickname: this.form.nickname
+                        },
+                        profile: {
+                            realName: this.form.realName,
+                            gender: this.form.gender,
+                            userPhone: this.form.phone
+                        }
+                    };
+
+                    if (this.passwordForm.oldPassword && this.passwordForm.newPassword && this.passwordForm.confirmPassword) {
+                        dto.password = {
+                            oldPassword: this.passwordForm.oldPassword,
+                            newPassword: this.passwordForm.newPassword,
+                            confirmPassword: this.passwordForm.confirmPassword
+                        };
+                    }
+
+                    const res = await axios.post('/api/profile/settings', dto);
+
+                    if (res.data.code === 200) {
+                        this.showToast('保存成功', 'success');
+                        this.passwordForm = {
+                            oldPassword: '',
+                            newPassword: '',
+                            confirmPassword: ''
+                        };
+                        this.passwordStrength = 0;
+                    } else {
+                        this.showToast(res.data.msg || '保存失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('保存失败', e);
+                    this.showToast('保存失败，请重试', 'error');
+                } finally {
+                    this.saving = false;
+                }
+            },
+
+            openAddElderModal() {
+                this.editingElder = null;
+                this.searchedUser = null;
+                this.searchUsername = '';
+                this.elderForm = {
+                    remark: '',
+                    relationship: ''
+                };
+                this.showAddElderModal = true;
+            },
+
+            async searchUser() {
+                if (!this.searchUsername.trim()) {
+                    this.showToast('请输入用户名', 'error');
+                    return;
+                }
+
+                this.searching = true;
+
+                try {
+                    const res = await axios.get(`/api/user/search?username=${this.searchUsername}`);
+                    if (res.data.code === 200 && res.data.data) {
+                        this.searchedUser = res.data.data;
+                        this.elderForm.remark = this.searchedUser.nickname;
+                    } else {
+                        this.showToast('未找到该用户', 'error');
+                        this.searchedUser = null;
+                    }
+                } catch (e) {
+                    this.showToast('搜索失败', 'error');
+                } finally {
+                    this.searching = false;
+                }
+            },
+
+            editElder(elder) {
+                this.editingElder = elder;
+                this.searchedUser = {
+                    id: elder.id,
+                    nickname: elder.nickname,
+                    avatar: elder.avatar,
+                    username: elder.nickname
+                };
+                this.elderForm = {
+                    remark: elder.remark || elder.nickname,
+                    relationship: elder.relationship || ''
+                };
+                this.showAddElderModal = true;
+            },
+
+            closeAddElderModal() {
+                this.showAddElderModal = false;
+                this.editingElder = null;
+                this.searchedUser = null;
+                this.searchUsername = '';
+                this.elderForm = {
+                    remark: '',
+                    relationship: ''
+                };
+            },
+
+            async saveElder() {
+                if (!this.editingElder && !this.searchedUser) {
+                    this.showToast('请先搜索用户', 'error');
+                    return;
+                }
+
+                this.savingElder = true;
+
+                try {
+                    if (this.editingElder) {
+                        const res = await axios.post('/api/friend/updateRemark', {
+                            friendId: this.editingElder.id,
+                            remark: this.elderForm.remark,
+                            relationship: this.elderForm.relationship || null
+                        });
+
+                        if (res.data.code === 200) {
+                            const idx = this.elders.findIndex(e => e.id === this.editingElder.id);
+                            if (idx !== -1) {
+                                this.elders[idx].remark = this.elderForm.remark;
+                                this.elders[idx].relationship = this.elderForm.relationship;
+                            }
+                            this.showToast('修改成功', 'success');
+                        } else {
+                            this.showToast(res.data.msg || '修改失败', 'error');
+                        }
+                    } else {
+                        const res = await axios.post('/api/friend/request', {
+                            username: this.searchedUser.username || this.searchUsername
+                        });
+
+                        if (res.data.code === 200) {
+                            this.showToast('申请已发送，等待对方确认', 'success');
+                        } else {
+                            this.showToast(res.data.msg || '添加失败', 'error');
+                        }
+                    }
+
+                    this.closeAddElderModal();
+                } catch (e) {
+                    console.error('保存失败', e);
+                    this.showToast('操作失败', 'error');
+                } finally {
+                    this.savingElder = false;
+                }
+            },
+
+            deleteElder(elder) {
+                this.deletingElder = elder;
+                this.showDeleteModal = true;
+            },
+
+            async confirmDeleteElder() {
+                if (!this.deletingElder || this.deleting) return;
+
+                this.deleting = true;
+                const elderId = this.deletingElder.id;
+
+                try {
+                    const res = await axios.post('/api/friend/delete', {
+                        friendId: elderId
+                    });
+
+                    if (res.data.code === 200) {
+                        this.elders = this.elders.filter(e => e.id !== elderId);
+                        this.showToast('已删除', 'success');
+                        this.showDeleteModal = false;
+                        this.deletingElder = null;
+                    } else {
+                        this.showToast(res.data.msg || '删除失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('删除失败', e);
+                    this.showToast('删除失败', 'error');
+                } finally {
+                    this.deleting = false;
+                }
+            },
+
+            async toggleEmergency(elder) {
+                try {
+                    if (elder.isEmergency) {
+                        await axios.post('/api/emergency/remove', {
+                            contactUserId: elder.id
+                        });
+                        elder.isEmergency = false;
+                        this.showToast('已取消紧急联系人', 'success');
+                    } else {
+                        await axios.post('/api/emergency/add', {
+                            contactUserId: elder.id,
+                            contactName: elder.remark || elder.nickname,
+                            contactPhone: elder.phone
+                        });
+                        elder.isEmergency = true;
+                        this.showToast('已设为紧急联系人', 'success');
+                    }
+                } catch (e) {
+                    console.error('操作失败', e);
+                    this.showToast('操作失败', 'error');
+                }
+            },
+
+            async saveEmergencyContact() {
+                if (!this.selectedEmergencyElder) {
+                    this.showToast('请选择一位好友', 'error');
+                    return;
+                }
+
+                this.savingEmergency = true;
+
+                try {
+                    const res = await axios.post('/api/emergency/add', {
+                        contactUserId: this.selectedEmergencyElder.id,
+                        contactName: this.selectedEmergencyElder.remark || this.selectedEmergencyElder.nickname,
+                        contactPhone: this.selectedEmergencyElder.phone
+                    });
+
+                    if (res.data.code === 200) {
+                        const idx = this.nonElderFriends.findIndex(f => f.id === this.selectedEmergencyElder.id);
+                        if (idx !== -1) {
+                            this.nonElderFriends[idx].isEmergency = true;
+                        }
+                        this.showToast('设置成功', 'success');
+                        this.showEmergencyModal = false;
+                        this.selectedEmergencyElder = null;
+                    } else {
+                        this.showToast(res.data.msg || '设置失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('设置失败', e);
+                    this.showToast('设置失败', 'error');
+                } finally {
+                    this.savingEmergency = false;
+                }
+            },
+
+            async removeEmergencyContact(friend) {
+                if (!confirm(`确定要移除 ${friend.remark || friend.nickname} 的紧急联系人身份吗？`)) {
+                    return;
+                }
+
+                try {
+                    const res = await axios.post('/api/emergency/remove', {
+                        contactUserId: friend.id
+                    });
+
+                    if (res.data.code === 200) {
+                        friend.isEmergency = false;
+                        this.showToast('已移除紧急联系人', 'success');
+                    } else {
+                        this.showToast(res.data.msg || '移除失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('移除失败', e);
+                    this.showToast('移除失败', 'error');
+                }
+            },
+
+            async requestToBeEmergency(elder) {
+                if (elder.requesting) return;
+
+                elder.requesting = true;
+
+                try {
+                    const res = await axios.post('/api/emergency/request', {
+                        elderId: elder.id
+                    });
+
+                    if (res.data.code === 200) {
+                        this.showToast('申请已发送，等待长辈确认', 'success');
+                    } else {
+                        this.showToast(res.data.msg || '申请失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('申请失败', e);
+                    this.showToast('申请失败', 'error');
+                } finally {
+                    elder.requesting = false;
+                }
+            },
+
+            showToast(msg, type = '') {
+                const toast = document.getElementById('toast');
+                toast.innerHTML = `<i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle'}"></i> ${msg}`;
+                toast.className = 'toast show ' + type;
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            },
+
+            async loadUnreadCount() {
+                try {
+                    const res = await axios.get('/api/msg/unread/detail');
+                    if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                        let total = 0;
+                        res.data.data.forEach(item => {
+                            total += item.count || item.unreadCount || item.unread_count || 0;
+                        });
+                        this.totalUnread = total;
+                    }
+                } catch (e) {
+                    console.error('加载未读消息数失败', e);
+                }
+            },
+
+            goBack() {
+                window.history.back();
+            },
+            selectMedicineOption(option) {
+                this.showMedicineModal = false;
+                switch(option) {
+                    case 'review':
+                        window.location.href = 'young_draft_review.html';
+                        break;
+                    case 'monitor':
+                        window.location.href = 'young_medicine.html';
+                        break;
+                    case 'box':
+                        window.location.href = 'young_medicine_box.html';
+                        break;
+                }
+            },
+            goToPage(page) {
+                switch(page) {
+                    case 'home':
+                        window.location.href = 'young_index.html';
+                        break;
+                    case 'health':
+                        window.location.href = 'young_health.html';
+                        break;
+                    case 'msg':
+                        window.location.href = 'young_msg.html';
+                        break;
+                    case 'profile':
+                        window.location.href = 'young_settings.html';
+                        break;
+                }
+            },
+
+            async logout() {
+                if (!confirm('确定要退出登录吗？')) {
+                    return;
+                }
+
+                try {
+                    await axios.post('/api/user/logout');
+                } catch (e) {
+                    console.error('退出登录失败', e);
+                }
+
+                sessionStorage.clear();
+                localStorage.removeItem('userInfo');
+                localStorage.removeItem('token');
+
+                window.location.href = 'login.html';
+            },
+
+            async openHealthConfigModal(elder) {
+                this.selectedElderForConfig = elder;
+                this.showHealthConfigModal = true;
+
+                try {
+                    const res = await axios.get(`/api/health/config/${elder.id}`);
+                    if (res.data.code === 200 && res.data.data) {
+                        this.healthConfigForm = {
+                            hr_min: res.data.data.hrMin || 50,
+                            hr_max: res.data.data.hrMax || 120,
+                            bo_min: res.data.data.boMin || 90,
+                            bp_sys_max: res.data.data.bpSysMax || 140,
+                            bp_dia_max: res.data.data.bpDiaMax || 90,
+                            bg_fasting_max: res.data.data.bgFastingMax || 7.0,
+                            step_target: res.data.data.stepTarget || 6000,
+                            sleep_target: res.data.data.sleepTarget || 7
+                        };
+                    }
+                } catch (e) {
+                    console.error('加载长辈健康配置失败:', e);
+                }
+            },
+
+            async saveHealthConfigForElder() {
+                if (!this.selectedElderForConfig) return;
+
+                if (this.healthConfigForm.hr_min >= this.healthConfigForm.hr_max) {
+                    this.showToast('心率最低值必须小于最高值', 'error');
+                    return;
+                }
+
+                this.savingHealthConfig = true;
+
+                try {
+                    const res = await axios.post('/api/health/config/update', {
+                        userId: this.selectedElderForConfig.id,
+                        hrMin: this.healthConfigForm.hr_min,
+                        hrMax: this.healthConfigForm.hr_max,
+                        boMin: this.healthConfigForm.bo_min,
+                        bpSysMax: this.healthConfigForm.bp_sys_max,
+                        bpDiaMax: this.healthConfigForm.bp_dia_max,
+                        bgFastingMax: this.healthConfigForm.bg_fasting_max,
+                        stepTarget: this.healthConfigForm.step_target,
+                        sleepTarget: this.healthConfigForm.sleep_target
+                    });
+
+                    if (res.data.code === 200) {
+                        this.showToast('健康阈值保存成功，长辈已收到变更通知', 'success');
+                        this.showHealthConfigModal = false;
+                    } else {
+                        this.showToast(res.data.msg || '保存失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('保存健康配置失败:', e);
+                    this.showToast('保存失败，请重试', 'error');
+                } finally {
+                    this.savingHealthConfig = false;
+                }
+            },
+
+            async resetHealthConfigForm() {
+                if (!this.selectedElderForConfig) return;
+
+                try {
+                    const res = await axios.post(`/api/health/config/reset/${this.selectedElderForConfig.id}`);
+                    if (res.data.code === 200 && res.data.data) {
+                        this.healthConfigForm = {
+                            hr_min: res.data.data.hrMin || 50,
+                            hr_max: res.data.data.hrMax || 120,
+                            bo_min: res.data.data.boMin || 90,
+                            bp_sys_max: res.data.data.bpSysMax || 140,
+                            bp_dia_max: res.data.data.bpDiaMax || 90,
+                            bg_fasting_max: res.data.data.bgFastingMax || 7.0,
+                            step_target: res.data.data.stepTarget || 6000,
+                            sleep_target: res.data.data.sleepTarget || 7
+                        };
+                        this.showToast('已恢复默认设置，长辈已收到变更通知', 'success');
+                    } else {
+                        this.showToast(res.data.msg || '恢复默认失败', 'error');
+                    }
+                } catch (e) {
+                    console.error('恢复默认配置失败:', e);
+                    this.showToast('恢复默认失败', 'error');
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

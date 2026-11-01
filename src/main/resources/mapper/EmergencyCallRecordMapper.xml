@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.EmergencyCallRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.chat.older.xiechen.model.EmergencyCallRecord">
+        <id column="id" property="id"/>
+        <result column="elder_user_id" property="elderUserId"/>
+        <result column="elder_user_name" property="elderUserName"/>
+        <result column="call_type" property="callType"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="answered_by_user_id" property="answeredByUserId"/>
+        <result column="answered_by_user_name" property="answeredByUserName"/>
+        <result column="status" property="status"/>
+        <result column="notification_status" property="notificationStatus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.EmergencyCallRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO emergency_call_records (
+            elder_user_id, elder_user_name, call_type, start_time, 
+            status, notification_status, create_time, update_time
+        ) VALUES (
+            #{elderUserId}, #{elderUserName}, #{callType}, #{startTime},
+            #{status}, #{notificationStatus}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="update" parameterType="com.chat.older.xiechen.model.EmergencyCallRecord">
+        UPDATE emergency_call_records
+        <set>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="answeredByUserId != null">answered_by_user_id = #{answeredByUserId},</if>
+            <if test="answeredByUserName != null">answered_by_user_name = #{answeredByUserName},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="notificationStatus != null">notification_status = #{notificationStatus},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM emergency_call_records WHERE id = #{id}
+    </select>
+
+    <select id="selectActiveByElderId" resultMap="BaseResultMap">
+        SELECT * FROM emergency_call_records 
+        WHERE elder_user_id = #{elderUserId} 
+        AND status = 'calling'
+        ORDER BY create_time DESC 
+        LIMIT 1
+    </select>
+
+    <select id="selectByElderId" resultMap="BaseResultMap">
+        SELECT * FROM emergency_call_records 
+        WHERE elder_user_id = #{elderUserId} 
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM emergency_call_records 
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人信息设置 · 解尘颐安智慧社区管理平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="/js/admin-message-center.js"></script>
+    <!-- 替换你原来的 font-awesome 引入 -->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f9ff;
+            color: #1f2a3f;
+            padding: 24px 32px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        .app-container { max-width: 900px; margin: 0 auto; }
+        
+        .navbar {
+            background: rgba(11, 42, 65, 0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            box-shadow: 0 15px 30px -10px rgba(0, 30, 60, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .navbar-left h1 {
+            font-weight: 500;
+            font-size: 1.6rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            letter-spacing: -0.3px;
+        }
+        .back-link {
+            color: #a8ceff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .back-link:hover { color: white; }
+        .time-panel {
+            background: #153e5a;
+            padding: 8px 28px;
+            border-radius: 40px;
+            color: #cbd5e1;
+            text-align: right;
+            border: 1px solid #2f5575;
+        }
+        .time-panel .date { font-size: 0.9rem; color: #b0c9e0; }
+        .time-panel .clock { font-size: 1.7rem; font-weight: 350; color: white; line-height: 1.2; }
+        
+        .profile-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e0ebf7;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0, 45, 80, 0.15);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e8f0fa;
+        }
+        .profile-avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .profile-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.2rem;
+            font-weight: 600;
+            box-shadow: 0 8px 20px rgba(29, 90, 139, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .avatar-upload-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .profile-avatar:hover .avatar-upload-overlay {
+            opacity: 1;
+        }
+        .avatar-upload-overlay i {
+            color: white;
+            font-size: 1.5rem;
+        }
+        .profile-title h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #0d4e7c;
+            margin-bottom: 6px;
+        }
+        .profile-title .role-badge {
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            color: white;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .edit-btn {
+            background: #f0f7fe;
+            border: 1px solid #d2e2f5;
+            color: #1d5a8b;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .edit-btn:hover {
+            background: #1d5a8b;
+            color: white;
+            border-color: #1d5a8b;
+        }
+        .edit-btn.saving {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .info-section {
+            margin-bottom: 24px;
+        }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0d4e7c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title i { color: #1d5a8b; }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .info-item {
+            background: #f8fcff;
+            border: 1px solid #e0ebf7;
+            border-radius: 16px;
+            padding: 16px 20px;
+        }
+        .info-item.full-width { grid-column: span 2; }
+        .info-label {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .info-label i { color: #1d5a8b; opacity: 0.7; }
+        .info-value {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #1f3249;
+        }
+        .info-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #d2e2f5;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1f3249;
+            background: white;
+            transition: all 0.2s;
+        }
+        .info-input:focus {
+            outline: none;
+            border-color: #1d5a8b;
+            box-shadow: 0 0 0 3px rgba(29, 90, 139, 0.1);
+        }
+        .info-input:disabled {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-weight: 600;
+            color: #1f3249;
+        }
+        
+        .password-section {
+            background: linear-gradient(135deg, rgba(29, 90, 139, 0.05), rgba(10, 59, 98, 0.02));
+            border: 1px dashed #1d5a8b;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .password-section-title {
+            font-weight: 600;
+            color: #0d4e7c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .password-section-title i { color: #1d5a8b; }
+        .password-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .password-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .password-item label {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .password-item input {
+            padding: 10px 14px;
+            border: 1px solid #d2e2f5;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .password-item input:focus {
+            outline: none;
+            border-color: #1d5a8b;
+            box-shadow: 0 0 0 3px rgba(29, 90, 139, 0.1);
+        }
+        .password-error {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e8f0fa;
+        }
+        .btn {
+            padding: 12px 28px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1d5a8b, #0a3b62);
+            color: white;
+            box-shadow: 0 4px 12px rgba(29, 90, 139, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(29, 90, 139, 0.4);
+        }
+        .btn-secondary {
+            background: #f0f7fe;
+            color: #1d5a8b;
+            border: 1px solid #d2e2f5;
+        }
+        .btn-secondary:hover {
+            background: #e0ebf7;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .logout-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e8f0fa;
+            display: flex;
+            justify-content: center;
+        }
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 12px 40px;
+        }
+        .btn-logout:hover {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+        
+        .community-info-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(5, 150, 105, 0.03));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+        .community-info-title {
+            font-weight: 600;
+            color: #047857;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .community-info-title i { color: #10b981; }
+        .community-info-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .community-info-item {
+            background: white;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(16, 185, 129, 0.15);
+        }
+        .community-info-item .label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .community-info-item .value {
+            font-weight: 600;
+            color: #047857;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .toast.success { background: #10b981; color: white; }
+        .toast.error { background: #ef4444; color: white; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #1d5a8b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        [v-cloak] { display: none; }
+        
+        @media screen and (max-width: 600px) {
+            body { padding: 16px; }
+            .navbar { padding: 10px 16px; }
+            .navbar-left h1 { font-size: 1.3rem; }
+            .time-panel { padding: 6px 16px; }
+            .time-panel .clock { font-size: 1.4rem; }
+            .profile-card { padding: 20px; }
+            .profile-header { flex-direction: column; gap: 20px; align-items: flex-start; }
+            .info-grid { grid-template-columns: 1fr; }
+            .info-item.full-width { grid-column: span 1; }
+            .password-grid { grid-template-columns: 1fr; }
+            .action-buttons { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak class="app-container">
+    <div v-if="initialLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <header class="navbar">
+        <div class="navbar-left">
+            <h1>
+                <a href="admin_index.html" class="back-link"><i class="fa fa-angle-left"></i></a>
+                <i class="fa fa-cog" style="color:#1d5a8b;"></i> 个人信息设置
+            </h1>
+        </div>
+        <div class="time-panel">
+            <div class="date">{{ currentDate }}</div>
+            <div class="clock">{{ currentTime }}</div>
+        </div>
+    </header>
+
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar-section">
+                <div class="profile-avatar" @click="triggerAvatarUpload" :style="form.avatar ? { backgroundImage: `url(${form.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}" style="cursor: pointer; position: relative;">
+                    <span v-if="!form.avatar">{{ form.realName ? form.realName.charAt(0) : '管' }}</span>
+                    <div class="avatar-upload-overlay">
+                        <i class="fa fa-camera"></i>
+                    </div>
+                </div>
+                <input type="file" ref="avatarInput" accept="image/*" style="display:none;" @change="onAvatarChange">
+                <div class="profile-title">
+                    <h2>{{ form.nickname || '管理员' }}</h2>
+                    <span class="role-badge"><i class="fa fa-shield"></i> 社区负责人</span>
+                </div>
+            </div>
+            <button v-if="!isEditing" class="edit-btn" @click="enterEditMode">
+                <i class="fa fa-pencil"></i> 编辑信息
+            </button>
+        </div>
+
+        <div class="info-section">
+            <div class="section-title"><i class="fa fa-user"></i> 基本信息</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label"><i class="fa fa-user-circle"></i> 昵称</div>
+                    <input v-if="isEditing" type="text" class="info-input" v-model="form.nickname" placeholder="请输入昵称" maxlength="30">
+                    <div v-else class="info-value">{{ form.nickname || '—' }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label"><i class="fa fa-id-card"></i> 真实姓名</div>
+                    <input v-if="isEditing" type="text" class="info-input" v-model="form.realName" placeholder="请输入真实姓名" maxlength="20">
+                    <div v-else class="info-value">{{ form.realName || '—' }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label"><i class="fa fa-phone"></i> 联系方式</div>
+                    <input v-if="isEditing" type="tel" class="info-input" v-model="form.phone" placeholder="请输入联系电话" maxlength="20">
+                    <div v-else class="info-value">{{ form.phone || '—' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="isEditing" class="password-section">
+            <div class="password-section-title"><i class="fa fa-lock"></i> 修改密码 (可选)</div>
+            <div class="password-grid">
+                <div class="password-item">
+                    <label>当前密码</label>
+                    <input type="password" v-model="passwordForm.oldPassword" placeholder="输入当前密码">
+                </div>
+                <div class="password-item">
+                    <label>新密码</label>
+                    <input type="password" v-model="passwordForm.newPassword" placeholder="6-20位字符">
+                </div>
+                <div class="password-item">
+                    <label>确认新密码</label>
+                    <input type="password" v-model="passwordForm.confirmPassword" placeholder="再次输入新密码">
+                </div>
+            </div>
+            <div v-if="passwordError" class="password-error">
+                <i class="fa fa-exclamation-circle"></i> {{ passwordError }}
+            </div>
+        </div>
+
+        <div v-if="isEditing" class="action-buttons">
+            <button class="btn btn-primary" @click="saveChanges" :disabled="saving">
+                <i class="fa" :class="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                {{ saving ? '保存中...' : '保存修改' }}
+            </button>
+            <button class="btn btn-secondary" @click="cancelEdit" :disabled="saving">
+                <i class="fa fa-times"></i> 取消
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-card">
+        <div class="community-info-card">
+            <div class="community-info-title"><i class="fa fa-building"></i> 所属社区</div>
+            <div class="community-info-content">
+                <div class="community-info-item">
+                    <div class="label">社区名称</div>
+                    <div class="value">{{ communityInfo.name || '—' }}</div>
+                </div>
+                <div class="community-info-item">
+                    <div class="label">联系电话</div>
+                    <div class="value">{{ communityInfo.phone || '—' }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="logout-section">
+            <button class="btn btn-logout" @click="logout">
+                <i class="fa fa-sign-out"></i> 退出登录
+            </button>
+        </div>
+    </div>
+
+    <div class="toast" :class="toast.type" v-if="toast.show">
+        <i class="fa" :class="toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+        {{ toast.message }}
+    </div>
+</div>
+
+<script>
+const { createApp, ref, reactive, onMounted } = Vue;
+
+createApp({
+    setup() {
+        const currentTime = ref('');
+        const currentDate = ref('');
+        const initialLoading = ref(true);
+        const isEditing = ref(false);
+        const saving = ref(false);
+        const passwordError = ref('');
+
+        const form = reactive({
+            nickname: '',
+            realName: '',
+            phone: '',
+            avatar: ''
+        });
+
+        const originalForm = reactive({
+            nickname: '',
+            realName: '',
+            phone: ''
+        });
+
+        const passwordForm = reactive({
+            oldPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+        });
+
+        const communityInfo = reactive({
+            name: '',
+            phone: ''
+        });
+
+        const toast = reactive({ show: false, message: '', type: 'success' });
+
+        const showToast = (message, type = 'success') => {
+            toast.message = message;
+            toast.type = type;
+            toast.show = true;
+            setTimeout(() => { toast.show = false; }, 3000);
+        };
+
+        const updateTime = () => {
+            const d = new Date();
+            currentTime.value = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+            const w = ['周日','周一','周二','周三','周四','周五','周六'];
+            currentDate.value = d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+w[d.getDay()];
+        };
+
+        const loadUserInfo = async () => {
+            try {
+                const res = await fetch('/api/admin/profile');
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    const user = data.data.user || {};
+                    const community = data.data.community || {};
+                    
+                    form.nickname = user.nickname || '';
+                    form.realName = user.realName || '';
+                    form.phone = user.phone || '';
+                    form.avatar = user.avatar || '';
+                    
+                    originalForm.nickname = form.nickname;
+                    originalForm.realName = form.realName;
+                    originalForm.phone = form.phone;
+
+                    communityInfo.name = community.name || '';
+                    communityInfo.phone = community.phone || '';
+                } else {
+                    showToast(data.msg || '获取用户信息失败', 'error');
+                }
+            } catch (e) {
+                console.error('加载用户信息失败', e);
+                showToast('加载失败，请刷新重试', 'error');
+            } finally {
+                initialLoading.value = false;
+            }
+        };
+
+        const enterEditMode = () => {
+            isEditing.value = true;
+            passwordForm.oldPassword = '';
+            passwordForm.newPassword = '';
+            passwordForm.confirmPassword = '';
+            passwordError.value = '';
+        };
+
+        const cancelEdit = () => {
+            isEditing.value = false;
+            form.nickname = originalForm.nickname;
+            form.realName = originalForm.realName;
+            form.phone = originalForm.phone;
+            passwordForm.oldPassword = '';
+            passwordForm.newPassword = '';
+            passwordForm.confirmPassword = '';
+            passwordError.value = '';
+        };
+
+        const validateForm = () => {
+            if (!form.nickname || !form.nickname.trim()) {
+                showToast('请输入昵称', 'error');
+                return false;
+            }
+            if (!form.realName || !form.realName.trim()) {
+                showToast('请输入真实姓名', 'error');
+                return false;
+            }
+
+            if (passwordForm.oldPassword || passwordForm.newPassword || passwordForm.confirmPassword) {
+                if (!passwordForm.oldPassword) {
+                    passwordError.value = '请输入当前密码';
+                    return false;
+                }
+                if (!passwordForm.newPassword) {
+                    passwordError.value = '请输入新密码';
+                    return false;
+                }
+                if (passwordForm.newPassword.length < 6 || passwordForm.newPassword.length > 20) {
+                    passwordError.value = '新密码长度需为6-20位';
+                    return false;
+                }
+                if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+                    passwordError.value = '两次输入的新密码不一致';
+                    return false;
+                }
+            }
+
+            passwordError.value = '';
+            return true;
+        };
+
+        const saveChanges = async () => {
+            if (!validateForm()) return;
+
+            saving.value = true;
+            try {
+                const payload = {
+                    nickname: form.nickname,
+                    realName: form.realName,
+                    phone: form.phone
+                };
+
+                if (passwordForm.oldPassword && passwordForm.newPassword) {
+                    payload.oldPassword = passwordForm.oldPassword;
+                    payload.newPassword = passwordForm.newPassword;
+                }
+
+                const res = await fetch('/api/admin/profile/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    showToast('保存成功');
+                    originalForm.nickname = form.nickname;
+                    originalForm.realName = form.realName;
+                    originalForm.phone = form.phone;
+                    isEditing.value = false;
+                    passwordForm.oldPassword = '';
+                    passwordForm.newPassword = '';
+                    passwordForm.confirmPassword = '';
+                } else {
+                    showToast(data.msg || '保存失败', 'error');
+                }
+            } catch (e) {
+                console.error('保存失败', e);
+                showToast('保存失败，请检查网络', 'error');
+            } finally {
+                saving.value = false;
+            }
+        };
+
+        onMounted(() => {
+            updateTime();
+            setInterval(updateTime, 1000);
+            loadUserInfo();
+        });
+
+        const avatarInput = ref(null);
+
+        const triggerAvatarUpload = () => {
+            avatarInput.value.click();
+        };
+
+        const onAvatarChange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                showToast('请选择图片文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/user/avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.code === 200 && data.data && data.data.url) {
+                    form.avatar = data.data.url;
+                    showToast('头像上传成功');
+                } else {
+                    showToast(data.msg || '头像上传失败', 'error');
+                }
+            } catch (err) {
+                console.error('头像上传失败', err);
+                showToast('头像上传失败，请检查网络', 'error');
+            }
+            
+            e.target.value = '';
+        };
+
+        const logout = () => {
+            if (!confirm('确定要退出登录吗？')) {
+                return;
+            }
+            fetch('/api/user/logout', {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                window.location.href = 'login.html';
+            })
+            .catch(err => {
+                window.location.href = 'login.html';
+            });
+        };
+
+        return {
+            currentTime, currentDate, initialLoading, isEditing, saving,
+            form, passwordForm, passwordError, communityInfo, toast,
+            avatarInput,
+            enterEditMode, cancelEdit, saveChanges,
+            triggerAvatarUpload, onAvatarChange, logout
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
+
+
+

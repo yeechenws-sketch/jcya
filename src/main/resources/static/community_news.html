@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <title>社区新闻 - 解尘颐安养老平台</title>
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="/js/global-mqtt-manager.js"></script>
+    <script src="/js/global-message-center.js"></script>
+    <script src="/js/user-settings-manager.js"></script>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <style>
+        :root{
+            --primary: #4361EE;
+            --primary-600: #3759d9;
+            --primary-light: rgba(67, 97, 238, 0.2);
+            --glass-bg: rgba(255,255,255,0.15);
+            --glass-border: rgba(255,255,255,0.3);
+            --blur: 45px;
+            --card-radius: 22px;
+            --text: #1E293B;
+            --muted: #64748b;
+            --max-width: 1320px;
+            --gap: 22px;
+            --community-color: #10b981;
+            --community-light: rgba(16, 185, 129, 0.2);
+            font-family: 'PingFang SC','Microsoft YaHei',system-ui,Arial,Helvetica;
+        }
+        *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+        html,body{
+            height:100%;margin:0;padding:0;
+            background:linear-gradient(135deg,#e7eef8 0%,#f6fbff 100%);
+            color:var(--text);overflow-y:auto;
+        }
+        button{font-family:inherit;border:none;cursor:pointer;background:transparent}
+        a{text-decoration: none; color: inherit;}
+        .topbar{
+            position:fixed;left:0;right:0;top:0;
+            height:96px;
+            display:flex;align-items:center;justify-content:space-between;
+            padding:0 28px;
+            background:var(--glass-bg);
+            backdrop-filter:blur(var(--blur)) saturate(180%);
+            -webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+            border-bottom:1px solid var(--glass-border);
+            z-index:9999;
+        }
+        .top-left{display:flex;align-items:center;gap:16px}
+        .btn-back{color:#16317a;font-size:34px;font-weight:700;padding:6px 8px}
+        .logo{font-size:34px;font-weight:900;color:#16317a;letter-spacing:1px}
+        .top-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+        .time{font-weight:900;font-size:36px;color:var(--primary);line-height:1}
+        .date{color:var(--muted);font-weight:700;font-size:14px}
+        .container {
+            max-width:var(--max-width);
+            margin:120px auto 60px;
+            padding:0 20px;
+        }
+        .card{
+            background:var(--glass-bg);
+            border-radius:var(--card-radius);
+            padding:30px;
+            box-shadow:0 18px 48px rgba(24,39,75,0.06);
+            border:1px solid var(--glass-border);
+            margin-bottom:var(--gap);
+        }
+        .loading-box {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--muted);
+            font-size: 18px;
+        }
+        .error-box {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+        .error-box i { font-size: 48px; color: #ef4444; margin-bottom: 20px; }
+        .error-box p { font-size: 18px; margin-bottom: 20px; }
+        .error-box button {
+            padding: 12px 24px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title i { color: var(--community-color); }
+        .community-badge {
+            background: linear-gradient(135deg, var(--community-color), #059669);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .news-list { display: flex; flex-direction: column; gap: 16px; }
+        .news-item {
+            display: flex;
+            gap: 16px;
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.5);
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border-left: 4px solid var(--community-color);
+            position: relative;
+        }
+        .news-item.unread {
+            background: rgba(16, 185, 129, 0.08);
+            border-left: 4px solid #ef4444;
+        }
+        .news-item.unread::before {
+            content: '新';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+        }
+        .news-item:hover {
+            transform: translateX(8px);
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+        }
+        .news-item.unread:hover {
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .news-item .news-cover {
+            width: 160px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 12px;
+            flex-shrink: 0;
+            background: #e2e8f0;
+        }
+        .news-main { flex: 1; min-width: 0; }
+        .news-main h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .news-main p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .news-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .news-meta span { display: flex; align-items: center; gap: 4px; }
+        .category-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--community-light);
+            color: var(--community-color);
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .page-btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: #fff;
+            border: 1px solid var(--glass-border);
+            font-weight: 700;
+            color: var(--text);
+            transition: all 0.3s;
+        }
+        .page-btn:hover:not(:disabled) {
+            background: var(--community-color);
+            color: #fff;
+            border-color: var(--community-color);
+        }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .page-info { font-weight: 800; color: var(--muted); margin: 0 15px; }
+        .empty-tip {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+        .empty-tip i { font-size: 60px; margin-bottom: 20px; color: var(--muted); }
+        .empty-tip p { font-size: 18px; }
+
+        .news-content {
+            line-height: 1.8;
+            color: var(--text);
+            margin: 30px 0;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        .news-content.font-size-sm { font-size: 16px; }
+        .news-content.font-size-md { font-size: 18px; }
+        .news-content.font-size-lg { font-size: 20px; }
+
+        .news-content h1 { font-size: 1.8em; font-weight: 700; margin: 1em 0 0.5em; color: var(--text); }
+        .news-content h2 { font-size: 1.5em; font-weight: 700; margin: 1em 0 0.5em; color: var(--text); }
+        .news-content h3 { font-size: 1.25em; font-weight: 600; margin: 1em 0 0.5em; color: var(--text); }
+        .news-content p { margin: 0.8em 0; }
+        .news-content strong, .news-content b { font-weight: 700; }
+        .news-content em, .news-content i { font-style: italic; }
+        .news-content u { text-decoration: underline; }
+        .news-content s, .news-content del { text-decoration: line-through; }
+        .news-content ul, .news-content ol { margin: 1em 0; padding-left: 2em; }
+        .news-content li { margin: 0.5em 0; }
+        .news-content blockquote {
+            border-left: 4px solid var(--community-color);
+            padding-left: 1em;
+            margin: 1em 0;
+            color: var(--muted);
+            background: rgba(16, 185, 129, 0.05);
+            padding: 1em;
+            border-radius: 0 8px 8px 0;
+        }
+        .news-content pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1em;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+        .news-content code {
+            background: rgba(0,0,0,0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .news-content a {
+            color: var(--community-color);
+            text-decoration: underline;
+        }
+        .news-content a:hover {
+            color: #059669;
+        }
+
+        .news-content img {
+            max-width: 600px;
+            max-height: 500px;
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 1.5em auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            object-fit: contain;
+        }
+        .news-content img:hover {
+            transform: scale(1.02);
+        }
+
+        .news-content .ql-align-center { text-align: center; }
+        .news-content .ql-align-right { text-align: right; }
+        .news-content .ql-align-justify { text-align: justify; }
+
+        .news-content small { font-size: 0.85em; }
+        .news-content .ql-size-small { font-size: 0.75em; }
+        .news-content .ql-size-large { font-size: 1.5em; }
+        .news-content .ql-size-huge { font-size: 2em; }
+
+        .cover-image-wrapper {
+            margin: 20px 0 30px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        .cover-image-wrapper img {
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .font-size-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 16px;
+        }
+        .font-size-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .font-size-btn.active {
+            color: var(--primary);
+            border-color: var(--primary-light);
+            background: var(--primary-light);
+        }
+        h1 {
+            font-size: 32px;
+            color: var(--text);
+            margin-bottom: 15px;
+            font-weight: 900;
+            line-height: 1.3;
+        }
+        .meta {
+            color: var(--muted);
+            font-size: 14px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .meta span { margin-right: 20px; }
+        .community-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--community-light);
+            color: var(--community-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--community-color), #059669);
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .back-btn:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        .btn-like {
+            padding: 12px 35px;
+            border-radius: 999px;
+            border: 1px solid var(--community-color);
+            background: var(--glass-bg);
+            color: var(--community-color);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+        .btn-like.active {
+            background: var(--community-color);
+            color: #fff;
+            box-shadow:0 8px 24px var(--community-light);
+        }
+        .detail-section-title {
+            font-size: 22px;
+            border-left: 4px solid var(--community-color);
+            padding-left: 12px;
+            margin: 40px 0 20px;
+            font-weight: 900;
+            color: var(--text);
+        }
+        .rec-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 14px;
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .rec-item:hover{
+            transform:translateX(8px);
+            background:rgba(255,255,255,0.5);
+        }
+        .rec-item img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+            flex-shrink: 0;
+            background: #e2e8f0;
+        }
+        .rec-item p { margin:0; }
+        .rec-item p:first-child { font-weight:bold; color:var(--text); font-size: 16px; }
+        .rec-item p:last-child { margin:5px 0; font-size:12px; color:var(--muted); }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            box-sizing: border-box;
+            background: var(--glass-bg);
+            font-family: inherit;
+            font-size: 16px;
+            color: var(--text);
+        }
+        textarea::placeholder { color: var(--muted); }
+        .btn-submit {
+            margin-top: 10px;
+            padding: 12px 24px;
+            background: var(--community-color);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            float: right;
+            font-weight: 700;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover { background: #059669; }
+        .comment-list { clear: both; margin-top: 40px; padding-top: 20px; }
+        .comment-item { border-bottom: 1px solid var(--glass-border); padding: 20px 0; }
+        .comment-user { font-weight: bold; color: var(--community-color); margin-bottom: 5px; }
+        .reply-list {
+            background: var(--glass-bg);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 14px;
+            font-size: 14px;
+            border:1px solid var(--glass-border);
+        }
+        .empty-comment { text-align: center; padding: 30px; color: var(--muted); font-size: 16px; }
+        .reply-input-wrap { margin-top: 10px; display: flex; gap: 10px; }
+        .reply-input-wrap input {
+            flex:1;
+            padding: 12px;
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            background: var(--glass-bg);
+            color: var(--text);
+        }
+        .reply-input-wrap button {
+            padding: 0 20px;
+            background: var(--community-color);
+            color: #fff;
+            border-radius: 999px;
+            font-weight: 700;
+            transition: background 0.2s;
+        }
+        .reply-input-wrap button:hover { background: #059669; }
+        .reply-action { margin-top: 10px; font-size: 13px; color: var(--community-color); }
+        .reply-action span {
+            cursor:pointer;
+            font-weight: 700;
+            margin-right: 15px;
+            transition: color 0.2s;
+        }
+        .reply-action span:hover { color: #059669; }
+        .ai-summary-btn {
+            position: fixed;
+            bottom: 50px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            cursor: pointer;
+            z-index: 9999;
+            transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .ai-summary-btn:hover { transform: scale(1.1) rotate(-5deg); }
+        .ai-summary-btn i { font-size: 20px; margin-bottom: 2px; }
+        .ai-summary-btn span { font-size: 10px; }
+        .summary-bubble {
+            position: fixed;
+            bottom: 120px;
+            right: 30px;
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px 15px 5px 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            padding: 20px;
+            z-index: 9999;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            animation: slideUp 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .bubble-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .bubble-title { font-weight: bold; color: var(--community-color); font-size: 16px; }
+        .bubble-close { cursor: pointer; color: #999; padding: 5px; }
+        .bubble-content {
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .btn-voice {
+            background: var(--community-light);
+            color: var(--community-color);
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-voice:hover { background: var(--community-color); color: white; }
+        .btn-voice.playing {
+            background: var(--community-color); color: white;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .image-lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            cursor: zoom-out;
+        }
+        .image-lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .news-item { flex-direction: column; }
+            .news-item .news-cover { width: 100%; height: 180px; }
+            .news-content img { max-width: 100%; max-height: 350px; }
+            .cover-image-wrapper img { max-height: 250px; }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="top-left">
+        <button class="btn-back" id="topBackBtn" onclick="handleTopBack()">
+            <i class="fa fa-angle-left"></i> 返回
+        </button>
+    </div>
+    <div class="logo" id="pageTitle">社区新闻</div>
+    <div class="top-right">
+        <div class="time" id="timeNow">00:00</div>
+        <div class="date" id="dateNow">01月01日 星期一</div>
+    </div>
+</header>
+
+<script>
+function handleTopBack() {
+    const params = new URLSearchParams(window.location.search);
+    const newsId = params.get('id');
+    if (newsId) {
+        window.location.href = 'community_news.html';
+    } else {
+        window.location.href = 'news.html';
+    }
+}
+</script>
+
+<div id="app" class="container">
+    <div v-if="hasError" class="card error-box">
+        <i class="fa fa-exclamation-circle"></i>
+        <p>{{ errorMessage }}</p>
+        <button onclick="history.back()">返回上一页</button>
+    </div>
+
+    <template v-else-if="isListMode">
+        <div class="card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fa fa-building"></i> 社区新闻
+                    <span v-if="communityName" class="community-badge">{{ communityName }}</span>
+                </div>
+            </div>
+            
+            <div v-if="newsList.length > 0" class="news-list">
+                <div v-for="item in newsList" :key="item.id" 
+                     class="news-item" 
+                     :class="{ unread: !readIds.includes(item.id) }"
+                     @click="goToDetail(item.id)">
+                    <img v-if="item.coverImage" :src="item.coverImage" alt="" class="news-cover">
+                    <div v-else class="news-cover" style="display:flex;align-items:center;justify-content:center;background:#e2e8f0;">
+                        <i class="fa fa-newspaper-o" style="font-size:32px;color:#94a3b8;"></i>
+                    </div>
+                    <div class="news-main">
+                        <h3>{{ item.title }}</h3>
+                        <p>{{ getPlainText(item.content) }}</p>
+                        <div class="news-meta">
+                            <span class="category-tag">{{ item.category || '社区公告' }}</span>
+                            <span><i class="fa fa-clock-o"></i> {{ formatDate(item.publishTime) }}</span>
+                            <span><i class="fa fa-eye"></i> {{ item.viewCount || 0 }}</span>
+                            <span><i class="fa fa-thumbs-o-up"></i> {{ item.likeCount || 0 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="empty-tip">
+                <i class="fa fa-newspaper-o"></i>
+                <p>暂无社区新闻</p>
+            </div>
+
+            <div v-if="totalPages > 1" class="pagination">
+                <button class="page-btn" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)">
+                    <i class="fa fa-chevron-left"></i> 上一页
+                </button>
+                <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
+                <button class="page-btn" :disabled="currentPage >= totalPages" @click="changePage(currentPage + 1)">
+                    下一页 <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <template v-else-if="news">
+        <div class="card">
+            <div class="back-btn" @click="goBackToList">
+                <i class="fa fa-arrow-left"></i> 返回列表
+            </div>
+            <header>
+                <h1>{{ news.title }}</h1>
+                <div class="meta">
+                    <div>
+                        <span class="community-tag">
+                            <i class="fa fa-home"></i>
+                            {{ news.communityName || '我的社区' }}
+                        </span>
+                        <span>分类：{{ news.category || '社区公告' }}</span>
+                        <span>发布：{{ formatDate(news.publishTime) }}</span>
+                        <span>阅读：{{ news.viewCount }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <div class="font-size-control">
+                            <span style="font-size: 14px; color: var(--muted);">字号：</span>
+                            <button class="font-size-btn" :class="{active: fontSize === 'sm'}" @click="fontSize = 'sm'">小</button>
+                            <button class="font-size-btn" :class="{active: fontSize === 'md'}" @click="fontSize = 'md'">中</button>
+                            <button class="font-size-btn" :class="{active: fontSize === 'lg'}" @click="fontSize = 'lg'">大</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div v-if="news.coverImage" class="cover-image-wrapper">
+                <img :src="news.coverImage" alt="封面图片" @click="openLightbox(news.coverImage)">
+            </div>
+
+            <div class="news-content" :class="`font-size-${fontSize}`" v-html="news.content || '<p>暂无新闻内容</p>'" @click="handleContentClick"></div>
+
+            <div style="text-align: center; margin: 40px 0;">
+                <button class="btn-like" :class="{active: isLiked}" @click="handleLike">
+                    <i class="fa fa-thumbs-up"></i> {{ isLiked ? '已点赞' : '点赞' }} {{ news.likeCount }}
+                </button>
+            </div>
+
+            <div class="detail-section-title">更多社区新闻</div>
+            <div v-for="item in recommendList" :key="item.id" class="rec-item" @click="goToDetail(item.id)">
+                <img :src="item.coverImage || 'https://via.placeholder.com/120x80?text=News'" @error="handleImageError">
+                <div>
+                    <p style="margin:0; font-weight:bold;">{{ item.title }}</p>
+                    <p style="margin:5px 0; font-size:12px; color:var(--muted);">{{ item.category }} · {{ formatDate(item.publishTime) }}</p>
+                </div>
+            </div>
+            <div v-if="recommendList.length === 0" style="text-align: center; color: var(--muted); padding: 20px;">
+                暂无更多社区新闻
+            </div>
+
+            <div class="detail-section-title">发表评论</div>
+            <textarea v-model="myComment" placeholder="写下你的看法..."></textarea>
+            <button class="btn-submit" @click="submitComment(null)">提交评论</button>
+
+            <div class="comment-list">
+                <div v-if="commentList && commentList.length > 0">
+                    <div v-for="c in commentList" :key="c.id" class="comment-item">
+                        <div class="comment-user">用户 {{ c.userId }}</div>
+                        <div>{{ c.content }}</div>
+
+                        <div class="reply-list" v-if="c.replies && c.replies.length > 0">
+                            <div v-for="r in c.replies" :key="r.id" style="margin-bottom:5px;">
+                                <strong>用户 {{ r.userId }}:</strong> {{ r.content }}
+                            </div>
+                        </div>
+
+                        <div class="reply-action">
+                            <span @click="activeReplyId = (activeReplyId === c.id ? null : c.id)">回复</span>
+                            <span><i class="fa fa-thumbs-o-up"></i> {{ c.likeCount }}</span>
+                        </div>
+
+                        <div v-if="activeReplyId === c.id" class="reply-input-wrap">
+                            <input v-model="myReply" :placeholder="'回复用户 '+c.userId">
+                            <button @click="submitComment(c.id)">发送</button>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-comment">
+                    暂无评论，快来抢沙发吧~
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-summary-btn" @click="toggleSummary">
+            <i class="fa fa-magic"></i>
+            <span>小智总结</span>
+        </div>
+
+        <div class="summary-bubble" v-if="showSummary">
+            <div class="bubble-header">
+                <span class="bubble-title">小智为您读社区新闻</span>
+                <i class="fa fa-times bubble-close" @click="showSummary = false"></i>
+            </div>
+            <div class="bubble-content" :class="`font-size-${fontSize}`">
+                <div v-if="summaryLoading" style="text-align: center; color: #666; padding: 20px;">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    <p style="margin-top:10px; font-size:12px;">正在阅读全文并总结...</p>
+                </div>
+                <div v-else>{{ summaryText || '暂无总结内容' }}</div>
+            </div>
+            <button v-if="!summaryLoading && summaryText"
+                    class="btn-voice"
+                    :class="{ playing: isSpeaking }"
+                    @click="toggleVoice">
+                <i class="fa" :class="isSpeaking ? 'fa-stop-circle' : 'fa-volume-up'"></i>
+                {{ isSpeaking ? '停止朗读' : '语音播报' }}
+            </button>
+        </div>
+
+        <div class="image-lightbox" v-if="lightboxImage" @click="lightboxImage = null">
+            <img :src="lightboxImage" alt="预览图片">
+        </div>
+    </template>
+
+    <div v-else class="loading-box">
+        <i class="fa fa-spinner fa-spin fa-2x"></i>
+        <p style="margin-top:10px">正在加载...</p>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, onMounted, computed, nextTick } = Vue;
+    const API_BASE = "/api";
+    axios.defaults.withCredentials = true;
+
+    function updateDateTime() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const weekDay = weekDays[now.getDay()];
+        document.getElementById('timeNow').textContent = `${hours}:${minutes}`;
+        document.getElementById('dateNow').textContent = `${month}月${day}日 ${weekDay}`;
+    }
+
+    updateDateTime();
+    setInterval(updateDateTime, 60000);
+
+    createApp({
+        setup() {
+            const isListMode = ref(true);
+            const news = ref(null);
+            const newsList = ref([]);
+            const recommendList = ref([]);
+            const commentList = ref([]);
+            const isLiked = ref(false);
+            const myComment = ref('');
+            const myReply = ref('');
+            const activeReplyId = ref(null);
+            const showSummary = ref(false);
+            const summaryText = ref("");
+            const summaryLoading = ref(false);
+            const isSpeaking = ref(false);
+            const hasError = ref(false);
+            const errorMessage = ref('');
+            const communityName = ref('');
+            const currentPage = ref(1);
+            const totalPages = ref(1);
+            const fontSize = ref('md');
+            const readIds = ref([]);
+            const lightboxImage = ref(null);
+            let audioPlayer = null;
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return "未知时间";
+                let date = new Date(dateStr);
+                if(isNaN(date.getTime())) return dateStr;
+                const y = date.getFullYear();
+                const m = (date.getMonth()+1).toString().padStart(2,0);
+                const d = date.getDate().toString().padStart(2,0);
+                const h = date.getHours().toString().padStart(2,0);
+                const min = date.getMinutes().toString().padStart(2,0);
+                return `${y}-${m}-${d} ${h}:${min}`;
+            };
+
+            const getPlainText = (html) => {
+                if (!html) return '';
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                const text = div.textContent || div.innerText || '';
+                return text.substring(0, 80) + (text.length > 80 ? '...' : '');
+            };
+
+            const handleImageError = (e) => {
+                e.target.src = 'https://via.placeholder.com/120x80?text=News';
+            };
+
+            const openLightbox = (src) => {
+                lightboxImage.value = src;
+            };
+
+            const handleContentClick = (e) => {
+                if (e.target.tagName === 'IMG') {
+                    openLightbox(e.target.src);
+                }
+            };
+
+            const loadList = async (page = 1) => {
+                try {
+                    const res = await axios.get(`${API_BASE}/news/community/list`, {
+                        params: { page, limit: 10 }
+                    });
+                    
+                    if (res.data.hasCommunity === false) {
+                        hasError.value = true;
+                        errorMessage.value = res.data.message || "您尚未加入任何社区";
+                        return;
+                    }
+
+                    newsList.value = res.data.list || [];
+                    currentPage.value = res.data.currentPage || 1;
+                    totalPages.value = res.data.totalPages || 1;
+                    readIds.value = res.data.readIds || [];
+                    
+                    if (newsList.value.length > 0 && newsList.value[0].communityName) {
+                        communityName.value = newsList.value[0].communityName;
+                    }
+                } catch (err) {
+                    console.error("加载列表失败:", err);
+                    hasError.value = true;
+                    errorMessage.value = "加载社区新闻失败，请稍后重试";
+                }
+            };
+
+            const loadDetail = async (id) => {
+                try {
+                    const newsRes = await axios.get(`${API_BASE}/news/community/detail/${id}`);
+                    if (newsRes.data && newsRes.data.success && newsRes.data.data) {
+                        news.value = newsRes.data.data;
+                        document.getElementById('pageTitle').textContent = '社区新闻详情';
+                        
+                        axios.post(`${API_BASE}/news/community/read/${id}?source=click`).then(() => {
+                            localStorage.setItem('communityNewsReadUpdated', Date.now().toString());
+                        }).catch(e => {
+                            console.log("标记已读失败:", e);
+                        });
+                    } else if (newsRes.data && !newsRes.data.success) {
+                        hasError.value = true;
+                        errorMessage.value = newsRes.data.message || "获取新闻失败";
+                        return;
+                    } else {
+                        hasError.value = true;
+                        errorMessage.value = "未找到该社区新闻或您无权查看";
+                        return;
+                    }
+
+                    const recRes = await axios.get(`${API_BASE}/news/community/list`, {
+                        params: { limit: 4 }
+                    });
+                    if(recRes.status === 200 && recRes.data.list) {
+                        recommendList.value = recRes.data.list.filter(item => item.id !== parseInt(id)).slice(0, 3);
+                    }
+
+                    const comRes = await axios.get(`${API_BASE}/news/comments/${id}`);
+                    if(comRes.status === 200) commentList.value = comRes.data || [];
+
+                } catch (err) {
+                    console.error("数据加载异常:", err);
+                    hasError.value = true;
+                    if (err.response && err.response.status === 401) {
+                        errorMessage.value = "请先登录后再查看社区新闻";
+                    } else if (err.response && err.response.status === 403) {
+                        errorMessage.value = "您没有权限查看该社区的新闻";
+                    } else {
+                        errorMessage.value = "数据加载失败，请稍后重试";
+                    }
+                }
+            };
+
+            const init = async () => {
+                const params = new URLSearchParams(window.location.search);
+                const newsId = params.get('id');
+                
+                if (newsId) {
+                    isListMode.value = false;
+                    await loadDetail(newsId);
+                } else {
+                    isListMode.value = true;
+                    const page = parseInt(params.get('page')) || 1;
+                    await loadList(page);
+                }
+            };
+
+            const changePage = (page) => {
+                window.location.href = `community_news.html?page=${page}`;
+            };
+
+            const goToDetail = (id) => {
+                window.location.href = `community_news.html?id=${id}`;
+            };
+
+            const handleLike = async () => {
+                try {
+                    const res = await axios.post(`${API_BASE}/news/like?newsId=${news.value.id}`);
+                    if (res.data === '点赞成功') {
+                        news.value.likeCount++;
+                        isLiked.value = true;
+                    } else if(res.data === '取消点赞成功') {
+                        news.value.likeCount--;
+                        isLiked.value = false;
+                    } else {
+                        alert(res.data);
+                    }
+                } catch (err) {
+                    console.error("点赞失败：", err);
+                    alert("点赞操作失败，请稍后重试");
+                }
+            };
+
+            const submitComment = async (parentId) => {
+                const content = parentId ? myReply.value : myComment.value;
+                const trimContent = content?.trim();
+                if (!trimContent) {
+                    alert("评论内容不能为空！");
+                    return;
+                }
+
+                try {
+                    const res = await axios.post(`${API_BASE}/news/comment/add`, {
+                        newsId: news.value.id,
+                        content: trimContent,
+                        parentId: parentId
+                    });
+
+                    if (res.data === "请先登录") {
+                        alert("请先登录后再评论！");
+                        return;
+                    }
+                    alert(parentId ? "回复成功！" : "评论成功！");
+                    myComment.value = '';
+                    myReply.value = '';
+                    activeReplyId.value = null;
+                    await loadDetail(news.value.id);
+                } catch (e) {
+                    console.error("评论失败：", e);
+                    alert("评论失败：请检查是否登录或后端服务是否正常");
+                }
+            };
+
+            const toggleSummary = async () => {
+                if (!news.value) {
+                    alert("新闻内容未加载完成，无法总结！");
+                    return;
+                }
+                showSummary.value = !showSummary.value;
+
+                if (showSummary.value && !summaryText.value) {
+                    summaryLoading.value = true;
+                    try {
+                        const res = await axios.get(`/news/summary/${news.value.id}?type=community`);
+                        summaryText.value = res.data || '暂无总结内容';
+                    } catch (e) {
+                        console.error("AI总结请求失败：", e);
+                        summaryText.value = "抱歉，小智现在有点累，连接不上服务器了。";
+                    } finally {
+                        summaryLoading.value = false;
+                    }
+                }
+            };
+
+            const toggleVoice = () => {
+                if (isSpeaking.value) {
+                    if (audioPlayer) {
+                        audioPlayer.pause();
+                        audioPlayer = null;
+                    }
+                    isSpeaking.value = false;
+                } else {
+                    if (!summaryText.value) return;
+                    const text = encodeURIComponent(summaryText.value);
+                    const url = `${API_BASE}/tts/speak?text=${text}&t=${Date.now()}`;
+                    audioPlayer = new Audio(url);
+                    isSpeaking.value = true;
+                    audioPlayer.play().catch(e => {
+                        console.error("播放失败", e);
+                        isSpeaking.value = false;
+                    });
+                    audioPlayer.onended = () => { isSpeaking.value = false; };
+                }
+            };
+
+            const goBackToList = () => {
+                window.location.href = 'community_news.html';
+            };
+
+            onMounted(() => {
+                init();
+                
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && isListMode.value) {
+                        loadList(currentPage.value);
+                    }
+                });
+            });
+
+            return {
+                isListMode, news, newsList, recommendList, commentList,
+                isLiked, myComment, myReply, activeReplyId,
+                showSummary, summaryText, summaryLoading, isSpeaking,
+                hasError, errorMessage, communityName,
+                currentPage, totalPages, fontSize, readIds, lightboxImage,
+                formatDate, getPlainText, handleImageError, openLightbox, handleContentClick,
+                changePage, goToDetail, handleLike, submitComment,
+                toggleSummary, toggleVoice, goBackToList
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+
+

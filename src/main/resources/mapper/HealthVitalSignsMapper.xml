@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.HealthVitalSignsMapper">
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.HealthVitalSigns" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO health_vital_signs (user_id, type, value1, value2, status, device_id, remark, create_time, update_time)
+        VALUES (#{userId}, #{type}, #{value1}, #{value2}, #{status}, #{deviceId}, #{remark}, #{createTime}, #{updateTime})
+    </insert>
+
+    <select id="selectById" parameterType="java.lang.Long" resultType="com.chat.older.xiechen.model.HealthVitalSigns">
+        SELECT * FROM health_vital_signs WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserIdAndType" resultType="com.chat.older.xiechen.model.HealthVitalSigns">
+        SELECT * FROM health_vital_signs
+        WHERE user_id = #{userId} AND type = #{type}
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectByUserIdAndTimeRange" resultType="com.chat.older.xiechen.model.HealthVitalSigns">
+        SELECT * FROM health_vital_signs
+        WHERE user_id = #{userId} AND create_time BETWEEN #{startTime} AND #{endTime}
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="selectLatestByUserId" resultType="com.chat.older.xiechen.model.HealthVitalSigns">
+        SELECT h.* FROM health_vital_signs h
+        INNER JOIN (
+            SELECT user_id, type, MAX(create_time) as max_time
+            FROM health_vital_signs
+            WHERE user_id = #{userId} AND type IN
+            <foreach item="type" collection="types" open="(" separator="," close=")">
+                #{type}
+            </foreach>
+            GROUP BY user_id, type
+        ) latest ON h.user_id = latest.user_id AND h.type = latest.type AND h.create_time = latest.max_time
+    </select>
+
+    <update id="updateStatus">
+        UPDATE health_vital_signs SET status = #{status} WHERE id = #{id}
+    </update>
+</mapper>

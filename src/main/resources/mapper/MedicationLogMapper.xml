@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.MedicationLogMapper">
+    <resultMap id="MedicationLogResultMap" type="com.chat.older.xiechen.model.MedicationLog">
+        <id property="id" column="id"/>
+        <result property="userMedicineId" column="user_medicine_id"/>
+        <result property="scheduledTime" column="scheduled_time"/>
+        <result property="takenTime" column="taken_time"/>
+        <result property="dosageTaken" column="dosage_taken"/>
+        <result property="status" column="status"/>
+        <result property="source" column="source"/>
+        <result property="createTime" column="create_time"/>
+        <result property="medicineName" column="medicine_name"/>
+        <result property="doseUnit" column="dose_unit"/>
+        <result property="reminderTimes" column="reminder_times"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.MedicationLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO medication_logs (user_medicine_id, scheduled_time, taken_time, dosage_taken, status, source, create_time)
+        VALUES (#{userMedicineId}, #{scheduledTime}, #{takenTime}, #{dosageTaken}, #{status}, #{source}, NOW())
+    </insert>
+
+    <update id="updateTaken">
+        UPDATE medication_logs 
+        SET taken_time = #{takenTime}, dosage_taken = #{dosageTaken}, status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectByUserMedicineId" resultMap="MedicationLogResultMap">
+        SELECT ml.*, um.custom_name as medicine_name, um.dose_unit
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        WHERE ml.user_medicine_id = #{userMedicineId}
+        ORDER BY ml.scheduled_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectPendingByUserId" resultMap="MedicationLogResultMap">
+        SELECT ml.*, COALESCE(um.custom_name, mi.name) as medicine_name, um.dose_unit
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.user_id = #{userId} AND ml.status = 'pending'
+        ORDER BY ml.scheduled_time ASC
+    </select>
+
+    <select id="selectTodayByUserId" resultMap="MedicationLogResultMap">
+        SELECT ml.*, COALESCE(um.custom_name, mi.name) as medicine_name, um.dose_unit, um.reminder_times
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.user_id = #{userId} AND DATE(ml.scheduled_time) = CURDATE()
+        ORDER BY ml.scheduled_time ASC
+    </select>
+
+    <select id="selectTodayByUserMedicineId" resultMap="MedicationLogResultMap">
+        SELECT ml.*, um.custom_name as medicine_name, um.dose_unit
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        WHERE ml.user_medicine_id = #{userMedicineId} AND DATE(ml.scheduled_time) = CURDATE()
+        ORDER BY ml.scheduled_time ASC
+    </select>
+
+    <select id="selectPendingByUserMedicineAndTime" resultMap="MedicationLogResultMap">
+        SELECT ml.*, um.custom_name as medicine_name, um.dose_unit, um.reminder_times
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        WHERE ml.user_medicine_id = #{userMedicineId} AND ml.scheduled_time = #{scheduledTime} AND ml.status IN ('pending', 'missed')
+        LIMIT 1
+    </select>
+
+    <select id="selectTakenTodayByUserMedicineAndTime" resultMap="MedicationLogResultMap">
+        SELECT ml.*, um.custom_name as medicine_name, um.dose_unit
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        WHERE ml.user_medicine_id = #{userMedicineId} 
+        AND ml.scheduled_time = #{scheduledTime}
+        AND ml.status IN ('taken', 'taken_early', 'taken_makeup')
+        ORDER BY ml.taken_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectLastTakenByUserMedicineId" resultMap="MedicationLogResultMap">
+        SELECT ml.*, um.custom_name as medicine_name, um.dose_unit
+        FROM medication_logs ml
+        LEFT JOIN user_medicines um ON ml.user_medicine_id = um.id
+        WHERE ml.user_medicine_id = #{userMedicineId} 
+        AND ml.status = 'taken'
+        AND ml.taken_time IS NOT NULL
+        ORDER BY ml.taken_time DESC
+        LIMIT 1
+    </select>
+
+    <delete id="deleteFuturePendingLogs">
+        DELETE FROM medication_logs 
+        WHERE user_medicine_id = #{userMedicineId}
+        AND status = 'pending'
+        AND scheduled_time &gt; #{afterTime}
+    </delete>
+</mapper>

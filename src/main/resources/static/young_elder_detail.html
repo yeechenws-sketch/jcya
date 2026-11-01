@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>长辈详情 - 智慧养老 -解尘颐安</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --primary-light: #3B82F6;
+            --primary-lighter: #60A5FA;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --text-light: #94A3B8;
+            --bg-light: #EFF6FF;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --bg-page: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+            --border: #E2E8F0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-page);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .back-btn i {
+            font-size: 18px;
+            color: white;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            padding-bottom: 40px;
+        }
+
+        .profile-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid var(--primary-light);
+            object-fit: cover;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .profile-relation {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            background: var(--bg-light);
+            border-radius: 12px;
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .profile-phone {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .add-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .contact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-light);
+            border-radius: 14px;
+            transition: all 0.2s;
+        }
+
+        .contact-item:hover {
+            background: #DBEAFE;
+        }
+
+        .contact-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-light);
+            object-fit: cover;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .emergency-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: var(--warning-light);
+            color: var(--warning);
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .contact-phone {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .contact-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .contact-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .contact-action-btn.call {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .contact-action-btn.call:hover {
+            background: var(--success);
+            color: white;
+        }
+
+        .contact-action-btn.delete {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .contact-action-btn.delete:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .contact-action-btn i {
+            font-size: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            opacity: 0.4;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--border);
+        }
+
+        .modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #E2E8F0;
+        }
+
+        .btn-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .info-hint {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .info-hint i {
+            color: var(--primary);
+            font-size: 18px;
+            margin-top: 2px;
+        }
+
+        .info-hint-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .info-hint-text strong {
+            color: var(--text);
+        }
+
+        .selectable-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .selectable-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-light);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .selectable-item:hover {
+            background: #DBEAFE;
+        }
+
+        .selectable-item.selected {
+            border-color: var(--primary);
+            background: var(--bg-light);
+        }
+
+        .selectable-item-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            object-fit: cover;
+        }
+
+        .selectable-item-info {
+            flex: 1;
+        }
+
+        .selectable-item-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .selectable-item-relation {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .selectable-item-check {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .selectable-item.selected .selectable-item-check {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .selectable-item-check i {
+            font-size: 12px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .selectable-item.selected .selectable-item-check i {
+            opacity: 1;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--text);
+            background: white;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .quick-action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            background: var(--bg-light);
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-action-btn:hover {
+            background: #DBEAFE;
+            transform: translateY(-2px);
+        }
+
+        .quick-action-btn i {
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .quick-action-btn span {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 16px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active i,
+        .nav-item.active span {
+            color: var(--primary);
+        }
+
+        .nav-item:hover i,
+        .nav-item:hover span {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--danger);
+            color: white;
+            border-radius: 8px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .main-content {
+            padding-bottom: 80px;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                max-width: 700px;
+                margin: 0 auto;
+                padding: 24px;
+                padding-bottom: 100px;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 12px 24px;
+                max-width: 1400px;
+                margin: 0 auto;
+                width: 100%;
+            }
+
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 20px 32px;
+                padding-bottom: 100px;
+            }
+
+            .profile-card,
+            .quick-actions,
+            .section {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .header {
+                padding: 10px 20px;
+            }
+
+            .main-content {
+                padding: 16px 24px;
+                padding-bottom: 100px;
+            }
+
+            .section {
+                padding: 16px;
+                margin-bottom: 12px;
+            }
+
+            .profile-card {
+                padding: 16px;
+            }
+
+            .profile-avatar {
+                width: 60px;
+                height: 60px;
+            }
+
+            .modal {
+                max-height: 90vh;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+
+            .header-title {
+                font-size: 16px;
+            }
+
+            .main-content {
+                padding: 12px 16px;
+                padding-bottom: 80px;
+            }
+
+            .section {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+
+            .profile-card {
+                padding: 12px;
+            }
+
+            .profile-avatar {
+                width: 50px;
+                height: 50px;
+            }
+
+            .profile-name {
+                font-size: 16px;
+            }
+
+            .quick-actions {
+                gap: 8px;
+            }
+
+            .action-btn {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            .contact-item {
+                padding: 10px 12px;
+            }
+
+            .modal {
+                max-height: 85vh;
+            }
+
+            .bottom-nav {
+                padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="back-btn" @click="goBack">
+                        <i class="fa fa-arrow-left"></i>
+                    </button>
+                    <span class="header-title">长辈详情</span>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="profile-card">
+                    <img :src="elderInfo.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + elderId" class="profile-avatar">
+                    <div class="profile-info">
+                        <div class="profile-name">{{ elderInfo.remark || elderInfo.nickname || '长辈' }}</div>
+                        <div class="profile-relation">
+                            <i class="fa fa-heart"></i>
+                            {{ elderInfo.relation || '家人' }}
+                        </div>
+                        <div class="profile-phone" v-if="elderInfo.phone">
+                            <i class="fa fa-phone"></i>
+                            {{ elderInfo.phone }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action-btn" @click="goToMedicine">
+                        <i class="fa fa-medkit"></i>
+                        <span>用药监控</span>
+                    </button>
+                    <button class="quick-action-btn" @click="goToHealth">
+                        <i class="fa fa-heartbeat"></i>
+                        <span>健康数据</span>
+                    </button>
+                    <button class="quick-action-btn" @click="callElder">
+                        <i class="fa fa-phone"></i>
+                        <span>拨打电话</span>
+                    </button>
+                    <button class="quick-action-btn" @click="sendMessage">
+                        <i class="fa fa-comment"></i>
+                        <span>发送消息</span>
+                    </button>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa fa-star"></i>
+                            紧急联系人
+                        </div>
+                        <button class="add-btn" @click="openAddModal">
+                            <i class="fa fa-plus"></i>
+                            添加
+                        </button>
+                    </div>
+
+                    <div v-if="emergencyContacts.length === 0" class="empty-state">
+                        <i class="fa fa-star-o"></i>
+                        <p>暂无紧急联系人<br>点击上方"添加"按钮为长辈添加紧急联系人</p>
+                    </div>
+
+                    <div v-else class="contact-list">
+                        <div v-for="contact in emergencyContacts" :key="contact.id" class="contact-item">
+                            <img :src="contact.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + contact.contactUserId" class="contact-avatar">
+                            <div class="contact-info">
+                                <div class="contact-name">
+                                    {{ contact.contactName || contact.nickname || '联系人' }}
+                                    <span class="emergency-badge">
+                                        <i class="fa fa-star"></i> 紧急联系人
+                                    </span>
+                                </div>
+                                <div class="contact-phone">
+                                    <i class="fa fa-phone"></i>
+                                    {{ contact.contactPhone || '未设置电话' }}
+                                </div>
+                            </div>
+                            <div class="contact-actions">
+                                <button class="contact-action-btn call" @click="callContact(contact)" title="拨打电话">
+                                    <i class="fa fa-phone"></i>
+                                </button>
+                                <button class="contact-action-btn delete" @click="removeContact(contact)" title="移除">
+                                    <i class="fa fa-trash-o"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <i class="fa fa-info-circle"></i>
+                            关于紧急联系人
+                        </div>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                        紧急联系人是在长辈遇到紧急情况时，系统会第一时间通知的人员。您可以添加多个紧急联系人，确保长辈的安全。
+                    </p>
+                </div>
+            </main>
+
+            <nav class="bottom-nav">
+                <div class="nav-item" @click="goToPage('home')">
+                    <i class="fa fa-home"></i>
+                    <span>首页</span>
+                </div>
+                <div class="nav-item" @click="goToPage('medicine')">
+                    <i class="fa fa-medkit"></i>
+                    <span>用药</span>
+                </div>
+                <div class="nav-item" @click="goToPage('health')">
+                    <i class="fa fa-heartbeat"></i>
+                    <span>健康</span>
+                </div>
+                <div class="nav-item" @click="goToPage('msg')">
+                    <i class="fa fa-commenting-o"></i>
+                    <span>消息</span>
+                    <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                </div>
+                <div class="nav-item" @click="goToPage('profile')">
+                    <i class="fa fa-user"></i>
+                    <span>我的</span>
+                </div>
+            </nav>
+        </div>
+
+        <div v-if="showAddModal" class="modal-overlay" @click.self="showAddModal = false">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">添加紧急联系人</span>
+                    <button class="modal-close" @click="showAddModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="info-hint">
+                        <i class="fa fa-info-circle"></i>
+                        <div class="info-hint-text">
+                            您正在为 <strong>{{ elderInfo.remark || elderInfo.nickname || '长辈' }}</strong> 添加紧急联系人。<br>
+                            请从您的家人列表中选择一位成员作为长辈的紧急联系人。
+                        </div>
+                    </div>
+
+                    <div v-if="familyList.length === 0" class="empty-state">
+                        <i class="fa fa-users"></i>
+                        <p>您的家人列表为空<br>请先在"个人设置"中添加家人</p>
+                    </div>
+
+                    <div v-else class="selectable-list">
+                        <div v-for="member in familyList" 
+                             :key="member.id" 
+                             :class="['selectable-item', selectedMember && selectedMember.id === member.id ? 'selected' : '']"
+                             @click="selectMember(member)">
+                            <img :src="member.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + member.id" class="selectable-item-avatar">
+                            <div class="selectable-item-info">
+                                <div class="selectable-item-name">{{ member.remark || member.nickname }}</div>
+                                <div class="selectable-item-relation">{{ member.relation || '家人' }}</div>
+                            </div>
+                            <div class="selectable-item-check">
+                                <i class="fa fa-check"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="selectedMember" class="form-group" style="margin-top: 16px;">
+                        <label class="form-label">联系人电话（可选）</label>
+                        <input type="tel" class="form-input" v-model="contactPhone" placeholder="请输入联系电话">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showAddModal = false">取消</button>
+                    <button class="btn btn-primary" @click="addContact" :disabled="!selectedMember || saving">
+                        <i class="fa fa-spinner fa-spin" v-if="saving"></i>
+                        <i class="fa fa-check" v-else></i>
+                        {{ saving ? '添加中...' : '确认添加' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showRemoveModal" class="modal-overlay" @click.self="showRemoveModal = false">
+            <div class="modal" style="max-width: 340px;">
+                <div class="modal-header">
+                    <span class="modal-title">确认移除</span>
+                    <button class="modal-close" @click="showRemoveModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="text-align: center; padding: 30px 20px;">
+                    <i class="fa fa-exclamation-triangle" style="font-size: 48px; color: var(--warning); margin-bottom: 16px;"></i>
+                    <p style="font-size: 15px; color: var(--text);">确定要移除该紧急联系人吗？</p>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">移除后，该联系人将不再接收长辈的紧急通知</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showRemoveModal = false">取消</button>
+                    <button class="btn btn-danger" @click="confirmRemove">确认移除</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast"></div>
+
+        <div v-if="pageLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    pageLoading: true,
+                    elderId: null,
+                    elderInfo: {},
+                    emergencyContacts: [],
+                    familyList: [],
+                    showAddModal: false,
+                    showRemoveModal: false,
+                    selectedMember: null,
+                    contactPhone: '',
+                    removingContact: null,
+                    saving: false,
+                    totalUnread: 0
+                };
+            },
+            mounted() {
+                const urlParams = new URLSearchParams(window.location.search);
+                this.elderId = urlParams.get('elderId');
+                if (this.elderId) {
+                    this.loadData();
+                    this.loadUnreadCount();
+                    this.setupMessageCallbacks();
+                } else {
+                    window.location.href = 'young_index.html';
+                }
+            },
+            methods: {
+                setupMessageCallbacks() {
+                    if (window.YoungMessageCenter) {
+                        YoungMessageCenter.onMessage((msg, contact) => {
+                            if (msg.fromId) {
+                                this.totalUnread++;
+                            }
+                        });
+                    }
+                },
+
+                async loadUnreadCount() {
+                    try {
+                        const res = await axios.get('/api/msg/unread/detail');
+                        if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                            let total = 0;
+                            res.data.data.forEach(item => {
+                                total += item.count || item.unreadCount || item.unread_count || 0;
+                            });
+                            this.totalUnread = total;
+                        }
+                    } catch (e) {
+                        console.error('加载未读消息数失败', e);
+                    }
+                },
+
+                async loadData() {
+                    try {
+                        const res = await axios.get('/api/user/info');
+                        if (res.data.code !== 200) {
+                            window.location.href = 'login.html';
+                            return;
+                        }
+                        
+                        await Promise.all([
+                            this.loadElderInfo(),
+                            this.loadEmergencyContacts(),
+                            this.loadFamilyList()
+                        ]);
+                    } catch (e) {
+                        console.error('加载数据失败', e);
+                    } finally {
+                        this.pageLoading = false;
+                    }
+                },
+
+                async loadElderInfo() {
+                    try {
+                        const res = await axios.get('/api/friend/list/ordered');
+                        if (res.data.code === 200) {
+                            const elder = (res.data.data || []).find(e => e.id == this.elderId);
+                            if (elder) {
+                                this.elderInfo = elder;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('加载长辈信息失败', e);
+                    }
+                },
+
+                async loadEmergencyContacts() {
+                    try {
+                        const res = await axios.get(`/api/emergency/elder/${this.elderId}`);
+                        if (res.data.code === 200) {
+                            this.emergencyContacts = res.data.data || [];
+                        }
+                    } catch (e) {
+                        console.error('加载紧急联系人失败', e);
+                    }
+                },
+
+                async loadFamilyList() {
+                    try {
+                        const res = await axios.get('/api/friend/list/ordered');
+                        if (res.data.code === 200) {
+                            this.familyList = (res.data.data || []).filter(f => f.id != this.elderId);
+                        }
+                    } catch (e) {
+                        console.error('加载家人列表失败', e);
+                    }
+                },
+
+                openAddModal() {
+                    this.selectedMember = null;
+                    this.contactPhone = '';
+                    this.showAddModal = true;
+                },
+
+                selectMember(member) {
+                    this.selectedMember = member;
+                    this.contactPhone = member.phone || '';
+                },
+
+                async addContact() {
+                    if (!this.selectedMember) {
+                        this.showToast('请选择一位家人', 'error');
+                        return;
+                    }
+
+                    this.saving = true;
+
+                    try {
+                        const res = await axios.post('/api/emergency/add-for-elder', {
+                            elderId: this.elderId,
+                            contactUserId: this.selectedMember.id,
+                            contactName: this.selectedMember.remark || this.selectedMember.nickname,
+                            contactPhone: this.contactPhone
+                        });
+
+                        if (res.data.code === 200) {
+                            this.showToast('添加成功', 'success');
+                            this.showAddModal = false;
+                            this.loadEmergencyContacts();
+                        } else {
+                            this.showToast(res.data.msg || '添加失败', 'error');
+                        }
+                    } catch (e) {
+                        console.error('添加失败', e);
+                        this.showToast('添加失败', 'error');
+                    } finally {
+                        this.saving = false;
+                    }
+                },
+
+                removeContact(contact) {
+                    this.removingContact = contact;
+                    this.showRemoveModal = true;
+                },
+
+                async confirmRemove() {
+                    if (!this.removingContact) return;
+
+                    try {
+                        const res = await axios.post('/api/emergency/remove-for-elder', {
+                            elderId: this.elderId,
+                            contactId: this.removingContact.id
+                        });
+
+                        if (res.data.code === 200) {
+                            this.showToast('已移除', 'success');
+                            this.showRemoveModal = false;
+                            this.loadEmergencyContacts();
+                        } else {
+                            this.showToast(res.data.msg || '移除失败', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('移除失败', 'error');
+                    } finally {
+                        this.removingContact = null;
+                    }
+                },
+
+                callContact(contact) {
+                    if (contact.contactPhone) {
+                        window.location.href = 'tel:' + contact.contactPhone;
+                    } else {
+                        this.showToast('该联系人未设置电话', 'error');
+                    }
+                },
+
+                callElder() {
+                    const myId = localStorage.getItem('user_id');
+                    const myName = localStorage.getItem('nickname') || '子女';
+                    const peerId = this.elderId;
+                    const peerName = encodeURIComponent(this.elderInfo.remark || this.elderInfo.nickname || '长辈');
+                    const peerAvatar = encodeURIComponent(this.elderInfo.avatar || '');
+                    const callType = 'audio';
+                    
+                    if (!myId || !peerId) {
+                        this.showToast('无法发起通话，请重新登录', 'error');
+                        return;
+                    }
+                    
+                    const url = `call.html?userId=${myId}&peerId=${peerId}&peerName=${peerName}&peerAvatar=${peerAvatar}&type=${callType}&incoming=false&myName=${encodeURIComponent(myName)}`;
+                    window.location.href = url;
+                },
+
+                goToMedicine() {
+                    window.location.href = 'young_medicine.html?elderId=' + this.elderId;
+                },
+
+                goToHealth() {
+                    window.location.href = 'young_health.html?elderId=' + this.elderId;
+                },
+
+                sendMessage() {
+                    window.location.href = 'young_msg.html?userId=' + this.elderId;
+                },
+
+                showToast(msg, type = '') {
+                    const toast = document.getElementById('toast');
+                    toast.innerHTML = `<i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle'}"></i> ${msg}`;
+                    toast.className = 'toast show ' + type;
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 3000);
+                },
+
+                goBack() {
+                    window.history.back();
+                },
+                goToPage(page) {
+                    switch(page) {
+                        case 'home':
+                            window.location.href = 'young_index.html';
+                            break;
+                        case 'medicine':
+                            window.location.href = 'young_medicine.html';
+                            break;
+                        case 'health':
+                            window.location.href = 'young_health.html';
+                            break;
+                        case 'msg':
+                            window.location.href = 'young_msg.html';
+                            break;
+                        case 'profile':
+                            window.location.href = 'young_settings.html';
+                            break;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+
+

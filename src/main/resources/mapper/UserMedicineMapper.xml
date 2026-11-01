@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.UserMedicineMapper">
+    <resultMap id="UserMedicineResultMap" type="com.chat.older.xiechen.model.UserMedicine">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="medicineId" column="medicine_id"/>
+        <result property="customName" column="custom_name"/>
+        <result property="type" column="type"/>
+        <result property="spec" column="spec"/>
+        <result property="packageUnit" column="package_unit"/>
+        <result property="packageQuantity" column="package_quantity"/>
+        <result property="doseUnit" column="dose_unit"/>
+        <result property="dosagePerTime" column="dosage_per_time"/>
+        <result property="frequencyPerDay" column="frequency_per_day"/>
+        <result property="reminderTimes" column="reminder_times"/>
+        <result property="totalPackages" column="total_packages"/>
+        <result property="totalStock" column="total_stock"/>
+        <result property="currentStock" column="current_stock"/>
+        <result property="thresholdDays" column="threshold_days"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="status" column="status"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="deletedTime" column="deleted_time"/>
+        <result property="deletedBy" column="deleted_by"/>
+        <result property="deletedByName" column="deleted_by_name"/>
+        <result property="deletedByRole" column="deleted_by_role"/>
+        <result property="deleteReason" column="delete_reason"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="medicineName" column="medicine_name"/>
+        <result property="barcode" column="barcode"/>
+        <result property="drugInstruction" column="drug_instruction"/>
+        <result property="indication" column="indication"/>
+        <result property="precautions" column="precautions"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.UserMedicine" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_medicines (user_id, medicine_id, custom_name, type, spec, package_unit, package_quantity, 
+            dose_unit, dosage_per_time, frequency_per_day, reminder_times, total_packages, total_stock, current_stock, 
+            threshold_days, start_date, end_date, status, precautions, create_time, update_time)
+        VALUES (#{userId}, #{medicineId}, #{customName}, #{type}, #{spec}, #{packageUnit}, #{packageQuantity}, 
+            #{doseUnit}, #{dosagePerTime}, #{frequencyPerDay}, #{reminderTimes}, #{totalPackages}, #{totalStock}, #{currentStock}, 
+            #{thresholdDays}, #{startDate}, #{endDate}, #{status}, #{precautions}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.chat.older.xiechen.model.UserMedicine">
+        UPDATE user_medicines SET
+            custom_name = #{customName},
+            type = #{type},
+            spec = #{spec},
+            package_unit = #{packageUnit},
+            package_quantity = #{packageQuantity},
+            dose_unit = #{doseUnit},
+            dosage_per_time = #{dosagePerTime},
+            frequency_per_day = #{frequencyPerDay},
+            reminder_times = #{reminderTimes},
+            total_packages = #{totalPackages},
+            total_stock = #{totalStock},
+            current_stock = #{currentStock},
+            threshold_days = #{thresholdDays},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            status = #{status},
+            precautions = #{precautions},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user_medicines WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="UserMedicineResultMap">
+        SELECT um.*, mi.name as medicine_name, mi.barcode, mi.drug_instruction, mi.indication
+        FROM user_medicines um
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.id = #{id}
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="UserMedicineResultMap">
+        SELECT um.*, mi.name as medicine_name, mi.barcode, mi.drug_instruction, mi.indication
+        FROM user_medicines um
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="selectByUserId" resultMap="UserMedicineResultMap">
+        SELECT um.*, mi.name as medicine_name, mi.barcode, mi.drug_instruction, mi.indication
+        FROM user_medicines um
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.user_id = #{userId} AND um.status = 1 AND (um.is_deleted = 0 OR um.is_deleted IS NULL)
+        ORDER BY um.create_time DESC
+    </select>
+
+    <select id="selectLowStockByUserId" resultMap="UserMedicineResultMap">
+        SELECT um.*, mi.name as medicine_name, mi.barcode, mi.drug_instruction, mi.indication
+        FROM user_medicines um
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.user_id = #{userId} AND um.status = 1 AND (um.is_deleted = 0 OR um.is_deleted IS NULL)
+          AND um.current_stock / (um.dosage_per_time * um.frequency_per_day) &lt;= #{thresholdDays}
+        ORDER BY um.current_stock ASC
+    </select>
+
+    <update id="updateStock">
+        UPDATE user_medicines SET current_stock = #{currentStock}, update_time = NOW() WHERE id = #{id}
+    </update>
+
+    <update id="decrementStock">
+        UPDATE user_medicines 
+        SET current_stock = GREATEST(0, current_stock - #{amount}), update_time = NOW() 
+        WHERE id = #{id} AND current_stock >= #{amount}
+    </update>
+
+    <update id="softDelete">
+        UPDATE user_medicines 
+        SET is_deleted = 1, 
+            deleted_time = NOW(), 
+            deleted_by = #{deletedBy}, 
+            deleted_by_name = #{deletedByName}, 
+            deleted_by_role = #{deletedByRole}, 
+            delete_reason = #{deleteReason},
+            update_time = NOW() 
+        WHERE id = #{id}
+    </update>
+
+    <update id="restore">
+        UPDATE user_medicines 
+        SET is_deleted = 0, 
+            deleted_time = NULL, 
+            deleted_by = NULL, 
+            deleted_by_name = NULL, 
+            deleted_by_role = NULL, 
+            delete_reason = NULL,
+            update_time = NOW() 
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectDeletedByUserId" resultMap="UserMedicineResultMap">
+        SELECT um.*, mi.name as medicine_name, mi.barcode, mi.drug_instruction, mi.indication
+        FROM user_medicines um
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.user_id = #{userId} AND um.is_deleted = 1
+        ORDER BY um.deleted_time DESC
+    </select>
+
+    <select id="selectByIdIncludeDeleted" resultMap="UserMedicineResultMap">
+        SELECT um.*, mi.name as medicine_name, mi.barcode, mi.drug_instruction, mi.indication
+        FROM user_medicines um
+        LEFT JOIN medicine_info mi ON um.medicine_id = mi.id
+        WHERE um.id = #{id}
+    </select>
+</mapper>

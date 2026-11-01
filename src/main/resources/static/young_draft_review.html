@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>用药审核 - 子女端 -解尘颐安</title>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+    <script src="/js/medicine-form-utils.js"></script>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --primary-light: #3B82F6;
+            --primary-lighter: #60A5FA;
+            --danger: #EF4444;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --bg-light: #EFF6FF;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .back-btn i {
+            font-size: 18px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 17px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-count {
+            background: var(--danger);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .main-content {
+            width: 100%;
+            max-width: 100%;
+            flex: 1;
+            padding: 20px;
+            padding-bottom: 100px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 16px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active i,
+        .nav-item.active span {
+            color: var(--primary);
+        }
+
+        .nav-item:hover i,
+        .nav-item:hover span {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--danger);
+            color: white;
+            border-radius: 8px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666666;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            opacity: 0.4;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #666666;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #000000;
+            font-weight: 500;
+        }
+
+        .draft-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            border: none;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .draft-card.expired {
+            opacity: 0.6;
+            background: #f8f9fa;
+        }
+
+        .draft-card.expired .medicine-name,
+        .draft-card.expired .elder-name,
+        .draft-card.expired .info-tag,
+        .draft-card.expired .draft-time {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .draft-card.expired::before {
+            background: linear-gradient(90deg, #9ca3af 0%, #d1d5db 100%);
+        }
+
+        .expired-badge {
+            background: #9ca3af;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .reviewer-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: rgba(37, 99, 235, 0.08);
+            border-radius: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .reviewer-info i {
+            color: var(--primary);
+        }
+
+        .reviewer-info .reviewer-name {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .draft-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .draft-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.18);
+        }
+
+        .draft-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .elder-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+        }
+
+        .elder-info {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .elder-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .draft-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .confidence-badge {
+            padding: 6px 14px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .confidence-badge.high {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .confidence-badge.medium {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .confidence-badge.low {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        .operation-badge {
+            padding: 6px 14px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .operation-badge.create {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .operation-badge.update {
+            background: rgba(37, 99, 235, 0.15);
+            color: var(--primary);
+        }
+
+        .operation-badge.delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        .target-medicine {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .target-medicine strong {
+            color: var(--text);
+        }
+
+        .delete-reason {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--danger);
+        }
+
+        .draft-body {
+            background: rgba(255,255,255,0.5);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .medicine-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .medicine-icon-text {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        .medicine-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .info-tag {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .input-method {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .input-method i {
+            font-size: 14px;
+        }
+
+        .draft-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-approve {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-edit {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-reject {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-header h2 {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #e2e8f0;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .detail-item {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .detail-item.full {
+            grid-column: span 2;
+        }
+
+        .image-preview {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .preview-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid #e2e8f0;
+            transition: border-color 0.2s;
+        }
+
+        .preview-img:hover {
+            border-color: var(--primary);
+        }
+
+        .voice-player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .play-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .voice-text {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+        }
+
+        .btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-confirm {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-confirm.danger {
+            background: var(--danger);
+        }
+
+        .btn-confirm.danger:hover {
+            background: #DC2626;
+        }
+
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .tab-bar {
+            display: flex;
+            background: var(--bg-light);
+            border-radius: 16px;
+            padding: 6px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto 16px;
+        }
+
+        .tab-item {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .tab-item.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .draft-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .empty-state {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .medicine-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .medicine-modal-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .medicine-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .medicine-modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .medicine-modal-header h3 i {
+            color: var(--primary);
+        }
+
+        .medicine-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .medicine-modal-close:hover {
+            background: #E0E7FF;
+        }
+
+        .medicine-modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .medicine-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .medicine-option:hover {
+            background: #E0E7FF;
+            border-color: var(--primary-light);
+        }
+
+        .medicine-option.active {
+            background: #DBEAFE;
+            border-color: var(--primary);
+        }
+
+        .medicine-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .medicine-option-icon.review {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        .medicine-option-icon.monitor {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        }
+
+        .medicine-option-icon.box {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .medicine-option-icon i {
+            font-size: 22px;
+            color: white;
+        }
+
+        .medicine-option-info {
+            flex: 1;
+        }
+
+        .medicine-option-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .medicine-option-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .current-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            font-weight: 500;
+        }
+
+        .medicine-option-arrow {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .medicine-option-check {
+            color: var(--primary);
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 28px;
+                padding-bottom: 100px;
+            }
+
+            .tab-bar {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .draft-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .draft-card {
+                padding: 24px;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+            }
+
+            .tab-bar {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .draft-list {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 12px 24px;
+            }
+
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 20px 32px;
+                padding-bottom: 100px;
+            }
+
+            .tab-bar {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .draft-list {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .empty-state {
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .header {
+                padding: 10px 20px;
+            }
+
+            .main-content {
+                padding: 16px 24px;
+                padding-bottom: 100px;
+            }
+
+            .draft-list {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+
+            .draft-card {
+                padding: 18px;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .main-content {
+                padding: 12px 16px;
+                padding-bottom: 80px;
+            }
+
+            .tab-bar {
+                margin-bottom: 12px;
+            }
+
+            .tab-item {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .draft-list {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .draft-card {
+                padding: 14px;
+            }
+
+            .draft-header {
+                margin-bottom: 10px;
+            }
+
+            .draft-name {
+                font-size: 14px;
+            }
+
+            .modal {
+                max-height: 85vh;
+            }
+
+            .bottom-nav {
+                padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+            }
+
+            .nav-item i {
+                font-size: 16px;
+            }
+
+            .nav-item span {
+                font-size: 8px;
+            }
+        }
+
+        @media (orientation: landscape) and (min-width: 1024px) and (max-height: 500px) {
+            .draft-list {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="back-btn" @click="goBack">
+                        <i class="fa fa-angle-left"></i>
+                    </button>
+                    <h1>用药审核</h1>
+                </div>
+                <div class="header-right">
+                    <span v-if="pendingDrafts.length > 0" class="header-count">{{ pendingDrafts.length }} 待审核</span>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="tab-bar">
+                    <div :class="['tab-item', currentTab === 'pending' ? 'active' : '']" @click="currentTab = 'pending'">
+                        待审核 ({{ pendingDrafts.length }})
+                    </div>
+                    <div :class="['tab-item', currentTab === 'all' ? 'active' : '']" @click="currentTab = 'all'">
+                        全部记录
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <input type="text" class="filter-input" v-model="elderNameFilter" placeholder="输入长辈姓名筛选..." @input="filterDrafts">
+                </div>
+
+                <div v-if="filteredDrafts.length === 0" class="empty-state">
+                    <i class="fa fa-clipboard-check"></i>
+                    <h3>{{ currentTab === 'pending' ? '暂无待审核草稿' : '暂无审核记录' }}</h3>
+                    <p>{{ currentTab === 'pending' ? '长辈录入的用药信息将在这里显示' : '审核记录将在这里显示' }}</p>
+                </div>
+
+                <div v-else class="draft-list">
+                    <div v-for="draft in filteredDrafts" :key="draft.id" 
+                         :class="['draft-card', { 'expired': draft.isExpired }]" 
+                         @click="showDraftDetail(draft)">
+                        <div class="draft-header">
+                            <img :src="draft.elderAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + draft.elderUserId" class="elder-avatar">
+                            <div class="elder-info">
+                                <div class="elder-name">{{ draft.elderName || '长辈' }}</div>
+                                <div class="draft-time">{{ formatTime(draft.createTime) }}</div>
+                            </div>
+                            <span v-if="draft.isExpired" class="expired-badge">已过期请求</span>
+                            <span :class="['operation-badge', draft.operationType || 'create']">
+                                <i :class="getOperationIcon(draft.operationType)"></i>
+                                {{ getOperationText(draft.operationType) }}
+                            </span>
+                            <span v-if="draft.confidence && !draft.isExpired" :class="['confidence-badge', getConfidenceLevel(draft.confidence)]">
+                                置信度 {{ draft.confidence }}%
+                            </span>
+                            <span v-if="draft.status !== 'pending'" :class="['confidence-badge', draft.status === 'approved' ? 'high' : 'low']">
+                                {{ draft.status === 'approved' ? '已通过' : (draft.status === 'rejected' ? '已驳回' : '已删除') }}
+                            </span>
+                        </div>
+                        <div class="draft-body">
+                            <div v-if="draft.operationType === 'update' || draft.operationType === 'delete'" class="target-medicine">
+                                <i class="fa fa-exclamation-circle"></i> 
+                                目标药品：<strong>{{ draft.medicineName }}</strong>
+                                <span v-if="draft.targetMedicineId">（ID: {{ draft.targetMedicineId }}）</span>
+                            </div>
+                            <div v-if="draft.operationType === 'delete' && draft.reviewNote" class="delete-reason">
+                                <i class="fa fa-comment"></i> 删除原因：{{ draft.reviewNote }}
+                            </div>
+                            <div class="medicine-name"><span class="medicine-icon-text">{{ getFirstChar(draft.medicineName) }}</span>{{ draft.medicineName || '待确认药品' }}</div>
+                            <div class="medicine-info">
+                                <span v-if="draft.spec" class="info-tag">{{ draft.spec }}</span>
+                                <span v-if="draft.dosagePerTime" class="info-tag">每次{{ draft.dosagePerTime }}{{ draft.doseUnit }}</span>
+                                <span v-if="draft.frequencyPerDay" class="info-tag">每日{{ draft.frequencyPerDay }}次</span>
+                            </div>
+                            <div class="input-method">
+                                <i :class="getInputMethodIcon(draft.inputMethod)"></i>
+                                {{ draft.inputMethodText || '手动录入' }}
+                            </div>
+                            <div v-if="draft.status !== 'pending' && draft.familyName" class="reviewer-info">
+                                <i class="fa fa-user"></i>
+                                由 <span class="reviewer-name">{{ draft.familyName }}</span> 
+                                {{ draft.status === 'approved' ? '审核通过' : (draft.status === 'rejected' ? '驳回' : '删除') }}
+                                <span v-if="draft.reviewTime">· {{ formatTime(draft.reviewTime) }}</span>
+                            </div>
+                        </div>
+                        <div v-if="draft.status === 'pending' && !draft.isExpired" class="draft-actions" @click.stop>
+                            <button class="action-btn btn-approve" @click="quickApprove(draft)">
+                                <i class="fa fa-check"></i> 通过
+                            </button>
+                            <button class="action-btn btn-edit" @click="openEditModal(draft)">
+                                <i class="fa fa-edit"></i> 修改
+                            </button>
+                            <button class="action-btn btn-reject" @click="openRejectModal(draft)">
+                                <i class="fa fa-times"></i> 驳回
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <nav class="bottom-nav">
+                <div class="nav-item" @click="goToPage('home')">
+                    <i class="fa fa-home"></i>
+                    <span>首页</span>
+                </div>
+                <div class="nav-item active" @click="showMedicineModal = true">
+                    <i class="fa fa-medkit"></i>
+                    <span>用药</span>
+                </div>
+                <div class="nav-item" @click="goToPage('health')">
+                    <i class="fa fa-heartbeat"></i>
+                    <span>健康</span>
+                </div>
+                <div class="nav-item" @click="goToPage('msg')">
+                    <i class="fa fa-commenting-o"></i>
+                    <span>消息</span>
+                    <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                </div>
+                <div class="nav-item" @click="goToPage('profile')">
+                    <i class="fa fa-user"></i>
+                    <span>我的</span>
+                </div>
+            </nav>
+        </div>
+
+        <div v-if="showMedicineModal" class="medicine-modal" @click.self="showMedicineModal = false">
+            <div class="medicine-modal-content">
+                <div class="medicine-modal-header">
+                    <h3><i class="fa fa-medkit"></i> 用药功能</h3>
+                    <button class="medicine-modal-close" @click="showMedicineModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="medicine-options">
+                    <div class="medicine-option active" @click="selectMedicineOption('review')">
+                        <div class="medicine-option-icon review">
+                            <i class="fa fa-check-square-o"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药审核 <span class="current-badge">当前</span></div>
+                            <div class="medicine-option-desc">审核长辈用药草稿</div>
+                        </div>
+                        <i class="fa fa-check medicine-option-check"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('monitor')">
+                        <div class="medicine-option-icon monitor">
+                            <i class="fa fa-medkit"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药监控</div>
+                            <div class="medicine-option-desc">查看长辈用药记录</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('box')">
+                        <div class="medicine-option-icon box">
+                            <i class="fa fa-cube"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">智能药盒</div>
+                            <div class="medicine-option-desc">监看长辈服药情况</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <transition name="fade">
+            <div v-if="showDetailModal" class="modal-mask" @click.self="showDetailModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>{{ getOperationText(selectedDraft?.operationType) }} - 详情</h2>
+                        <button class="modal-close" @click="showDetailModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="selectedDraft?.operationType === 'delete'" class="detail-section" style="background: rgba(239, 68, 68, 0.1); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                            <h3 style="color: var(--danger);"><i class="fa fa-exclamation-triangle"></i> 删除申请</h3>
+                            <p style="margin-top: 8px; color: var(--text);">长辈申请删除以下药品，请确认是否同意删除。</p>
+                            <div v-if="selectedDraft.reviewNote" style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.8); border-radius: 8px;">
+                                <strong>删除原因：</strong>{{ selectedDraft.reviewNote }}
+                            </div>
+                        </div>
+
+                        <div v-if="selectedDraft?.operationType === 'update'" class="detail-section" style="background: rgba(37, 99, 235, 0.1); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                            <h3 style="color: var(--primary);"><i class="fa fa-edit"></i> 修改申请</h3>
+                            <p style="margin-top: 8px; color: var(--text);">长辈申请修改药品信息，请审核修改内容。</p>
+                            <div v-if="selectedDraft.targetMedicineId" style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.8); border-radius: 8px;">
+                                <strong>目标药品ID：</strong>{{ selectedDraft.targetMedicineId }}
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3><i class="fa fa-user"></i> 录入信息</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">录入人</div>
+                                    <div class="detail-value">{{ selectedDraft.elderName }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">录入方式</div>
+                                    <div class="detail-value">{{ selectedDraft.inputMethodText }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">AI置信度</div>
+                                    <div class="detail-value">{{ selectedDraft.confidence || '-' }}%</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">录入时间</div>
+                                    <div class="detail-value">{{ formatTime(selectedDraft.createTime) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3><i class="fa fa-medkit"></i> 药品信息</h3>
+                            <div class="detail-grid">
+                                <div class="detail-item full">
+                                    <div class="detail-label">药品名称</div>
+                                    <div class="detail-value">{{ selectedDraft.medicineName || '待确认' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">药品规格</div>
+                                    <div class="detail-value">{{ selectedDraft.spec || '-' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">药品类型</div>
+                                    <div class="detail-value">{{ selectedDraft.medicineType || '-' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">每次用量</div>
+                                    <div class="detail-value">{{ selectedDraft.dosagePerTime || '-' }} {{ selectedDraft.doseUnit }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">每日次数</div>
+                                    <div class="detail-value">{{ selectedDraft.frequencyPerDay || '-' }} 次</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">购买数量</div>
+                                    <div class="detail-value">{{ selectedDraft.totalPackages || 1 }} {{ selectedDraft.packageQuantity || 30 }}粒/盒</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">生产企业</div>
+                                    <div class="detail-value">{{ selectedDraft.manufacturer || '-' }}</div>
+                                </div>
+                                <div class="detail-item full" v-if="selectedDraft.precautions">
+                                    <div class="detail-label">注意事项</div>
+                                    <div class="detail-value">{{ selectedDraft.precautions }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedDraft.coverImageUrl || selectedDraft.instructionImageUrl" class="detail-section">
+                            <h3><i class="fa fa-image"></i> 原始图片</h3>
+                            <div class="image-preview">
+                                <img v-if="selectedDraft.coverImageUrl" :src="selectedDraft.coverImageUrl" class="preview-img" @click="openImage(selectedDraft.coverImageUrl)">
+                                <img v-if="selectedDraft.instructionImageUrl" :src="selectedDraft.instructionImageUrl" class="preview-img" @click="openImage(selectedDraft.instructionImageUrl)">
+                            </div>
+                        </div>
+
+                        <div v-if="selectedDraft.voiceUrl || selectedDraft.voiceText" class="detail-section">
+                            <h3><i class="fa fa-microphone"></i> 语音记录</h3>
+                            <div v-if="selectedDraft.voiceUrl" class="voice-player">
+                                <button class="play-btn" @click="playVoice(selectedDraft.voiceUrl)">
+                                    <i class="fa fa-play"></i>
+                                </button>
+                                <div class="voice-text">点击播放语音</div>
+                            </div>
+                            <div v-if="selectedDraft.voiceText" class="voice-text" style="background: #f8fafc; padding: 12px; border-radius: 10px; margin-top: 8px;">
+                                {{ selectedDraft.voiceText }}
+                            </div>
+                        </div>
+
+                        <div v-if="selectedDraft.rawOcrText" class="detail-section">
+                            <h3><i class="fa fa-file-text"></i> OCR识别文本</h3>
+                            <div class="voice-text" style="background: #f8fafc; padding: 12px; border-radius: 10px; font-size: 12px; max-height: 120px; overflow-y: auto;">
+                                {{ selectedDraft.rawOcrText }}
+                            </div>
+                        </div>
+
+                        <div v-if="selectedDraft.status !== 'pending'" class="detail-section" style="background: #f0f9ff; padding: 16px; border-radius: 12px; margin-top: 16px;">
+                            <h3 style="color: var(--primary);"><i class="fa fa-check-circle"></i> 审核记录</h3>
+                            <div class="detail-grid" style="margin-top: 12px;">
+                                <div class="detail-item">
+                                    <div class="detail-label">审核状态</div>
+                                    <div class="detail-value" :style="{ color: selectedDraft.status === 'approved' ? '#10B981' : (selectedDraft.status === 'rejected' ? '#EF4444' : '#6B7280') }">
+                                        {{ selectedDraft.status === 'approved' ? '已通过' : (selectedDraft.status === 'rejected' ? '已驳回' : '已删除') }}
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">审核人</div>
+                                    <div class="detail-value">{{ selectedDraft.familyName || '子女' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">关联长辈</div>
+                                    <div class="detail-value">{{ selectedDraft.elderName || '长辈' }}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">审核时间</div>
+                                    <div class="detail-value">{{ formatTime(selectedDraft.reviewTime) }}</div>
+                                </div>
+                                <div class="detail-item full" v-if="selectedDraft.reviewNote">
+                                    <div class="detail-label">审核备注</div>
+                                    <div class="detail-value">{{ selectedDraft.reviewNote }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="selectedDraft.status === 'pending' && !selectedDraft.isExpired" class="modal-footer">
+                        <button class="btn-cancel" @click="openRejectModal(selectedDraft); showDetailModal = false;">驳回</button>
+                        <button v-if="selectedDraft.operationType === 'delete'" class="btn-confirm danger" @click="quickApprove(selectedDraft); showDetailModal = false;">确认删除</button>
+                        <button v-else class="btn-confirm" @click="quickApprove(selectedDraft); showDetailModal = false;">审核通过</button>
+                    </div>
+                    <div v-else-if="selectedDraft.isExpired" class="modal-footer">
+                        <button class="btn-cancel" @click="showDetailModal = false;" style="flex: 1;">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showEditModal" class="modal-mask" @click.self="showEditModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>修改后通过</h2>
+                        <button class="modal-close" @click="showEditModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="edit-form">
+                            <div class="form-group">
+                                <label>药品名称 *</label>
+                                <input v-model="editForm.medicineName" placeholder="请输入药品名称" @blur="validateEditField('medicineName')">
+                            </div>
+                            <div class="form-group">
+                                <label>药品规格</label>
+                                <input v-model="editForm.spec" placeholder="如：60片/盒" @blur="onEditSpecChange" @input="onEditSpecInput">
+                            </div>
+                            <div class="form-group">
+                                <label>药品类型</label>
+                                <select v-model="editForm.medicineType">
+                                    <option value="">请选择</option>
+                                    <option value="降压药">降压药</option>
+                                    <option value="降糖药">降糖药</option>
+                                    <option value="降脂药">降脂药</option>
+                                    <option value="感冒药">感冒药</option>
+                                    <option value="抗生素">抗生素</option>
+                                    <option value="胃药">胃药</option>
+                                    <option value="钙片">钙片</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group">
+                                    <label>每次用量 <span style="color: #64748B; font-size: 12px;">(单位: {{ editForm.doseUnit }})</span></label>
+                                    <input v-model.number="editForm.dosagePerTime" type="number" placeholder="数量" min="1" @blur="validateEditField('dosagePerTime')">
+                                </div>
+                                <div class="form-group">
+                                    <label>剂量单位</label>
+                                    <select v-model="editForm.doseUnit" @change="onEditUnitChange">
+                                        <option v-for="u in editAvailableUnits" :key="u" :value="u">{{ u }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>每日次数</label>
+                                <input v-model.number="editForm.frequencyPerDay" type="number" placeholder="每日服用次数" min="1" max="6" @blur="validateEditField('frequencyPerDay')">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group">
+                                    <label>药品盒数</label>
+                                    <input v-model.number="editForm.totalPackages" type="number" placeholder="购买盒数" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>每盒粒数</label>
+                                    <input v-model.number="editForm.packageQuantity" type="number" placeholder="每盒数量" min="1">
+                                </div>
+                            </div>
+                            <div class="form-group" v-if="editCalculatedTotal > 0">
+                                <div style="background: #EEF2FF; padding: 12px; border-radius: 8px; color: var(--primary); font-size: 14px;">
+                                    <i class="fa fa-calculator" style="margin-right: 6px;"></i>
+                                    总药量: <strong>{{ editCalculatedTotal }}{{ editForm.doseUnit }}</strong>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>审核备注</label>
+                                <textarea v-model="editForm.reviewNote" placeholder="可选：填写修改说明"></textarea>
+                            </div>
+                            <div class="form-group" v-if="editFormErrors.length > 0">
+                                <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px;">
+                                    <div v-for="error in editFormErrors" :key="error.field" style="color: #DC2626; font-size: 12px; margin-bottom: 4px;">
+                                        <i class="fa fa-exclamation-circle"></i> {{ error.message }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showEditModal = false">取消</button>
+                        <button class="btn-confirm" @click="approveWithEdit">确认通过</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showRejectModal" class="modal-mask" @click.self="showRejectModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>驳回原因</h2>
+                        <button class="modal-close" @click="showRejectModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>请说明驳回原因 *</label>
+                            <textarea v-model="rejectReason" placeholder="如：药名错误，正确名称为XX"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showRejectModal = false">取消</button>
+                        <button class="btn-confirm danger" @click="confirmReject">确认驳回</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentTab: 'pending',
+                    pendingDrafts: [],
+                    allDrafts: [],
+                    selectedDraft: null,
+                    showDetailModal: false,
+                    showEditModal: false,
+                    showRejectModal: false,
+                    showMedicineModal: false,
+                    elders: [],
+                    elderNameFilter: '',
+                    editForm: {
+                        medicineName: '',
+                        spec: '',
+                        medicineType: '',
+                        dosagePerTime: 1,
+                        doseUnit: '片',
+                        frequencyPerDay: 2,
+                        totalPackages: 1,
+                        packageQuantity: 30,
+                        reviewNote: ''
+                    },
+                    editAvailableUnits: ['片', '粒', '袋', '毫升', '克', '支', '颗', '丸'],
+                    editFormErrors: [],
+                    rejectReason: '',
+                    totalUnread: 0
+                };
+            },
+            computed: {
+                displayDrafts() {
+                    return this.currentTab === 'pending' ? this.pendingDrafts : this.allDrafts;
+                },
+                filteredDrafts() {
+                    let drafts = this.displayDrafts;
+                    if (this.elderNameFilter && this.elderNameFilter.trim()) {
+                        const keyword = this.elderNameFilter.trim().toLowerCase();
+                        drafts = drafts.filter(draft => 
+                            (draft.elderName && draft.elderName.toLowerCase().includes(keyword))
+                        );
+                    }
+                    return drafts;
+                },
+                editCalculatedTotal() {
+                    return (this.editForm.totalPackages || 0) * (this.editForm.packageQuantity || 0);
+                }
+            },
+            mounted() {
+                this.loadElders();
+                this.loadDrafts();
+                this.loadUnreadCount();
+                this.setupMessageCallbacks();
+            },
+            methods: {
+                setupMessageCallbacks() {
+                    if (window.YoungMessageCenter) {
+                        YoungMessageCenter.onMessage((msg, contact) => {
+                            if (msg.fromId) {
+                                this.totalUnread++;
+                            }
+                        });
+                    }
+                },
+
+                async loadUnreadCount() {
+                    try {
+                        const res = await axios.get('/api/msg/unread/detail');
+                        if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                            let total = 0;
+                            res.data.data.forEach(item => {
+                                total += item.count || item.unreadCount || item.unread_count || 0;
+                            });
+                            this.totalUnread = total;
+                        }
+                    } catch (e) {
+                        console.error('加载未读消息数失败', e);
+                    }
+                },
+
+                async loadElders() {
+                    try {
+                        const res = await axios.get('/api/friend/list/ordered');
+                        if (res.data.code === 200) {
+                            this.elders = res.data.data || [];
+                        }
+                    } catch (e) {
+                        console.error('加载长辈列表失败', e);
+                    }
+                },
+
+                async loadDrafts() {
+                    try {
+                        const [pendingRes, allRes] = await Promise.all([
+                            axios.get('/api/medicine-draft/pending'),
+                            axios.get('/api/medicine-draft/all')
+                        ]);
+                        
+                        if (pendingRes.data.code === 200) {
+                            this.pendingDrafts = pendingRes.data.data || [];
+                        }
+                        if (allRes.data.code === 200) {
+                            this.allDrafts = allRes.data.data || [];
+                        }
+                    } catch (e) {
+                        console.error('加载草稿失败', e);
+                    }
+                },
+
+                showDraftDetail(draft) {
+                    this.selectedDraft = draft;
+                    this.showDetailModal = true;
+                },
+
+                async quickApprove(draft) {
+                    const operationType = draft.operationType || 'create';
+                    let confirmMsg = '';
+                    let successMsg = '';
+                    
+                    if (operationType === 'delete') {
+                        confirmMsg = '确认删除该药品？删除后将停止用药提醒并解绑药仓。';
+                        successMsg = '已确认删除，药品已从用药列表移除';
+                    } else if (operationType === 'update') {
+                        confirmMsg = '确认修改该药品信息？';
+                        successMsg = '已确认修改，药品信息已更新';
+                    } else {
+                        confirmMsg = '确认通过该用药信息？';
+                        successMsg = '审核通过，已添加到用药列表';
+                    }
+                    
+                    if (!confirm(confirmMsg)) return;
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine-draft/approve/${draft.id}`, {});
+                        if (res.data.code === 200) {
+                            const data = res.data.data;
+                            
+                            if (operationType === 'delete' && data.deleteResult) {
+                                const del = data.deleteResult;
+                                let msg = `已删除"${del.medicineName || '药品'}"\n`;
+                                msg += `总药量: ${del.totalPills}粒 (${del.initialWeight}g)\n`;
+                                if (del.unbindCount > 0) {
+                                    msg += `已解绑 ${del.unbindCount} 个药仓`;
+                                } else {
+                                    msg += `该药品未绑定药仓`;
+                                }
+                                this.showToast(msg);
+                            } else {
+                                this.showToast(data?.message || successMsg);
+                            }
+                            this.loadDrafts();
+                        } else {
+                            this.showToast(res.data.msg || '操作失败');
+                        }
+                    } catch (e) {
+                        this.showToast('操作失败，请重试');
+                    }
+                },
+
+                openEditModal(draft) {
+                    this.selectedDraft = draft;
+                    this.editForm = {
+                        medicineName: draft.medicineName || '',
+                        spec: draft.spec || '',
+                        medicineType: draft.medicineType || '',
+                        dosagePerTime: draft.dosagePerTime || 1,
+                        doseUnit: draft.doseUnit || '片',
+                        frequencyPerDay: draft.frequencyPerDay || 2,
+                        totalPackages: draft.totalPackages || 1,
+                        packageQuantity: draft.packageQuantity || 30,
+                        reviewNote: ''
+                    };
+                    this.editFormErrors = [];
+                    this.showEditModal = true;
+                },
+
+                onEditSpecChange() {
+                    const parsed = MedicineFormUtils.parseSpec(this.editForm.spec);
+                    if (parsed.unit) {
+                        this.editForm.doseUnit = parsed.unit;
+                        this.editAvailableUnits = [parsed.unit];
+                    }
+                    if (parsed.quantity) {
+                        this.editForm.packageQuantity = parsed.quantity;
+                    }
+                },
+
+                onEditSpecInput() {
+                    const parsed = MedicineFormUtils.parseSpec(this.editForm.spec);
+                    if (parsed.unit) {
+                        this.editForm.doseUnit = parsed.unit;
+                        this.editAvailableUnits = [parsed.unit];
+                    }
+                    if (parsed.quantity) {
+                        this.editForm.packageQuantity = parsed.quantity;
+                    }
+                },
+
+                onEditUnitChange() {
+                    // 单位已根据规格自动设置
+                },
+
+                validateEditField(fieldName) {
+                    this.editFormErrors = this.editFormErrors.filter(e => e.field !== fieldName);
+                },
+
+                validateEditForm() {
+                    this.editFormErrors = [];
+                    
+                    if (!this.editForm.medicineName || !this.editForm.medicineName.trim()) {
+                        this.editFormErrors.push({ field: 'medicineName', message: '请输入药品名称' });
+                    }
+                    
+                    if (!this.editForm.dosagePerTime || this.editForm.dosagePerTime <= 0) {
+                        this.editFormErrors.push({ field: 'dosagePerTime', message: '每次用量必须大于0' });
+                    }
+                    
+                    if (!this.editForm.frequencyPerDay || this.editForm.frequencyPerDay < 1 || this.editForm.frequencyPerDay > 6) {
+                        this.editFormErrors.push({ field: 'frequencyPerDay', message: '每日次数应在1-6次之间' });
+                    }
+                    
+                    return this.editFormErrors.length === 0;
+                },
+
+                async approveWithEdit() {
+                    if (!this.validateEditForm()) {
+                        this.showToast('请修正表单中的错误');
+                        return;
+                    }
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine-draft/approve-with-edit/${this.selectedDraft.id}`, {
+                            modifiedData: this.editForm,
+                            reviewNote: this.editForm.reviewNote
+                        });
+                        if (res.data.code === 200) {
+                            this.showToast('修改后审核通过');
+                            this.showEditModal = false;
+                            this.loadDrafts();
+                        } else {
+                            this.showToast(res.data.msg || '操作失败');
+                        }
+                    } catch (e) {
+                        this.showToast('操作失败，请重试');
+                    }
+                },
+
+                openRejectModal(draft) {
+                    this.selectedDraft = draft;
+                    this.rejectReason = '';
+                    this.showRejectModal = true;
+                },
+
+                async confirmReject() {
+                    if (!this.rejectReason.trim()) {
+                        this.showToast('请填写驳回原因');
+                        return;
+                    }
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine-draft/reject/${this.selectedDraft.id}`, {
+                            reviewNote: this.rejectReason
+                        });
+                        if (res.data.code === 200) {
+                            this.showToast('已驳回该草稿');
+                            this.showRejectModal = false;
+                            this.loadDrafts();
+                        } else {
+                            this.showToast(res.data.msg || '操作失败');
+                        }
+                    } catch (e) {
+                        this.showToast('操作失败，请重试');
+                    }
+                },
+
+                async deleteDraft(draft) {
+                    if (!confirm('确定删除该草稿？此操作不可恢复。')) return;
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine-draft/delete/${draft.id}`, {});
+                        if (res.data.code === 200) {
+                            this.showToast('已删除草稿');
+                            this.loadDrafts();
+                        } else {
+                            this.showToast(res.data.msg || '操作失败');
+                        }
+                    } catch (e) {
+                        this.showToast('操作失败，请重试');
+                    }
+                },
+
+                getConfidenceLevel(confidence) {
+                    if (confidence >= 80) return 'high';
+                    if (confidence >= 50) return 'medium';
+                    return 'low';
+                },
+
+                getInputMethodIcon(method) {
+                    const icons = {
+                        'ocr': 'fa fa-camera',
+                        'voice': 'fa fa-microphone',
+                        'barcode': 'fa fa-barcode',
+                        'manual': 'fa fa-edit'
+                    };
+                    return icons[method] || 'fa fa-edit';
+                },
+
+                getOperationIcon(type) {
+                    const icons = {
+                        'create': 'fa fa-plus',
+                        'update': 'fa fa-edit',
+                        'delete': 'fa fa-trash'
+                    };
+                    return icons[type] || 'fa fa-plus';
+                },
+
+                getOperationText(type) {
+                    const texts = {
+                        'create': '新增药品',
+                        'update': '修改药品',
+                        'delete': '删除药品'
+                    };
+                    return texts[type] || '新增药品';
+                },
+
+                getFirstChar(name) {
+                    if (!name) return '药';
+                    return name.charAt(0);
+                },
+
+                formatTime(timeStr) {
+                    if (!timeStr) return '';
+                    const date = new Date(timeStr);
+                    const now = new Date();
+                    const isToday = date.toDateString() === now.toDateString();
+                    
+                    if (isToday) {
+                        return '今天 ' + date.getHours().toString().padStart(2, '0') + ':' + 
+                               date.getMinutes().toString().padStart(2, '0');
+                    } else {
+                        return (date.getMonth() + 1) + '/' + date.getDate() + ' ' + 
+                               date.getHours().toString().padStart(2, '0') + ':' + 
+                               date.getMinutes().toString().padStart(2, '0');
+                    }
+                },
+
+                openImage(url) {
+                    window.open(url, '_blank');
+                },
+
+                playVoice(url) {
+                    const audio = new Audio(url);
+                    audio.play();
+                },
+
+                showToast(msg) {
+                    const toast = document.getElementById('toast');
+                    toast.textContent = msg;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 3000);
+                },
+
+                goBack() {
+                    window.location.href = 'young_index.html';
+                },
+
+                goToPage(page) {
+                    const pages = {
+                        'home': 'young_index.html',
+                        'health': 'young_health.html',
+                        'msg': 'young_msg.html',
+                        'profile': 'young_settings.html'
+                    };
+                    if (pages[page]) {
+                        window.location.href = pages[page];
+                    }
+                },
+
+                selectMedicineOption(option) {
+                    this.showMedicineModal = false;
+                    if (option === 'review') {
+                        // 当前页面，不做跳转
+                    } else if (option === 'monitor') {
+                        if (this.elders.length > 0) {
+                            window.location.href = `young_medicine.html?elderId=${this.elders[0].id}`;
+                        } else {
+                            window.location.href = 'young_medicine.html';
+                        }
+                    } else if (option === 'box') {
+                        window.location.href = 'young_medicine_box.html';
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+

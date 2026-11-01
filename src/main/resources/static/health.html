@@ -1,0 +1,4039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>健康监测 - 解尘颐安养老平台</title>
+
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/echarts.min.js"></script>
+    <script src="lib/js/recorder.mp3.min.js"></script>
+    <script src="lib/js/wav.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="/js/global-mqtt-manager.js"></script>
+    <script src="/js/global-message-center.js"></script>
+    <script src="/js/user-settings-manager.js"></script>
+
+    <style>
+        .custom-icon {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        .icon-box .custom-icon {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+        
+        .fa-spin {
+            animation: fa-spin 1s infinite linear;
+        }
+        
+        @keyframes fa-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        :root {
+            --primary: #4361EE;
+            --danger: #F72585;
+            --success: #06D6A0;
+            --warning: #FF9F1C;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.7);
+            --text-dark: #1E3A8A;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at 10% 20%, #E0EAFC 0%, #CFDEF3 100%);
+            height: 100vh; font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 133.333%; height: 133.333%;
+            transform: scale(0.75); transform-origin: top left;
+            display: flex; flex-direction: column;
+        }
+
+        .top-bar {
+            height: 110px; padding: 0 50px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(25px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 100;
+        }
+
+        .main-content {
+            flex: 1; display: flex;
+            gap: 30px; padding: 30px 50px;
+            overflow: hidden;
+            height: calc(100% - 110px);
+        }
+
+        .left-side {
+            width: 65%; display: flex; flex-direction: column;
+        }
+
+        .right-side {
+            width: 35%; height: 100%;
+            display: flex; flex-direction: column;
+        }
+
+        .view-switcher {
+            display: flex; background: rgba(255,255,255,0.4);
+            padding: 10px; border-radius: 30px; margin-bottom: 25px;
+            width: fit-content; border: 1.5px solid white;
+        }
+
+        .switch-btn {
+            padding: 15px 40px; border-radius: 25px; font-size: 26px;
+            font-weight: bold; cursor: pointer; transition: 0.3s; color: var(--text-dark);
+        }
+
+        .switch-btn.active { background: var(--primary); color: white; box-shadow: 0 8px 20px rgba(67,97,238,0.3); }
+
+        .display-window {
+            position: relative; flex: 1; overflow: hidden; border-radius: 40px;
+        }
+
+        .sliding-container {
+            display: flex; width: 200%; height: 100%;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .view-pane {
+            width: 50%; height: 100%;
+            display: flex; flex-direction: column;
+        }
+
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 25px;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .glass-card {
+            background: var(--glass-bg); backdrop-filter: blur(20px);
+            border-radius: 40px; border: 1.5px solid var(--glass-border);
+            padding: 30px; display: flex; align-items: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: rgba(67, 97, 238, 0.4);
+        }
+
+        .icon-box {
+            width: 90px; height: 90px;
+            border-radius: 25px;
+            display: flex; align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            margin-right: 25px;
+            flex-shrink: 0;
+        }
+        
+        .icon-box img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .data-value {
+            font-size: 44px;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .data-unit {
+            font-size: 22px;
+            margin-left: 8px;
+            font-weight: 600;
+            color: #64748B;
+            align-self: flex-end;
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 14px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .number-animation {
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: inline-block;
+        }
+
+        .number-update {
+            animation: numberPulse 0.8s ease;
+            color: var(--primary);
+        }
+
+        @keyframes numberPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); color: var(--danger); }
+            100% { transform: scale(1); color: var(--text-dark); }
+        }
+
+        .chart-card {
+            background: var(--glass-bg); backdrop-filter: blur(20px);
+            border-radius: 40px; border: 2.5px solid white;
+            height: 100%; padding: 30px;
+            display: flex; flex-direction: column;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .chart-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .chart-filters {
+            display: flex;
+            gap: 15px;
+        }
+
+        .filter-item {
+            padding: 12px 25px;
+            border-radius: 20px;
+            background: white;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2.5px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        /* 为每个筛选项设置不同的边框颜色 */
+        .filter-item[data-type="bp"] {
+            color: #4361EE;
+            border-color: #4361EE;
+        }
+
+        .filter-item[data-type="hr"] {
+            color: #F72585;
+            border-color: #F72585;
+        }
+
+        .filter-item[data-type="sugar"] {
+            color: #FF9F1C;
+            border-color: #FF9F1C;
+        }
+
+        .filter-item[data-type="spo2"] {
+            color: #06D6A0;
+            border-color: #06D6A0;
+        }
+
+        .filter-item[data-type="steps"] {
+            color: #7209B7;
+            border-color: #7209B7;
+        }
+
+        .filter-item[data-type="sleep"] {
+            color: #4895EF;
+            border-color: #4895EF;
+        }
+
+        .filter-item.active {
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 激活状态下的不同颜色 - 只改变背景色，保持边框颜色不变 */
+        .filter-item[data-type="bp"].active {
+            background: #4361EE;
+        }
+
+        .filter-item[data-type="hr"].active {
+            background: #F72585;
+        }
+
+        .filter-item[data-type="sugar"].active {
+            background: #FF9F1C;
+        }
+
+        .filter-item[data-type="spo2"].active {
+            background: #06D6A0;
+        }
+
+        .filter-item[data-type="steps"].active {
+            background: #7209B7;
+        }
+
+        .filter-item[data-type="sleep"].active {
+            background: #4895EF;
+        }
+
+        .filter-item:not(.active):hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        #trendChart {
+            width: 100%;
+            height: calc(100% - 80px);
+            min-height: 400px;
+        }
+
+        .ai-report-card {
+            background: rgba(255, 255, 255, 0.75);
+            border-radius: 50px;
+            padding: 40px;
+            border: 2px solid white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(67, 97, 238, 0.12);
+            box-sizing: border-box;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .ai-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .ai-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4361EE, #3A56D4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+        }
+
+        .ai-info {
+            margin-left: 20px;
+        }
+
+        .ai-name {
+            margin: 0;
+            font-size: 34px;
+            color: var(--text-dark);
+            font-weight: 900;
+        }
+
+        .ai-status {
+            color: var(--success);
+            font-weight: bold;
+            font-size: 22px;
+            margin-top: 5px;
+        }
+
+        .ai-status-right {
+            color: #666;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .ai-status-right.voice-playing {
+            color: var(--primary);
+        }
+
+        .report-content {
+            font-size: 26px;
+            line-height: 1.6;
+            color: #334155;
+            flex: 1;
+            overflow-y: auto;
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 30px;
+        }
+
+        .report-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .report-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .report-content::-webkit-scrollbar-thumb {
+            background: rgba(67, 97, 238, 0.3);
+            border-radius: 10px;
+        }
+
+        /* 对话样式 */
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message {
+            padding: 15px 20px;
+            border-radius: 20px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            border-bottom-right-radius: 5px;
+            text-align: right;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #334155;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 20px;
+        }
+
+        .message-content {
+            font-size: 24px;
+            line-height: 1.4;
+        }
+
+        .no-conversation {
+            text-align: center;
+            color: #64748B;
+            padding: 40px 0;
+            font-size: 26px;
+        }
+
+        .no-conversation i {
+            font-size: 50px;
+            margin-bottom: 20px;
+            display: block;
+            color: #CBD5E1;
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .voice-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 25px;
+            border-radius: 35px;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.3);
+        }
+
+        .voice-btn:hover:not(:disabled) {
+            background: #3A56D4;
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(67, 97, 238, 0.4);
+        }
+
+        .voice-btn:disabled {
+            background: #94A3B8;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .voice-btn.recording {
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        .voice-btn.playing {
+            background: var(--warning);
+        }
+
+        .voice-btn.stop-btn {
+            background: var(--danger);
+        }
+
+        .voice-btn.stop-btn:hover:not(:disabled) {
+            background: #D1145F;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(247, 37, 133, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(247, 37, 133, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(247, 37, 133, 0); }
+        }
+
+        .pressable:active { transform: scale(0.95); transition: 0.1s; }
+
+        .refreshing-indicator {
+            position: fixed;
+            top: 150px;
+            right: 50px;
+            z-index: 1000;
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+            animation: slideInRight 0.3s ease, slideOutRight 0.3s ease 1.7s forwards;
+            opacity: 0.9;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 0.9; }
+        }
+
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 0.9; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        .refreshing-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .refreshing-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: white;
+            animation: dotPulse 1.4s infinite ease-in-out both;
+        }
+
+        .refreshing-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .refreshing-dots span:nth-child(2) { animation-delay: -0.16s; }
+        .refreshing-dots span:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes dotPulse {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .recording-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(247, 37, 133, 0.1);
+            border-radius: 25px;
+            margin-bottom: 15px;
+            font-size: 22px;
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .recording-animation {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            height: 25px;
+        }
+
+        .recording-animation span {
+            display: inline-block;
+            width: 4px;
+            background: var(--danger);
+            border-radius: 2px;
+            animation: soundWave 1.5s infinite ease-in-out;
+        }
+
+        .recording-animation span:nth-child(1) { height: 10px; animation-delay: 0.1s; }
+        .recording-animation span:nth-child(2) { height: 18px; animation-delay: 0.2s; }
+        .recording-animation span:nth-child(3) { height: 25px; animation-delay: 0.3s; }
+        .recording-animation span:nth-child(4) { height: 18px; animation-delay: 0.4s; }
+        .recording-animation span:nth-child(5) { height: 10px; animation-delay: 0.5s; }
+
+        @keyframes soundWave {
+            0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+            50% { transform: scaleY(1.5); opacity: 1; }
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .playback-controls .voice-btn {
+            flex: 1;
+        }
+
+        @keyframes loading {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1.2); }
+        }
+
+        [v-cloak] { display: none; }
+
+        /* MQTT模拟功能样式 */
+        .mqtt-sim-icon {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4361EE, #3A56D4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .mqtt-sim-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(67, 97, 238, 0.5);
+        }
+
+        .mqtt-sim-icon i {
+            color: white;
+            font-size: 32px;
+        }
+
+        .mqtt-sim-icon.running {
+            background: linear-gradient(135deg, #06D6A0, #05B588);
+            animation: pulse-glow 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 8px 25px rgba(6, 214, 160, 0.4); }
+            50% { box-shadow: 0 8px 35px rgba(6, 214, 160, 0.7); }
+        }
+
+        .mqtt-sim-panel {
+            position: fixed;
+            bottom: 110px;
+            right: 30px;
+            width: 420px;
+            max-height: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+            z-index: 999;
+            overflow: hidden;
+            transform-origin: bottom right;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .mqtt-sim-panel.hidden {
+            transform: scale(0);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mqtt-panel-header {
+            padding: 20px 25px;
+            background: linear-gradient(135deg, #4361EE, #3A56D4);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mqtt-panel-header h3 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .mqtt-panel-close {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .mqtt-panel-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .mqtt-panel-body {
+            padding: 20px;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .mqtt-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: rgba(6, 214, 160, 0.1);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .mqtt-status-bar.running {
+            background: rgba(6, 214, 160, 0.15);
+        }
+
+        .mqtt-status-bar.stopped {
+            background: rgba(100, 116, 139, 0.1);
+        }
+
+        .mqtt-status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #64748B;
+        }
+
+        .mqtt-status-dot.running {
+            background: #06D6A0;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .mqtt-status-text {
+            font-size: 16px;
+            font-weight: bold;
+            color: #334155;
+        }
+
+        .mqtt-control-btns {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mqtt-ctrl-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 15px;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mqtt-ctrl-btn.start {
+            background: #06D6A0;
+            color: white;
+        }
+
+        .mqtt-ctrl-btn.stop {
+            background: #F72585;
+            color: white;
+        }
+
+        .mqtt-ctrl-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .mqtt-ctrl-btn:disabled {
+            background: #CBD5E1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .mqtt-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1E3A8A;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .mqtt-data-type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mqtt-data-type-btn {
+            padding: 15px 10px;
+            border-radius: 15px;
+            border: 2px solid #E2E8F0;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .mqtt-data-type-btn:hover {
+            border-color: #4361EE;
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .mqtt-data-type-btn.active {
+            border-color: #4361EE;
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .mqtt-data-type-btn i {
+            font-size: 24px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .mqtt-data-type-btn span {
+            font-size: 14px;
+            font-weight: bold;
+            color: #334155;
+        }
+
+        .mqtt-input-group {
+            margin-bottom: 15px;
+        }
+
+        .mqtt-input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            color: #64748B;
+            margin-bottom: 8px;
+        }
+
+        .mqtt-input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .mqtt-input-group input:focus {
+            outline: none;
+            border-color: #4361EE;
+        }
+
+        .mqtt-send-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 15px;
+            border: none;
+            background: linear-gradient(135deg, #4361EE, #3A56D4);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mqtt-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
+        }
+
+        .mqtt-send-btn:disabled {
+            background: #CBD5E1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .mqtt-history {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .mqtt-history-item {
+            padding: 12px;
+            background: rgba(241, 245, 249, 0.8);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .mqtt-history-item .time {
+            color: #64748B;
+            font-size: 12px;
+        }
+
+        .mqtt-history-item .data {
+            font-weight: bold;
+            color: #1E3A8A;
+        }
+
+        .mqtt-history-item .status-normal {
+            color: #06D6A0;
+        }
+
+        .mqtt-history-item .status-alert {
+            color: #F72585;
+        }
+
+        /* 心率广播接收功能样式 */
+        .hr-broadcast-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #E2E8F0;
+        }
+
+        .hr-broadcast-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .hr-broadcast-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1E3A8A;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hr-broadcast-title i {
+            color: #F72585;
+        }
+
+        .hr-broadcast-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hr-broadcast-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #CBD5E1;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .hr-broadcast-toggle.active {
+            background: #06D6A0;
+        }
+
+        .hr-broadcast-toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .hr-broadcast-toggle.active::after {
+            left: 27px;
+        }
+
+        .hr-broadcast-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 15px;
+            background: rgba(100, 116, 139, 0.1);
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .hr-broadcast-status.active {
+            background: rgba(6, 214, 160, 0.15);
+        }
+
+        .hr-broadcast-status.scanning {
+            background: rgba(67, 97, 238, 0.1);
+        }
+
+        .hr-broadcast-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #64748B;
+        }
+
+        .hr-broadcast-status-dot.active {
+            background: #06D6A0;
+            animation: blink 1s infinite;
+        }
+
+        .hr-broadcast-status-dot.scanning {
+            background: #4361EE;
+            animation: blink 0.5s infinite;
+        }
+
+        .hr-broadcast-status-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: #334155;
+        }
+
+        .hr-broadcast-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hr-broadcast-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(241, 245, 249, 0.8);
+            border-radius: 10px;
+        }
+
+        .hr-broadcast-info-label {
+            font-size: 13px;
+            color: #64748B;
+            font-weight: 600;
+        }
+
+        .hr-broadcast-info-value {
+            font-size: 15px;
+            font-weight: bold;
+            color: #1E3A8A;
+        }
+
+        .hr-broadcast-info-value.heart-rate {
+            font-size: 24px;
+            color: #F72585;
+        }
+
+        .hr-broadcast-device-list {
+            margin-top: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .hr-broadcast-device-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(247, 37, 133, 0.05);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(247, 37, 133, 0.2);
+        }
+
+        .hr-broadcast-device-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .hr-broadcast-device-hr {
+            font-size: 16px;
+            font-weight: bold;
+            color: #F72585;
+        }
+
+        .hr-broadcast-tip {
+            font-size: 12px;
+            color: #64748B;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(67, 97, 238, 0.05);
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .hr-broadcast-tip i {
+            color: #4361EE;
+            margin-right: 5px;
+        }
+
+        /* 自动紧急呼叫弹窗样式 */
+        .auto-emergency-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auto-emergency-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.92) 0%, rgba(239, 68, 68, 0.88) 100%);
+            animation: emergency-bg-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes emergency-bg-pulse {
+            0%, 100% { 
+                background: linear-gradient(135deg, rgba(220, 38, 38, 0.92) 0%, rgba(239, 68, 68, 0.88) 100%);
+                box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.1);
+            }
+            50% { 
+                background: linear-gradient(135deg, rgba(220, 38, 38, 0.88) 0%, rgba(239, 68, 68, 0.84) 100%);
+                box-shadow: inset 0 0 150px rgba(0, 0, 0, 0.15);
+            }
+        }
+
+        .auto-emergency-content {
+            position: relative;
+            background: linear-gradient(145deg, #ffffff 0%, #fef2f2 100%);
+            border-radius: 60px;
+            padding: 60px 50px;
+            max-width: 700px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(255, 255, 255, 0.8);
+            animation: emergency-pop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes emergency-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .emergency-header {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+
+        .emergency-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            color: white;
+            padding: 12px 30px;
+            border-bottom-left-radius: 30px;
+            font-size: 22px;
+            font-weight: 900;
+            box-shadow: 0 8px 30px rgba(239, 68, 68, 0.5);
+        }
+
+        .emergency-badge.processing {
+            background: linear-gradient(135deg, #FF9F1C 0%, #F59E0B 100%);
+        }
+
+        .emergency-icon-animation {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            margin: 20px auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: emergency-shake 0.6s ease-in-out infinite;
+            box-shadow: 0 0 60px rgba(239, 68, 68, 0.8);
+        }
+
+        .emergency-icon-animation i {
+            font-size: 70px;
+            color: white;
+        }
+
+        .emergency-icon-animation.spinning {
+            animation: emergency-ring 1.2s ease-in-out infinite;
+        }
+
+        @keyframes emergency-shake {
+            0%, 100% { transform: translateX(0) rotate(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            75% { transform: translateX(10px) rotate(5deg); }
+        }
+
+        @keyframes emergency-ring {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .auto-emergency-content h2 {
+            font-size: 42px;
+            color: #DC2626;
+            margin-bottom: 25px;
+            font-weight: 900;
+        }
+
+        .emergency-info {
+            background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+            border: 3px solid #EF4444;
+            border-radius: 25px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .emergency-info p {
+            font-size: 26px;
+            color: #991B1B;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .emergency-info .alert-value {
+            color: #DC2626;
+            font-size: 32px;
+        }
+
+        .emergency-info .alert-level {
+            background: #DC2626;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: 700;
+        }
+
+        .emergency-question {
+            font-size: 28px;
+            color: #1E293B;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .countdown-display {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+            border: 2px solid #F59E0B;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .countdown-label {
+            font-size: 20px;
+            color: #92400E;
+            font-weight: 600;
+        }
+
+        .countdown-number {
+            font-size: 50px;
+            color: #DC2626;
+            font-weight: 900;
+        }
+
+        .countdown-unit {
+            font-size: 20px;
+            color: #92400E;
+            font-weight: 600;
+        }
+
+        .emergency-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .btn-cancel, .btn-confirm {
+            padding: 18px 45px;
+            border-radius: 30px;
+            border: none;
+            font-size: 24px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-cancel {
+            background: white;
+            color: #64748B;
+            border: 3px solid #E2E8F0;
+        }
+
+        .btn-cancel:hover {
+            background: #F1F5F9;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+            animation: emergency-btn-pulse 1.5s ease-in-out infinite;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes emergency-btn-pulse {
+            0%, 100% { box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 8px 35px rgba(239, 68, 68, 0.7); }
+        }
+
+        .call-status {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 20px;
+        }
+
+        .status-success {
+            background: rgba(6, 214, 160, 0.15);
+            color: #059669;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .status-success i {
+            font-size: 32px;
+        }
+
+        .status-waiting {
+            color: #92400E;
+            font-size: 22px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .waiting-animation {
+            display: flex;
+            gap: 5px;
+        }
+
+        .waiting-animation span {
+            width: 8px;
+            height: 8px;
+            background: #F59E0B;
+            border-radius: 50%;
+            animation: waiting-dot 1.4s infinite ease-in-out both;
+        }
+
+        .waiting-animation span:nth-child(1) { animation-delay: -0.32s; }
+        .waiting-animation span:nth-child(2) { animation-delay: -0.16s; }
+        .waiting-animation span:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes waiting-dot {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    <!-- 顶部Header -->
+    <header class="top-bar">
+        <a href="index.html" class="pressable" style="text-decoration: none; color: var(--text-dark); font-weight: bold; font-size: 42px; display: flex; align-items: center; gap: 10px;">
+            <img src="images/icons/fa-angle-left.svg" class="custom-icon" style="width: 28px; height: 28px;"> 返回
+        </a>
+        <h1 style="color: var(--text-dark); font-size: 44px; font-weight: 900;">实时健康监测</h1>
+        <div style="text-align: right">
+            <div style="font-size: 48px; font-weight: 900; color: var(--primary);">{{ currentTime }}</div>
+            <div style="font-size: 20px; color: #64748B; font-weight: 800; margin-top: 5px;">{{ currentDate }}</div>
+        </div>
+    </header>
+
+    <!-- 刷新提示 -->
+    <div v-if="showRefreshing" class="refreshing-indicator">
+        <div class="refreshing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        正在更新健康报告...
+    </div>
+
+    <!-- 录音指示器 -->
+    <div v-if="isRecording" class="recording-indicator">
+        <div class="recording-animation">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        正在录音...请说话
+    </div>
+
+    <!-- 主内容区域 -->
+    <main class="main-content">
+        <!-- 左侧区域：数据卡片和趋势图 -->
+        <div class="left-side">
+            <!-- 视图切换开关 -->
+            <div class="view-switcher">
+                <div class="switch-btn pressable" :class="{active: activeTab === 'realtime'}" @click="activeTab = 'realtime'">数据详情</div>
+                <div class="switch-btn pressable" :class="{active: activeTab === 'trend'}" @click="switchToTrend">趋势统计</div>
+            </div>
+
+            <!-- 滑动显示区域 -->
+            <div class="display-window">
+                <div class="sliding-container" :style="{transform: activeTab === 'realtime' ? 'translateX(0)' : 'translateX(-50%)'}">
+                    <!-- 数据卡片面板 -->
+                    <div class="view-pane">
+                        <div class="health-grid">
+                            <div v-for="item in healthCards" :key="item.id" class="glass-card pressable" @click="showDetail(item)">
+                                <div class="icon-box">
+                                    <img :src="'images/icons/' + item.icon" class="custom-icon">
+                                </div>
+                                <div style="flex: 1">
+                                    <div style="font-size: 24px; color: #64748B; font-weight: 600;">{{ item.label }}</div>
+                                    <div class="data-value">
+                                        <span class="number-animation" :class="{'number-update': item.isUpdating}"
+                                              :id="'value-' + item.id">
+                                            {{ item.displayValue || item.value }}
+                                        </span>
+                                        <span class="data-unit">{{ item.unit }}</span>
+                                    </div>
+                                    <span class="status-tag" :style="{background: getStatusColor(item.status)}">{{ item.status }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 趋势图面板 -->
+                    <div class="view-pane">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div class="chart-title">健康趋势分析</div>
+                                <div class="chart-filters">
+                                    <div v-for="(val, key) in filters" :key="key"
+                                         class="filter-item pressable" :class="{active: val}"
+                                         :data-type="key"
+                                         @click="toggleFilter(key)">
+                                        {{ filterNames[key] }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="trendChart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧区域：小智健康助手 -->
+        <div class="right-side">
+            <!-- AI健康总结 -->
+            <div class="ai-report-card">
+                <div class="ai-header">
+                    <div class="ai-left">
+                        <div class="ai-avatar">
+                            <img src="images/icons/fa-heartbeat.svg" class="custom-icon" style="width: 32px; height: 32px;">
+                        </div>
+                        <div class="ai-info">
+                            <h2 class="ai-name">小智健康助手</h2>
+                            <div class="ai-status">● 实时在线</div>
+                        </div>
+                    </div>
+                    <div class="ai-status-right" :class="{'voice-playing': isPlayingVoice}">
+                        {{ isPlayingVoice ? '● 播报中' : '' }}
+                    </div>
+                </div>
+
+                <div class="report-content">
+                    <div v-if="isAnalyzing && conversation.length === 0" style="display: flex; align-items: center; gap: 15px; height: 100%; justify-content: center;">
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--primary); animation: loading 1.4s infinite ease-in-out;"></span>
+                            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--primary); animation: loading 1.4s infinite ease-in-out; animation-delay: 0.2s;"></span>
+                            <span style="width: 12px; height: 12px; border-radius: 50%; background: var(--primary); animation: loading 1.4s infinite ease-in-out; animation-delay: 0.4s;"></span>
+                        </div>
+                        正在分析您的健康数据...
+                    </div>
+
+                    <div v-else>
+                        <div v-if="conversation.length > 0" class="conversation-container">
+                            <div v-for="(msg, index) in conversation" :key="index" class="message" :class="msg.sender === 'user' ? 'user-message' : 'ai-message'">
+                                <div class="message-sender">{{ msg.sender === 'user' ? nickname : '小智健康助手' }}</div>
+                                <div class="message-content">{{ msg.content }}</div>
+                                <div v-if="msg.timestamp" style="font-size: 18px; color: #94A3B8; margin-top: 5px;">{{ msg.timestamp }}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="conversation.length === 0">
+                            <p style="font-size: 28px; font-weight: 800; color: var(--text-dark); margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">健康报告 - {{ currentDate }}</p>
+
+                            <p style="margin-bottom: 20px;"><strong>{{ nickname }}长辈：</strong></p>
+                            <p style="margin-bottom: 20px;">{{ aiSummary }}</p>
+
+                            <!-- 健康建议 -->
+                            <div style="margin-top: 30px; padding: 20px; background: rgba(6, 214, 160, 0.1); border-radius: 20px;">
+                                <p style="color: var(--success); font-weight: bold; margin-bottom: 10px;">
+                                    <img src="images/icons/fa-lightbulb-o.png" class="custom-icon" style="width: 20px; height: 20px; vertical-align: middle;"> 今日健康建议
+                                </p>
+                                <ul style="margin: 0; padding-left: 25px;">
+                                    <li v-for="advice in healthAdvices" :key="advice">{{ advice }}</li>
+                                </ul>
+                            </div>
+
+                            <!-- 趋势分析 -->
+                            <div style="margin-top: 30px; padding: 20px; background: rgba(67, 97, 238, 0.08); border-radius: 20px;">
+                                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">
+                                    <img src="images/icons/icon-health.png" class="custom-icon" style="width: 20px; height: 20px; vertical-align: middle;"> 健康趋势
+                                </p>
+                                <p>{{ trendAnalysis }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="conversation.length === 0" class="no-conversation">
+                            <img src="images/icons/icon-social.png" class="custom-icon" style="width: 32px; height: 32px;">
+                            长按下方按钮开始语音提问
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 语音控制区域 -->
+                <div v-if="!isAnalyzing" class="playback-controls">
+                    <div class="voice-controls" style="flex: 1; display: flex; gap: 15px;">
+                        <button class="voice-btn pressable"
+                                @mousedown="startVoiceRecording"
+                                @touchstart="startVoiceRecording"
+                                @mouseup="stopVoiceRecording"
+                                @mouseleave="stopVoiceRecordingIfRecording"
+                                @touchend="stopVoiceRecording"
+                                @touchcancel="stopVoiceRecording"
+                                :disabled="isPlayingVoice"
+                                :class="{'recording': isRecording}"
+                                style="flex: 1;">
+                            <img v-if="isRecording" src="images/icons/fa-stop-circle.svg" class="custom-icon" style="width: 24px; height: 24px;">
+                            <img v-else src="images/icons/fa-microphone.svg" class="custom-icon" style="width: 24px; height: 24px;">
+                            {{ isRecording ? '松开结束' : '长按语音提问' }}
+                        </button>
+                        <button class="voice-btn pressable"
+                                @click="toggleVoicePlayback"
+                                :disabled="isRecording"
+                                :class="{'playing': isPlayingVoice}"
+                                style="flex: 1;">
+                            <img v-if="isPlayingVoice" src="images/icons/fa-stop.svg" class="custom-icon" style="width: 24px; height: 24px;">
+                            <img v-else src="images/icons/fa-volume-up.svg" class="custom-icon" style="width: 24px; height: 24px;">
+                            {{ isPlayingVoice ? '停止播报' : '完整播报' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 自动紧急呼叫确认弹窗 -->
+    <div v-if="showAutoEmergencyModal" class="auto-emergency-modal">
+        <div class="auto-emergency-backdrop"></div>
+        <div class="auto-emergency-content">
+            <div class="emergency-header">
+                <span class="emergency-badge">🚨 紧急</span>
+            </div>
+            <div class="emergency-icon-animation">
+                <img src="images/icons/fa-exclamation-triangle.png" class="custom-icon" style="width: 120px; height: 120px;">
+            </div>
+            <h2>检测到健康异常</h2>
+            <div class="emergency-info">
+                <p>您的 <strong>{{ autoEmergencyAlertType }}</strong> 值为 <strong class="alert-value">{{ autoEmergencyAlertValue }}</strong></p>
+                <p>已达到 <span class="alert-level">严重</span> 级别</p>
+            </div>
+            <p class="emergency-question">是否立即发起紧急呼叫？</p>
+            <div class="countdown-display">
+                <span class="countdown-label">自动呼叫倒计时</span>
+                <span class="countdown-number">{{ autoEmergencyCountdown }}</span>
+                <span class="countdown-unit">秒</span>
+            </div>
+            <div class="emergency-buttons">
+                <button class="btn-cancel" @click="cancelAutoEmergencyCall" :disabled="autoEmergencyConfirmed">
+                    <img src="images/icons/fa-times.png" class="custom-icon" style="width: 36px; height: 36px;"> 取消
+                </button>
+                <button class="btn-confirm" @click="confirmAutoEmergencyCall" :disabled="autoEmergencyConfirmed">
+                    <img src="images/icons/fa-phone.png" class="custom-icon" style="width: 36px; height: 36px;"> 
+                    {{ autoEmergencyConfirmed ? '呼叫中...' : '立即呼叫' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自动紧急呼叫进行中弹窗 -->
+    <div v-if="showAutoEmergencyProgress" class="auto-emergency-modal">
+        <div class="auto-emergency-backdrop"></div>
+        <div class="auto-emergency-content progress">
+            <div class="emergency-header">
+                <span class="emergency-badge processing">🚨 呼叫中</span>
+            </div>
+            <div class="emergency-icon-animation spinning">
+                <img src="images/icons/fa-phone.png" class="custom-icon" style="width: 120px; height: 120px;">
+            </div>
+            <h2>正在发起紧急呼叫</h2>
+            <div class="emergency-info">
+                <p>呼叫类型：<strong>自动呼叫</strong></p>
+                <p>预警原因：<strong>{{ autoEmergencyAlertType }} ({{ autoEmergencyAlertValue }})</strong></p>
+            </div>
+            <div class="call-status">
+                <div v-if="autoEmergencyAnswered" class="status-success">
+                    <img src="images/icons/fa-check-circle.png" class="custom-icon" style="width: 36px; height: 36px;">
+                    <span>{{ autoEmergencyAnsweredName }} 已接听</span>
+                </div>
+                <div v-else class="status-waiting">
+                    <div class="waiting-animation">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span>等待联系人接听...</span>
+                </div>
+            </div>
+            <button class="btn-cancel" @click="cancelAutoEmergencyCall">
+                <img src="images/icons/fa-power-off.png" class="custom-icon" style="width: 36px; height: 36px;"> 结束呼叫
+            </button>
+        </div>
+    </div>
+
+    <!-- MQTT模拟功能图标 -->
+    <div class="mqtt-sim-icon pressable" :class="{'running': mqttSimulationRunning}" @click="toggleMqttPanel">
+        <img v-if="mqttSimulationRunning" src="images/icons/fa-rss.png" class="custom-icon" style="width: 24px; height: 24px;">
+        <img v-else src="images/icons/fa-paper-plane.png" class="custom-icon" style="width: 24px; height: 24px;">
+    </div>
+
+    <!-- MQTT模拟控制面板 -->
+    <div class="mqtt-sim-panel" :class="{'hidden': !showMqttPanel}">
+        <div class="mqtt-panel-header">
+            <h3><img src="images/icons/fa-paper-plane.png" class="custom-icon" style="width: 20px; height: 20px;"> MQTT数据模拟</h3>
+            <button class="mqtt-panel-close" @click="showMqttPanel = false">
+                <img src="images/icons/fa-times.png" class="custom-icon" style="width: 16px; height: 16px;">
+            </button>
+        </div>
+        <div class="mqtt-panel-body">
+            <!-- 状态栏 -->
+            <div class="mqtt-status-bar" :class="mqttSimulationRunning ? 'running' : 'stopped'">
+                <div class="mqtt-status-dot" :class="{'running': mqttSimulationRunning}"></div>
+                <span class="mqtt-status-text">
+                    {{ mqttSimulationRunning ? '自动模拟运行中...' : '模拟已停止' }}
+                    <span v-if="mqttSimulationRunning"> (已发送 {{ mqttDataCount }} 条数据)</span>
+                </span>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="mqtt-control-btns">
+                <button class="mqtt-ctrl-btn start" @click="startMqttSimulation" :disabled="mqttSimulationRunning">
+                    <img src="images/icons/fa-play.png" class="custom-icon" style="width: 16px; height: 16px;"> 启动自动模拟
+                </button>
+                <button class="mqtt-ctrl-btn stop" @click="stopMqttSimulation" :disabled="!mqttSimulationRunning">
+                    <img src="images/icons/fa-stop.svg" class="custom-icon" style="width: 16px; height: 16px;"> 停止模拟
+                </button>
+            </div>
+
+            <!-- 手动模拟区域 -->
+            <div class="mqtt-section-title">手动发送数据</div>
+            
+            <!-- 数据类型选择 -->
+            <div class="mqtt-data-type-grid">
+                <div class="mqtt-data-type-btn" :class="{'active': mqttDataType === 'BP'}" @click="mqttDataType = 'BP'">
+                    <img src="images/icons/fa-heartbeat.svg" class="custom-icon" style="width: 20px; height: 20px;">
+                    <span>血压</span>
+                </div>
+                <div class="mqtt-data-type-btn" :class="{'active': mqttDataType === 'HR'}" @click="mqttDataType = 'HR'">
+                    <img src="images/icons/fa-tachometer.svg" class="custom-icon" style="width: 20px; height: 20px;">
+                    <span>心率</span>
+                </div>
+                <div class="mqtt-data-type-btn" :class="{'active': mqttDataType === 'BO'}" @click="mqttDataType = 'BO'">
+                    <img src="images/icons/fa-leaf.svg" class="custom-icon" style="width: 20px; height: 20px;">
+                    <span>血氧</span>
+                </div>
+                <div class="mqtt-data-type-btn" :class="{'active': mqttDataType === 'BG'}" @click="mqttDataType = 'BG'">
+                    <img src="images/icons/fa-tint.svg" class="custom-icon" style="width: 20px; height: 20px;">
+                    <span>血糖</span>
+                </div>
+                <div class="mqtt-data-type-btn" :class="{'active': mqttDataType === 'STEPS'}" @click="mqttDataType = 'STEPS'">
+                    <img src="images/icons/fa-blind.svg" class="custom-icon" style="width: 20px; height: 20px;">
+                    <span>步数</span>
+                </div>
+                <div class="mqtt-data-type-btn" :class="{'active': mqttDataType === 'SLEEP'}" @click="mqttDataType = 'SLEEP'">
+                    <img src="images/icons/fa-moon-o.svg" class="custom-icon" style="width: 20px; height: 20px;">
+                    <span>睡眠</span>
+                </div>
+            </div>
+
+            <!-- 数值输入 -->
+            <div class="mqtt-input-group" v-if="mqttDataType === 'BP'">
+                <label>收缩压/舒张压 (mmHg)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" v-model.number="mqttValue1" placeholder="收缩压" style="flex: 1;">
+                    <input type="number" v-model.number="mqttValue2" placeholder="舒张压" style="flex: 1;">
+                </div>
+            </div>
+            <div class="mqtt-input-group" v-else-if="mqttDataType === 'HR'">
+                <label>心率 (次/分)</label>
+                <input type="number" v-model.number="mqttValue1" placeholder="如: 75">
+            </div>
+            <div class="mqtt-input-group" v-else-if="mqttDataType === 'BO'">
+                <label>血氧饱和度 (%)</label>
+                <input type="number" v-model.number="mqttValue1" placeholder="如: 98">
+            </div>
+            <div class="mqtt-input-group" v-else-if="mqttDataType === 'BG'">
+                <label>血糖 (mmol/L)</label>
+                <input type="number" step="0.1" v-model.number="mqttValue1" placeholder="如: 5.5">
+            </div>
+            <div class="mqtt-input-group" v-else-if="mqttDataType === 'STEPS'">
+                <label>步数</label>
+                <input type="number" v-model.number="mqttValue1" placeholder="如: 5000">
+            </div>
+            <div class="mqtt-input-group" v-else-if="mqttDataType === 'SLEEP'">
+                <label>睡眠时长 (小时)</label>
+                <input type="number" step="0.5" v-model.number="mqttValue1" placeholder="如: 7.5">
+            </div>
+
+            <!-- 发送按钮 -->
+            <button class="mqtt-send-btn" @click="sendMqttData" :disabled="mqttSending">
+                <img v-if="mqttSending" src="images/icons/fa-spinner.png" class="custom-icon fa-spin" style="width: 16px; height: 16px;">
+                <img v-else src="images/icons/fa-paper-plane.png" class="custom-icon" style="width: 16px; height: 16px;">
+                {{ mqttSending ? '发送中...' : '发送模拟数据' }}
+            </button>
+
+            <!-- 发送历史 -->
+            <div class="mqtt-history" v-if="mqttHistory.length > 0">
+                <div class="mqtt-section-title">发送记录</div>
+                <div class="mqtt-history-item" v-for="(item, index) in mqttHistory" :key="index">
+                    <div class="time">{{ item.time }}</div>
+                    <div class="data">
+                        {{ item.dataType }}: {{ item.value }}
+                        <span :class="item.status === '正常' ? 'status-normal' : 'status-alert'">
+                            [{{ item.status }}]
+                        </span>
+                        <span v-if="item.alertLevel" class="status-alert">
+                            - {{ item.alertLevelText }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 心率广播接收功能区域 -->
+            <div class="hr-broadcast-section">
+                <div class="hr-broadcast-header">
+                    <div class="hr-broadcast-title">
+                        <img src="images/icons/fa-tachometer.svg" class="custom-icon" style="width: 18px; height: 18px;">
+                        心率广播接收
+                    </div>
+                    <div class="hr-broadcast-switch">
+                        <span style="font-size: 13px; color: #64748B;">{{ hrBroadcastEnabled ? '已开启' : '已关闭' }}</span>
+                        <div class="hr-broadcast-toggle" :class="{'active': hrBroadcastEnabled}" @click="toggleHrBroadcast"></div>
+                    </div>
+                </div>
+
+                <!-- 状态指示 -->
+                <div class="hr-broadcast-status" :class="{'active': hrBroadcastReceiving, 'scanning': hrBroadcastScanning}">
+                    <div class="hr-broadcast-status-dot" :class="{'active': hrBroadcastReceiving, 'scanning': hrBroadcastScanning}"></div>
+                    <span class="hr-broadcast-status-text">
+                        <template v-if="!hrBroadcastEnabled">功能已关闭</template>
+                        <template v-else-if="hrBroadcastScanning">正在扫描设备...</template>
+                        <template v-else-if="hrBroadcastReceiving">正在接收心率数据</template>
+                        <template v-else>等待开启</template>
+                    </span>
+                </div>
+
+                <!-- 心率数据显示 -->
+                <div class="hr-broadcast-info" v-if="hrBroadcastEnabled">
+                    <div class="hr-broadcast-info-item">
+                        <span class="hr-broadcast-info-label">当前心率</span>
+                        <span class="hr-broadcast-info-value heart-rate">
+                            {{ hrBroadcastCurrentHr || '--' }}
+                            <span style="font-size: 14px; color: #64748B;">次/分</span>
+                        </span>
+                    </div>
+                    <div class="hr-broadcast-info-item">
+                        <span class="hr-broadcast-info-label">设备名称</span>
+                        <span class="hr-broadcast-info-value">{{ hrBroadcastDeviceName || '未连接' }}</span>
+                    </div>
+                    <div class="hr-broadcast-info-item">
+                        <span class="hr-broadcast-info-label">最后更新</span>
+                        <span class="hr-broadcast-info-value">{{ hrBroadcastLastUpdate || '--' }}</span>
+                    </div>
+                    <div class="hr-broadcast-info-item" v-if="hrLastSaveTime">
+                        <span class="hr-broadcast-info-label">上次保存</span>
+                        <span class="hr-broadcast-info-value" style="color: #06D6A0;">
+                            {{ formatHrSaveTime(hrLastSaveTime) }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 已发现设备列表 -->
+                <div class="hr-broadcast-device-list" v-if="hrBroadcastEnabled && hrBroadcastDevices.length > 0">
+                    <div class="hr-broadcast-device-item" v-for="device in hrBroadcastDevices" :key="device.id">
+                        <span class="hr-broadcast-device-name">{{ device.name }}</span>
+                        <span class="hr-broadcast-device-hr">{{ device.heartRate }} 次/分</span>
+                    </div>
+                </div>
+
+                <!-- 使用提示 -->
+                <div class="hr-broadcast-tip" v-if="hrBroadcastEnabled">
+                    <img src="images/icons/fa-info-circle.png" class="custom-icon" style="width: 14px; height: 14px;">
+                    支持所有符合BLE心率服务标准的设备，包括小米手环、华为手环、Apple Watch、Garmin、Fitbit等。请确保设备已开启心率广播功能。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                currentTime: '',
+                currentDate: '',
+                nickname: localStorage.getItem('nickname') || "长辈",
+                activeTab: 'realtime',
+                isAnalyzing: true,
+                aiSummary: '',
+                healthCards: [],
+                filters: { bp: true, hr: true, sugar: true, spo2: true, steps: true, sleep: true },
+                filterNames: { bp: '血压', hr: '心率', sugar: '血糖', spo2: '血氧', steps: '步数', sleep: '睡眠' },
+                chart: null,
+                cachedTrendData: null,
+                websocket: null,
+                userId: localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId')) : 1,
+                wsConnected: false,
+                isRecording: false,
+                rec: null,
+                healthAdvices: [],
+                trendAnalysis: '',
+                showRefreshing: false,
+                lastUpdateTime: null,
+                dataUpdateCount: 0,
+                refreshTimer: null,
+
+                // 语音播报相关状态
+                isPlayingVoice: false,
+                currentAudio: null,
+
+                // 对话记录
+                conversation: [],
+
+                // MQTT模拟相关状态
+                showMqttPanel: false,
+                mqttSimulationRunning: false,
+                mqttDataCount: 0,
+                mqttDataType: 'BP',
+                mqttValue1: null,
+                mqttValue2: null,
+                mqttSending: false,
+                mqttHistory: [],
+                mqttStatusCheckTimer: null,
+
+                // 自动紧急呼叫相关状态
+                showAutoEmergencyModal: false,
+                showAutoEmergencyProgress: false,
+                autoEmergencyAlertType: '',
+                autoEmergencyAlertValue: '',
+                autoEmergencyAlertLevel: 0,
+                autoEmergencyCountdown: 10,
+                autoEmergencyCountdownTimer: null,
+                autoEmergencyCallRecordId: null,
+                autoEmergencyAnswered: false,
+                autoEmergencyAnsweredName: '',
+                autoEmergencyStatusTimer: null,
+                autoEmergencyConfirmed: false,
+                autoEmergencyContacts: [],
+                emergencySocket: null,
+                ringtoneConfig: {},
+
+                // 心率广播接收相关状态
+                hrBroadcastEnabled: false,
+                hrBroadcastScanning: false,
+                hrBroadcastReceiving: false,
+                hrBroadcastCurrentHr: null,
+                hrBroadcastDeviceName: '',
+                hrBroadcastLastUpdate: '',
+                hrBroadcastDevices: [],
+                hrBluetoothDevice: null,
+                hrBluetoothServer: null,
+                hrBluetoothCharacteristic: null,
+                hrSaveTimer: null,           // 定时保存心率数据的定时器
+                hrDataBuffer: [],            // 心率数据缓冲区
+                hrLastSaveTime: null,        // 上次保存时间
+                hrHealthConfig: null,        // 用户健康配置（心率阈值）
+                hrEmergencyTriggered: false  // 是否已触发紧急呼叫（防止重复触发）
+            }
+        },
+        async mounted() {
+            this.initClock();
+            await this.loadRingtoneConfig();
+
+            // 设置全局消息中心回调
+            if (typeof GlobalMessageCenter !== 'undefined') {
+                GlobalMessageCenter.onAutoEmergencyTriggered = (data) => {
+                    console.log('收到自动紧急呼叫触发通知:', data);
+                    if (data.alertType && data.alertValue) {
+                        this.showAutoEmergencyCallModal(data.alertType, data.alertValue, data.alertLevel || 3);
+                    }
+                };
+            }
+
+            // 从Session获取当前登录用户的userId
+            try {
+                const userRes = await axios.get('/api/user/info');
+                if (userRes.data && userRes.data.code === 200 && userRes.data.data) {
+                    this.userId = userRes.data.data.id;
+                    console.log('从Session获取的userId:', this.userId);
+                } else {
+                    this.userId = localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId')) : 1;
+                }
+            } catch (e) {
+                this.userId = localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId')) : 1;
+                console.error('获取用户信息失败:', e);
+            }
+            console.log('最终使用的userId:', this.userId);
+
+            this.initWebSocket();
+            this.fetchInitialHealthData();
+            this.fetchAISummary();
+
+            // 监听窗口大小变化，重新渲染图表
+            window.addEventListener('resize', () => {
+                if (this.chart) {
+                    this.chart.resize();
+                }
+            });
+
+            // 监听页面可见性变化，处理语音播报
+            document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        },
+        beforeUnmount() {
+            // 组件销毁前停止语音播报
+            this.stopVoiceReport();
+            // 停止录音
+            this.stopRecording();
+            // 停止心率广播接收和定时保存
+            this.stopHrBroadcast();
+            document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        },
+        methods: {
+            async loadRingtoneConfig() {
+                try {
+                    const res = await fetch('/api/qiniu/ringtones');
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.items) {
+                            this.ringtoneConfig = {};
+                            data.items.forEach(item => {
+                                this.ringtoneConfig[item.type] = item.url;
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.log('加载铃声配置失败:', e);
+                }
+            },
+            // 处理页面可见性变化
+            handleVisibilityChange() {
+                if (document.hidden && this.isPlayingVoice) {
+                    this.stopVoiceReport();
+                }
+                if (document.hidden && this.isRecording) {
+                    this.stopRecording();
+                }
+            },
+
+            // 初始化WebSocket连接
+            initWebSocket() {
+                try {
+                    console.log('初始化WebSocket连接，userId:', this.userId);
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/ws/health/${this.userId}`;
+                    console.log('WebSocket连接URL:', wsUrl);
+                    this.websocket = new WebSocket(wsUrl);
+
+                    this.websocket.onopen = () => {
+                        console.log('WebSocket连接成功');
+                        this.wsConnected = true;
+                    };
+
+                    this.websocket.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (data && data.type === 'health_data_update') {
+                                if (Array.isArray(data.data)) {
+                                    console.log('收到WebSocket健康数据更新');
+
+                                    // 使用动画更新数据
+                                    this.animateHealthCardsUpdate(data.data);
+
+                                    // 触发右侧AI总结刷新
+                                    this.scheduleRightSideRefresh();
+                                }
+                            }
+                        } catch (error) {
+                            console.error('WebSocket消息解析失败:', error);
+                        }
+                    };
+
+                    this.websocket.onclose = () => {
+                        console.log('WebSocket连接关闭');
+                        this.wsConnected = false;
+                        setTimeout(() => {
+                            console.log('尝试重新连接WebSocket...');
+                            this.initWebSocket();
+                        }, 3000);
+                    };
+
+                    this.websocket.onerror = () => {
+                        this.wsConnected = false;
+                    };
+                } catch (error) {
+                    console.error('WebSocket初始化失败:', error);
+                    setTimeout(() => {
+                        console.log('尝试重新连接WebSocket...');
+                        this.initWebSocket();
+                    }, 3000);
+                }
+            },
+
+            // 调度右侧刷新
+            scheduleRightSideRefresh() {
+                console.log('调度右侧AI总结刷新');
+                this.dataUpdateCount++;
+
+                // 显示刷新提示
+                this.showRefreshing = true;
+
+                // 2秒后自动隐藏刷新提示
+                setTimeout(() => {
+                    this.showRefreshing = false;
+                }, 2000);
+
+                // 如果短时间内多次更新，使用防抖策略
+                if (this.refreshTimer) {
+                    clearTimeout(this.refreshTimer);
+                }
+
+                // 延迟1秒后刷新AI总结，避免频繁调用
+                this.refreshTimer = setTimeout(() => {
+                    this.refreshRightSideAI();
+                }, 1000);
+            },
+
+            // 刷新右侧AI总结
+            refreshRightSideAI() {
+                console.log('开始刷新右侧AI总结，数据已更新', this.dataUpdateCount, '次');
+
+                // 更新当前时间
+                const d = new Date();
+                this.currentDate = (d.getMonth() + 1).toString().padStart(2, '0') + '月' +
+                                  d.getDate().toString().padStart(2, '0') + '日 ' +
+                                  ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+
+                // 重新获取AI总结
+                this.fetchAISummary();
+
+                // 重新生成健康建议
+                this.generateHealthAdvices();
+
+                // 重新获取趋势分析
+                this.fetchTrendAnalysis();
+
+                // 记录最后更新时间
+                this.lastUpdateTime = new Date();
+                console.log('右侧AI总结刷新完成，更新时间:', this.lastUpdateTime);
+            },
+
+            // 使用动画更新健康卡片数据
+            animateHealthCardsUpdate(newCards) {
+                if (!Array.isArray(newCards)) return;
+
+                // 保存旧值用于动画
+                const oldCards = [...this.healthCards];
+
+                newCards.forEach((newCard, index) => {
+                    const oldCard = oldCards.find(card => card.id === newCard.id);
+                    if (oldCard) {
+                        // 如果值发生变化，添加动画
+                        if (oldCard.value !== newCard.value) {
+                            // 为新增动画类
+                            newCard.isUpdating = true;
+                            newCard.displayValue = oldCard.value; // 从旧值开始
+
+                            // 启动动画
+                            this.animateNumber(newCard.id, oldCard.value, newCard.value);
+
+                            // 3秒后移除动画类
+                            setTimeout(() => {
+                                const cardIndex = this.healthCards.findIndex(card => card.id === newCard.id);
+                                if (cardIndex !== -1) {
+                                    this.healthCards[cardIndex].isUpdating = false;
+                                }
+                            }, 800);
+                        } else {
+                            newCard.displayValue = newCard.value;
+                        }
+                    } else {
+                        newCard.displayValue = newCard.value;
+                    }
+                });
+
+                this.healthCards = newCards;
+            },
+
+            // 数字动画效果
+            animateNumber(cardId, startValue, endValue, duration = 800) {
+                // 解析数值（处理像血压"125/82"这样的复合值）
+                const isSimpleNumber = /^\d+(\.\d+)?$/.test(startValue) && /^\d+(\.\d+)?$/.test(endValue);
+
+                if (isSimpleNumber) {
+                    const start = parseFloat(startValue);
+                    const end = parseFloat(endValue);
+
+                    const startTime = Date.now();
+                    const element = document.getElementById(`value-${cardId}`);
+
+                    if (!element) return;
+
+                    const animate = () => {
+                        const now = Date.now();
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+
+                        // 使用缓动函数让动画更平滑
+                        const easeProgress = this.easeOutCubic(progress);
+                        const currentValue = start + (end - start) * easeProgress;
+
+                        // 格式化显示（保留适当小数位）
+                        let displayValue;
+                        if (Math.abs(end - start) < 10) {
+                            displayValue = currentValue.toFixed(1);
+                        } else {
+                            displayValue = Math.round(currentValue);
+                        }
+
+                        element.textContent = displayValue;
+
+                        // 更新data中的displayValue
+                        const cardIndex = this.healthCards.findIndex(card => card.id === cardId);
+                        if (cardIndex !== -1) {
+                            this.healthCards[cardIndex].displayValue = displayValue;
+                        }
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animate);
+                        } else {
+                            // 动画结束，确保最终值正确
+                            element.textContent = endValue;
+                            if (cardIndex !== -1) {
+                                this.healthCards[cardIndex].displayValue = endValue;
+                            }
+                        }
+                    };
+
+                    requestAnimationFrame(animate);
+                } else {
+                    // 对于复合值（如血压），直接显示新值
+                    const element = document.getElementById(`value-${cardId}`);
+                    if (element) {
+                        element.textContent = endValue;
+                    }
+                }
+            },
+
+            // 缓动函数 - 让动画更平滑
+            easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            },
+
+            // 获取初始健康数据
+            fetchInitialHealthData() {
+                console.log('获取初始健康数据, userId:', this.userId);
+
+                if (typeof axios === 'undefined' || !axios.get) {
+                    console.error('Axios 未加载，使用默认数据');
+                    this.showDefaultData();
+                    return;
+                }
+
+                const oldCards = [...this.healthCards];
+
+                axios.get(`/api/health/cards?userId=${this.userId}`)
+                    .then(response => {
+                        console.log('获取健康数据成功:', response.data);
+                        if (response.data && response.data.code === 200 && Array.isArray(response.data.data)) {
+                            const newCards = response.data.data.map(newCard => {
+                                const oldCard = oldCards.find(c => c.id === newCard.id);
+                                if (oldCard && oldCard.value !== newCard.value) {
+                                    newCard.isUpdating = true;
+                                    newCard.displayValue = oldCard.value;
+                                    setTimeout(() => {
+                                        this.animateNumber(newCard.id, oldCard.value, newCard.value);
+                                        setTimeout(() => {
+                                            const cardIndex = this.healthCards.findIndex(c => c.id === newCard.id);
+                                            if (cardIndex !== -1) {
+                                                this.healthCards[cardIndex].isUpdating = false;
+                                            }
+                                        }, 800);
+                                    }, 50);
+                                } else {
+                                    newCard.displayValue = newCard.value;
+                                }
+                                return newCard;
+                            });
+                            this.healthCards = newCards;
+                        } else {
+                            console.error('健康数据格式错误:', response.data);
+                            this.showDefaultData();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取健康数据失败:', error);
+                        this.showDefaultData();
+                    });
+            },
+
+            // 显示默认数据（当API调用失败时）
+            showDefaultData() {
+                console.log('使用默认健康数据');
+                this.healthCards = [
+                    { id:1, label:'血压 (高压/低压)', value:'125/82', unit:'mmHg', status:'正常', icon:'fa-heartbeat.png', color:'#4361EE', displayValue: '125/82' },
+                    { id:2, label:'心率', value:'75', unit:'次/分', status:'正常', icon:'fa-tachometer.png', color:'#F72585', displayValue: '75' },
+                    { id:3, label:'血糖 (空腹)', value:'7.1', unit:'mmol/L', status:'稍高', icon:'fa-tint.png', color:'#FF9F1C', displayValue: '7.1' },
+                    { id:4, label:'血氧饱和度', value:'98', unit:'%', status:'正常', icon:'fa-leaf.png', color:'#06D6A0', displayValue: '98' },
+                    { id:5, label:'今日步数', value:'5420', unit:'步', status:'达标', icon:'fa-blind.png', color:'#7209B7', displayValue: '5420' },
+                    { id:6, label:'睡眠时长', value:'7.5', unit:'小时', status:'正常', icon:'fa-moon-o.png', color:'#4895EF', displayValue: '7.5' }
+                ];
+            },
+
+            // 获取AI健康总结
+            fetchAISummary() {
+                console.log('获取AI健康总结, userId:', this.userId);
+                this.isAnalyzing = true;
+
+                if (typeof axios === 'undefined' || !axios.get) {
+                    console.error('Axios 未加载');
+                    this.isAnalyzing = false;
+                    this.aiSummary = '抱歉，无法生成健康总结，请稍后再试。';
+                    return;
+                }
+
+                // 调用后端API获取AI健康总结
+                axios.get(`/api/health/ai/summary?userId=${this.userId}`)
+                    .then(response => {
+                        console.log('获取AI健康总结成功:', response.data);
+                        if (response.data && response.data.code === 200) {
+                            this.aiSummary = response.data.data;
+                            // 根据健康卡片状态生成建议
+                            this.generateHealthAdvices();
+                            // 获取趋势分析
+                            this.fetchTrendAnalysis();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取AI健康总结失败:', error);
+                        this.aiSummary = '您的各项身体指标非常平稳。血压125/82mmHg处于健康范围，心率75次/分钟正常。空腹血糖值7.1mmol/L略高，建议关注饮食控制。血氧饱和度98%非常理想。今日已走5420步，完成运动目标。睡眠时长7.5小时，深度睡眠充足。';
+                        this.generateHealthAdvices();
+                    })
+                    .finally(() => {
+                        this.isAnalyzing = false;
+                    });
+            },
+
+            // 根据健康卡片状态生成建议（调用后端动态生成）
+            generateHealthAdvices() {
+                this.healthAdvices = [];
+                
+                axios.get('/api/health/ai/daily-advices?userId=' + this.userId)
+                    .then(response => {
+                        if (response.data && response.data.code === 200 && response.data.data) {
+                            this.healthAdvices = response.data.data;
+                        }
+                        
+                        if (this.healthAdvices.length === 0) {
+                            this.healthAdvices = [
+                                "各项指标正常，继续保持健康的生活方式"
+                            ];
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取动态健康建议失败:', error);
+                        this.healthAdvices = [
+                            "各项指标正常，继续保持健康的生活方式"
+                        ];
+                    });
+            },
+
+            fetchDbHealthAdvices() {
+                // 已合并到generateHealthAdvices中，此方法保留兼容
+            },
+
+            // 获取趋势分析
+            fetchTrendAnalysis() {
+                axios.get(`/api/health/ai/trend?userId=${this.userId}&days=7`)
+                    .then(response => {
+                        if (response.data && response.data.code === 200) {
+                            this.trendAnalysis = response.data.data;
+                        } else {
+                            this.trendAnalysis = '近期您的健康指标保持稳定，各项数据都在正常范围内波动。建议继续保持良好的生活习惯。';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('获取趋势分析失败:', error);
+                        this.trendAnalysis = '近期您的健康指标保持稳定，各项数据都在正常范围内波动。建议继续保持良好的生活习惯。';
+                    });
+            },
+
+            initClock() {
+                const update = () => {
+                    const d = new Date();
+                    this.currentTime = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                    this.currentDate = (d.getMonth() + 1).toString().padStart(2, '0') + '月' + d.getDate().toString().padStart(2, '0') + '日 ' + ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][d.getDay()];
+                };
+                update();
+                setInterval(update, 1000);
+            },
+
+            getStatusColor(status) {
+                const map = {
+                    '正常': '#06D6A0',
+                    '达标': '#06D6A0',
+                    '优': '#4361EE',
+                    '稍高': '#FF9F1C',
+                    '偏低': '#FF9F1C',
+                    '警告': '#F72585'
+                };
+                return map[status] || '#64748B';
+            },
+
+            showDetail(item) {
+                const text = `${item.label}，当前值为${item.value}${item.unit}，状态${item.status}。`;
+                this.playAIVoice(text);
+            },
+
+            switchToTrend() {
+                this.activeTab = 'trend';
+                this.$nextTick(() => {
+                    setTimeout(this.renderChart, 300);
+                });
+            },
+
+            toggleFilter(key) {
+                this.filters[key] = !this.filters[key];
+
+                if (this.cachedTrendData) {
+                    this.renderTrendCharts(this.cachedTrendData);
+                } else {
+                    this.renderChart();
+                }
+            },
+
+            // 趋势统计方法
+            renderChart() {
+                var container = document.getElementById('trendChart');
+                if (!container) {
+                    return;
+                }
+
+                if (typeof echarts === 'undefined') {
+                    this.showDefaultChart();
+                    return;
+                }
+
+                if (!this.chart) {
+                    this.chart = echarts.init(container);
+                } else {
+                    this.chart.dispose();
+                    this.chart = echarts.init(container);
+                }
+
+                if (typeof axios === 'undefined' || !axios.get) {
+                    this.showDefaultChart();
+                    return;
+                }
+
+                axios.get('/api/health/trend?userId=' + this.userId + '&days=7&t=' + Date.now())
+                    .then(response => {
+                        if (response.data && response.data.code === 200 && response.data.data) {
+                            this.cachedTrendData = response.data.data;
+                            this.renderTrendCharts(this.cachedTrendData);
+                        }
+                    });
+            },
+
+            renderTrendCharts(trendData) {
+                if (!trendData) {
+                    this.showDefaultChart();
+                    return;
+                }
+
+                if (!this.chart) {
+                    var chartDom = document.getElementById('trendChart');
+                    if (!chartDom || typeof echarts === 'undefined') {
+                        this.showDefaultChart();
+                        return;
+                    }
+                    this.chart = echarts.init(chartDom);
+                }
+
+                var dates = [];
+                var bloodPressure = [];
+                var heartRate = [];
+                var bloodOxygen = [];
+                var bloodGlucose = [];
+                var steps = [];
+                var sleepHours = [];
+                var bloodPressureDiastolic = [];
+
+                if (Array.isArray(trendData.dates)) dates = trendData.dates;
+                if (Array.isArray(trendData.bloodPressure)) bloodPressure = trendData.bloodPressure;
+                if (Array.isArray(trendData.heartRate)) heartRate = trendData.heartRate;
+                if (Array.isArray(trendData.bloodOxygen)) bloodOxygen = trendData.bloodOxygen;
+                if (Array.isArray(trendData.bloodGlucose)) bloodGlucose = trendData.bloodGlucose;
+                if (Array.isArray(trendData.steps)) steps = trendData.steps;
+                if (Array.isArray(trendData.sleepHours)) sleepHours = trendData.sleepHours;
+                if (Array.isArray(trendData.bloodPressureDiastolic)) bloodPressureDiastolic = trendData.bloodPressureDiastolic;
+
+                dates = dates.map(function(v) { return v || ''; });
+
+                // Ensure all data arrays have the same length as dates
+                var dateLength = dates.length;
+                bloodPressure = bloodPressure.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (bloodPressure.length < dateLength) bloodPressure.push(0);
+                heartRate = heartRate.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (heartRate.length < dateLength) heartRate.push(0);
+                bloodOxygen = bloodOxygen.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (bloodOxygen.length < dateLength) bloodOxygen.push(0);
+                bloodGlucose = bloodGlucose.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (bloodGlucose.length < dateLength) bloodGlucose.push(0);
+                steps = steps.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (steps.length < dateLength) steps.push(0);
+                sleepHours = sleepHours.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (sleepHours.length < dateLength) sleepHours.push(0);
+
+                if (bloodPressureDiastolic.length === 0 && bloodPressure.length > 0) {
+                    bloodPressureDiastolic = bloodPressure.map(function(v) { return Math.round(v * 0.65); });
+                }
+                bloodPressureDiastolic = bloodPressureDiastolic.map(function(v) { return typeof v === 'number' ? v : 0; });
+                while (bloodPressureDiastolic.length < dateLength) bloodPressureDiastolic.push(0);
+
+                var filters = this.filters;
+                if (!filters || typeof filters !== 'object') {
+                    filters = { bp: true, hr: true, sugar: true, spo2: true, steps: true, sleep: true };
+                }
+
+                var series = [];
+
+                // 严格检查每个filter是否为true
+                var hasAnyFilter = false;
+                var filterKeys = ['bp', 'hr', 'sugar', 'spo2', 'steps', 'sleep'];
+                for (var i = 0; i < filterKeys.length; i++) {
+                    if (filters[filterKeys[i]] === true) {
+                        hasAnyFilter = true;
+                        break;
+                    }
+                }
+
+                // 如果没有任何筛选项被选中，显示空状态
+                if (!hasAnyFilter) {
+                    this.showEmptyChart();
+                    return;
+                }
+
+                // 颜色映射，与筛选按钮边框颜色保持一致
+                var colorMap = {
+                    hr: '#F72585',
+                    bp_systolic: '#4361EE',
+                    bp_diastolic: '#3A0CA3',
+                    spo2: '#06D6A0',
+                    sugar: '#FF9F1C',
+                    steps: '#7209B7',
+                    sleep: '#4895EF'
+                };
+
+                // 血压需要特殊处理 - 严格检查是否为true
+                if (filters.bp === true) {
+                    // 收缩压
+                    series.push({
+                        name: '血压(收缩压)',
+                        type: 'line',
+                        smooth: true,
+                        data: bloodPressure,
+                        lineStyle: { width: 3, color: colorMap.bp_systolic },
+                        itemStyle: { color: colorMap.bp_systolic },
+                        showSymbol: false
+                    });
+
+                    // 舒张压
+                    if (bloodPressureDiastolic.length > 0) {
+                        series.push({
+                            name: '血压(舒张压)',
+                            type: 'line',
+                            smooth: true,
+                            data: bloodPressureDiastolic,
+                            lineStyle: { width: 3, color: colorMap.bp_diastolic },
+                            itemStyle: { color: colorMap.bp_diastolic },
+                            showSymbol: false
+                        });
+                    }
+                }
+
+                if (filters.hr === true) {
+                    series.push({
+                        name: '心率',
+                        type: 'line',
+                        smooth: true,
+                        data: heartRate,
+                        lineStyle: { width: 3, color: colorMap.hr },
+                        itemStyle: { color: colorMap.hr },
+                        showSymbol: false
+                    });
+                }
+
+                if (filters.spo2 === true) {
+                    series.push({
+                        name: '血氧',
+                        type: 'line',
+                        data: bloodOxygen,
+                        lineStyle: { width: 3, color: colorMap.spo2 },
+                        itemStyle: { color: colorMap.spo2 },
+                        showSymbol: false
+                    });
+                }
+
+                if (filters.sugar === true) {
+                    series.push({
+                        name: '血糖',
+                        type: 'line',
+                        smooth: true,
+                        data: bloodGlucose,
+                        lineStyle: { width: 3, color: colorMap.sugar },
+                        itemStyle: { color: colorMap.sugar },
+                        showSymbol: false
+                    });
+                }
+
+                if (filters.steps === true) {
+                    series.push({
+                        name: '步数',
+                        type: 'line',
+                        smooth: true,
+                        data: steps,
+                        lineStyle: { width: 3, color: colorMap.steps },
+                        itemStyle: { color: colorMap.steps },
+                        showSymbol: false
+                    });
+                }
+
+                if (filters.sleep === true) {
+                    series.push({
+                        name: '睡眠',
+                        type: 'line',
+                        smooth: true,
+                        data: sleepHours,
+                        lineStyle: { width: 3, color: colorMap.sleep },
+                        itemStyle: { color: colorMap.sleep },
+                        showSymbol: false
+                    });
+                }
+
+                if (series.length === 0) {
+                    this.showEmptyChart();
+                    return;
+                }
+
+                try {
+                    var chartOption = {
+                        tooltip: {
+                            trigger: 'axis',
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            borderColor: '#E2E8F0',
+                            textStyle: {
+                                color: '#1E293B',
+                                fontSize: 20
+                            }
+                        },
+                        grid: {
+                            left: '5%',
+                            right: '4%',
+                            bottom: '8%',
+                            top: '8%',
+                            containLabel: true
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: dates,
+                            boundaryGap: false,
+                            position: 'bottom',
+                            axisLine: {
+                                onZero: true,
+                                lineStyle: {
+                                    color: '#CBD5E1'
+                                }
+                            },
+                            axisLabel: {
+                                color: '#64748B',
+                                fontSize: 18
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            min: 0,
+                            scale: false,
+                            boundaryGap: [0, '10%'],
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    color: '#CBD5E1'
+                                }
+                            },
+                            axisLabel: {
+                                color: '#64748B',
+                                fontSize: 18
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: '#F1F5F9',
+                                    type: 'solid'
+                                }
+                            }
+                        },
+                        series: series
+                    };
+
+                    this.chart.setOption(chartOption, true);
+                    this.chart.resize();
+                } catch (e) {
+                    console.error('图表渲染错误:', e);
+                    this.showDefaultChart();
+                }
+            },
+
+            // 显示空状态图表（未选择任何数据系列时）
+            showEmptyChart() {
+                var container = document.getElementById('trendChart');
+                if (!container) return;
+
+                if (!window.echarts) return;
+
+                var chart = window.echarts.init(container);
+                var option = {
+                    title: {
+                        text: '请选择要查看的数据类型',
+                        left: 'center',
+                        top: 'center',
+                        textStyle: {
+                            color: '#94A3B8',
+                            fontSize: 18,
+                            fontWeight: 'normal'
+                        }
+                    },
+                    grid: {
+                        show: false
+                    },
+                    xAxis: {
+                        show: false
+                    },
+                    yAxis: {
+                        show: false
+                    },
+                    series: []
+                };
+
+                chart.setOption(option, true);
+            },
+
+            // 显示默认图表
+            showDefaultChart() {
+                console.log('显示默认图表');
+                var container = document.getElementById('trendChart');
+                if (!container) return;
+
+                if (!window.echarts) return;
+
+                var chart = window.echarts.init(container);
+// 在 showDefaultChart 方法中，移除了图例显示
+                var option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        textStyle: { fontSize: 14 }
+                    },
+                    // 已移除图例配置
+                    grid: {
+                        top: '15%',
+                        left: '5%',
+                        right: '5%',
+                        bottom: '10%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['无数据'],
+                        axisLabel: {
+                            fontSize: 12,
+                            color: '#64748B'
+                        }
+                    },
+                    // new111
+                    yAxis: {
+                        type: 'value',
+                        min: 0,  // 添加这行，确保从0开始
+                        axisLabel: {
+                            fontSize: 12,
+                            color: '#64748B'
+                        },
+                        splitLine: {
+                            lineStyle: {
+                                color: '#E2E8F0',
+                                type: 'dashed'
+                            }
+                        }
+                    },
+                    series: [{
+                        name: '无数据',
+                        type: 'line',
+                        data: [0],
+                        lineStyle: {
+                            color: '#CBD5E1'
+                        },
+                        itemStyle: {
+                            color: '#94A3B8'
+                        }
+                    }]
+                };
+                chart.setOption(option);
+            },
+
+            // 语音相关方法 - 长按录音
+            startVoiceRecording() {
+                if (this.isRecording || this.isPlayingVoice) return;
+
+                // 初始化录音器
+                this.rec = Recorder({ type: "wav", sampleRate: 16000, bitRate: 16 });
+                this.rec.open(() => {
+                    this.rec.start();
+                    this.isRecording = true;
+                    console.log('开始录音');
+                }, (msg) => {
+                    console.error('录音开启失败:', msg);
+                    this.isRecording = false;
+                    alert('无法开启录音，请检查麦克风权限');
+                });
+            },
+
+            stopVoiceRecording() {
+                if (!this.isRecording) return;
+
+                this.isRecording = false;
+                if (this.rec) {
+                    this.rec.stop((blob, duration) => {
+                        console.log('录音停止，时长:', duration, 'ms');
+
+                        if (duration < 800) {
+                            console.log('录音时间太短，忽略');
+                            this.rec.close();
+                            return;
+                        }
+
+                        // 上传录音文件进行语音识别
+                        const fd = new FormData();
+                        fd.append('file', blob, 'audio.wav');
+
+                        console.log('上传录音进行识别...');
+                        axios.post('/api/asr/translate', fd)
+                            .then(res => {
+                                if (res.data.code === 200 && res.data.data) {
+                                    const userText = res.data.data.trim();
+                                    if (userText) {
+                                        console.log('识别结果:', userText);
+                                        this.processVoiceInput(userText);
+                                    } else {
+                                        alert('没有识别到语音内容，请重新尝试');
+                                    }
+                                } else {
+                                    alert('语音识别失败，请稍后重试');
+                                }
+                                this.rec.close();
+                            })
+                            .catch(error => {
+                                console.error('语音识别失败:', error);
+                                alert('语音识别服务异常，请稍后再试');
+                                this.rec.close();
+                            });
+                    }, () => {
+                        this.rec.close();
+                    });
+                }
+            },
+
+            // 当鼠标离开按钮时停止录音（防止用户按住后移开鼠标）
+            stopVoiceRecordingIfRecording() {
+                if (this.isRecording) {
+                    this.stopVoiceRecording();
+                }
+            },
+
+            // 处理语音输入
+            processVoiceInput(userText) {
+                console.log('处理语音输入:', userText);
+
+                // 获取当前时间
+                const now = new Date();
+                const timestamp = now.getHours().toString().padStart(2, '0') + ':' +
+                                 now.getMinutes().toString().padStart(2, '0');
+
+                // 添加用户消息到对话
+                this.conversation.push({
+                    sender: 'user',
+                    content: userText,
+                    timestamp: timestamp
+                });
+
+                // 滚动到最新消息
+                this.$nextTick(() => {
+                    const reportContent = document.querySelector('.report-content');
+                    if (reportContent) {
+                        reportContent.scrollTop = reportContent.scrollHeight;
+                    }
+                });
+
+                // 调用后端AI接口处理语音问题
+                axios.post('/api/chat/send', {
+                    message: userText,
+                    userId: this.userId
+                })
+                    .then(response => {
+                        if (response.data && response.data.code === 200 && response.data.data) {
+                            const aiResponse = response.data.data;
+
+                            // 获取当前时间
+                            const now = new Date();
+                            const timestamp = now.getHours().toString().padStart(2, '0') + ':' +
+                                             now.getMinutes().toString().padStart(2, '0');
+
+                            // 添加AI回复到对话
+                            this.conversation.push({
+                                sender: 'ai',
+                                content: aiResponse,
+                                timestamp: timestamp
+                            });
+
+                            // 滚动到最新消息
+                            this.$nextTick(() => {
+                                const reportContent = document.querySelector('.report-content');
+                                if (reportContent) {
+                                    reportContent.scrollTop = reportContent.scrollHeight;
+                                }
+                            });
+
+                            // 自动播放AI回复的语音
+                            this.playAIVoice(aiResponse);
+                        } else {
+                            alert('抱歉，AI助手暂时无法回答您的问题');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('AI回答失败:', error);
+                        alert('抱歉，我现在很忙，请稍后再问我吧。');
+                    });
+            },
+
+            // 播放AI语音回复
+            playAIVoice(text) {
+                // 如果正在播放其他语音，先停止
+                if (this.currentAudio) {
+                    this.stopVoiceReport();
+                }
+
+                // 设置播放状态
+                this.isPlayingVoice = true;
+
+                // 创建音频对象
+                const url = `/api/tts/speak?text=${encodeURIComponent(text)}&t=${Date.now()}`;
+                this.currentAudio = new Audio(url);
+
+                // 监听音频播放结束
+                this.currentAudio.addEventListener('ended', () => {
+                    console.log('AI语音回复播放结束');
+                    this.isPlayingVoice = false;
+                    this.currentAudio = null;
+                });
+
+                // 监听音频播放错误
+                this.currentAudio.addEventListener('error', (error) => {
+                    console.error('AI语音回复播放失败:', error);
+                    this.isPlayingVoice = false;
+                    this.currentAudio = null;
+                });
+
+                // 开始播放
+                this.currentAudio.play().catch(error => {
+                    console.error('AI语音回复播放失败:', error);
+                    this.isPlayingVoice = false;
+                    this.currentAudio = null;
+                });
+            },
+
+            // 生成完整的语音播报文本（包含所有内容）
+            generateFullVoiceReport() {
+                let reportText = `${this.nickname}长辈，您好。`;
+
+                reportText += `今天是${this.currentDate}，现在是${this.currentTime}。`;
+
+                if (this.aiSummary && this.aiSummary.trim()) {
+                    reportText += '健康总结：' + this.aiSummary;
+                }
+
+                if (this.healthAdvices && this.healthAdvices.length > 0) {
+                    reportText += '。今日健康建议：';
+                    this.healthAdvices.forEach((advice, index) => {
+                        reportText += `第${index + 1}条，${advice}；`;
+                    });
+                }
+
+                if (this.trendAnalysis && this.trendAnalysis.trim()) {
+                    reportText += '。健康趋势分析：' + this.trendAnalysis;
+                }
+
+                reportText += '。祝您健康愉快！';
+
+                return reportText;
+            },
+
+            // 切换语音播报
+            toggleVoicePlayback() {
+                if (this.isPlayingVoice) {
+                    this.stopVoiceReport();
+                } else {
+                    this.playVoiceReport();
+                }
+            },
+
+            // 播放完整的语音报告
+            playVoiceReport() {
+                console.log('播放完整的语音报告');
+
+                // 检查语音模式设置 - 手动触发模式不允许自动播放
+                const settingsManager = window.userSettingsManager;
+                if (settingsManager && settingsManager.settings.voiceMode === 1) {
+                    console.log('语音模式已开启，不允许自动播放');
+                    return;
+                }
+
+                // 如果正在播放，先停止
+                if (this.currentAudio) {
+                    this.stopVoiceReport();
+                }
+
+                // 生成完整的报告文本
+                const reportText = this.generateFullVoiceReport();
+                console.log('完整播报内容:', reportText);
+
+                // 设置播放状态
+                this.isPlayingVoice = true;
+
+                // 创建音频对象
+                const url = `/api/tts/speak?text=${encodeURIComponent(reportText)}&t=${Date.now()}`;
+                this.currentAudio = new Audio(url);
+                
+                // 应用用户音量设置
+                const volume = settingsManager ? settingsManager.getVolume() : 0.8;
+                this.currentAudio.volume = volume;
+
+                // 监听音频播放结束
+                this.currentAudio.addEventListener('ended', () => {
+                    console.log('语音播报结束');
+                    this.isPlayingVoice = false;
+                    this.currentAudio = null;
+                });
+
+                // 监听音频播放错误
+                this.currentAudio.addEventListener('error', (error) => {
+                    console.error('语音播报失败:', error);
+                    this.isPlayingVoice = false;
+                    this.currentAudio = null;
+                });
+
+                // 开始播放
+                this.currentAudio.play().catch(error => {
+                    console.error('播放失败:', error);
+                    this.isPlayingVoice = false;
+                    this.currentAudio = null;
+                });
+            },
+
+            // 停止语音播报
+            stopVoiceReport() {
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio.currentTime = 0;
+                    this.currentAudio = null;
+                }
+                this.isPlayingVoice = false;
+            },
+
+            // MQTT模拟功能方法
+            toggleMqttPanel() {
+                this.showMqttPanel = !this.showMqttPanel;
+                if (this.showMqttPanel) {
+                    this.checkMqttSimulationStatus();
+                }
+            },
+
+            checkMqttSimulationStatus() {
+                axios.get(`/api/mqtt-simulation/status/${this.userId}`)
+                    .then(response => {
+                        if (response.data && response.data.code === 200) {
+                            const status = response.data.data;
+                            this.mqttSimulationRunning = status.isRunning || false;
+                            if (status.dataCount !== undefined) {
+                                this.mqttDataCount = status.dataCount;
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('检查MQTT模拟状态失败:', error);
+                    });
+            },
+
+            startMqttSimulation() {
+                axios.post(`/api/mqtt-simulation/start/${this.userId}`)
+                    .then(response => {
+                        if (response.data && response.data.code === 200) {
+                            this.mqttSimulationRunning = true;
+                            this.mqttDataCount = 0;
+                            console.log('MQTT自动模拟已启动');
+                            this.startMqttStatusCheck();
+                        } else {
+                            alert(response.data.msg || '启动失败');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('启动MQTT模拟失败:', error);
+                        alert('启动失败，请稍后重试');
+                    });
+            },
+
+            stopMqttSimulation() {
+                axios.post(`/api/mqtt-simulation/stop/${this.userId}`)
+                    .then(response => {
+                        if (response.data && response.data.code === 200) {
+                            this.mqttSimulationRunning = false;
+                            console.log('MQTT自动模拟已停止');
+                            this.stopMqttStatusCheck();
+                        } else {
+                            alert(response.data.msg || '停止失败');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('停止MQTT模拟失败:', error);
+                        alert('停止失败，请稍后重试');
+                    });
+            },
+
+            startMqttStatusCheck() {
+                if (this.mqttStatusCheckTimer) {
+                    clearInterval(this.mqttStatusCheckTimer);
+                }
+                this.mqttStatusCheckTimer = setInterval(() => {
+                    this.checkMqttSimulationStatus();
+                }, 3000);
+            },
+
+            stopMqttStatusCheck() {
+                if (this.mqttStatusCheckTimer) {
+                    clearInterval(this.mqttStatusCheckTimer);
+                    this.mqttStatusCheckTimer = null;
+                }
+            },
+
+            sendMqttData() {
+                if (this.mqttValue1 === null || this.mqttValue1 === '') {
+                    alert('请输入数值');
+                    return;
+                }
+
+                if (this.mqttDataType === 'BP' && (this.mqttValue2 === null || this.mqttValue2 === '')) {
+                    alert('请输入舒张压数值');
+                    return;
+                }
+
+                this.mqttSending = true;
+
+                const params = {
+                    userId: this.userId,
+                    dataType: this.mqttDataType,
+                    value1: this.mqttValue1
+                };
+                if (this.mqttValue2 !== null && this.mqttValue2 !== '') {
+                    params.value2 = this.mqttValue2;
+                }
+
+                axios.post('/api/mqtt-simulation/simulate', params)
+                    .then(response => {
+                        this.mqttSending = false;
+                        if (response.data && response.data.code === 200) {
+                            const result = response.data.data;
+                            
+                            const dataTypeNames = {
+                                'BP': '血压',
+                                'HR': '心率',
+                                'BO': '血氧',
+                                'BG': '血糖',
+                                'STEPS': '步数',
+                                'SLEEP': '睡眠'
+                            };
+
+                            let valueDisplay = '';
+                            if (this.mqttDataType === 'BP') {
+                                valueDisplay = `${this.mqttValue1}/${this.mqttValue2} mmHg`;
+                            } else if (this.mqttDataType === 'HR') {
+                                valueDisplay = `${this.mqttValue1} 次/分`;
+                            } else if (this.mqttDataType === 'BO') {
+                                valueDisplay = `${this.mqttValue1}%`;
+                            } else if (this.mqttDataType === 'BG') {
+                                valueDisplay = `${this.mqttValue1} mmol/L`;
+                            } else if (this.mqttDataType === 'STEPS') {
+                                valueDisplay = `${this.mqttValue1} 步`;
+                            } else if (this.mqttDataType === 'SLEEP') {
+                                valueDisplay = `${this.mqttValue1} 小时`;
+                            }
+
+                            const now = new Date();
+                            const timeStr = now.getHours().toString().padStart(2, '0') + ':' +
+                                           now.getMinutes().toString().padStart(2, '0') + ':' +
+                                           now.getSeconds().toString().padStart(2, '0');
+
+                            this.mqttHistory.unshift({
+                                time: timeStr,
+                                dataType: dataTypeNames[this.mqttDataType] || this.mqttDataType,
+                                value: valueDisplay,
+                                status: result.status || '已记录',
+                                alertLevel: result.alertLevel,
+                                alertLevelText: result.alertLevelText
+                            });
+
+                            if (this.mqttHistory.length > 10) {
+                                this.mqttHistory.pop();
+                            }
+
+                            this.mqttValue1 = null;
+                            this.mqttValue2 = null;
+
+                            this.fetchInitialHealthData();
+
+                            console.log('MQTT数据发送成功:', result);
+                        } else {
+                            alert(response.data.msg || '发送失败');
+                        }
+                    })
+                    .catch(error => {
+                        this.mqttSending = false;
+                        console.error('发送MQTT数据失败:', error);
+                        alert('发送失败，请稍后重试');
+                    });
+            },
+
+            // 自动紧急呼叫相关方法
+            warningAudio: null,
+
+            showAutoEmergencyCallModal(alertType, alertValue, alertLevel) {
+                const alertTypeNames = {
+                    'BP': '血压',
+                    'HR': '心率',
+                    'BO': '血氧',
+                    'BG': '血糖'
+                };
+
+                this.autoEmergencyAlertType = alertTypeNames[alertType] || alertType;
+                this.autoEmergencyAlertValue = alertValue;
+                this.autoEmergencyAlertLevel = alertLevel;
+                this.autoEmergencyCountdown = 10;
+                this.autoEmergencyAnswered = false;
+                this.autoEmergencyAnsweredName = '';
+                this.autoEmergencyConfirmed = false;
+                this.showAutoEmergencyModal = true;
+
+                this.playEmergencySound();
+                
+                const ttsText = `警告，检测到您${this.autoEmergencyAlertType}为${this.autoEmergencyAlertValue}，情况危急，是否紧急呼叫？`;
+                this.speakTTS(ttsText);
+
+                this.autoEmergencyCountdownTimer = setInterval(() => {
+                    this.autoEmergencyCountdown--;
+                    if (this.autoEmergencyCountdown <= 0) {
+                        this.clearAutoEmergencyCountdown();
+                        // 倒计时结束后自动呼叫
+                        this.confirmAutoEmergencyCall();
+                    }
+                }, 1000);
+            },
+
+            clearAutoEmergencyCountdown() {
+                if (this.autoEmergencyCountdownTimer) {
+                    clearInterval(this.autoEmergencyCountdownTimer);
+                    this.autoEmergencyCountdownTimer = null;
+                }
+            },
+
+            playEmergencySound() {
+                try {
+                    if (this.warningAudio) {
+                        this.warningAudio.pause();
+                        this.warningAudio = null;
+                    }
+                    const ringtoneUrl = this.ringtoneConfig?.emergency || 'http://t9se9imi4.hn-bkt.clouddn.com/warning.mp3';
+                    this.warningAudio = new Audio(ringtoneUrl);
+                    this.warningAudio.loop = true;
+                    this.warningAudio.volume = 1.0;
+                    this.warningAudio.play().catch(e => {
+                        console.log('播放警告铃声失败:', e);
+                    });
+                } catch (e) {
+                    console.log('初始化音频失败:', e);
+                }
+            },
+
+            stopEmergencySound() {
+                if (this.warningAudio) {
+                    try {
+                        this.warningAudio.pause();
+                        this.warningAudio.currentTime = 0;
+                        this.warningAudio = null;
+                    } catch (e) {
+                        console.log('停止警告铃声失败:', e);
+                    }
+                }
+            },
+
+            speakText(text) {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.0;
+                    utterance.volume = 1.0;
+                    window.speechSynthesis.speak(utterance);
+                }
+            },
+
+            speakTTS(text) {
+                const url = `/api/tts/speak?text=${encodeURIComponent(text)}&t=${Date.now()}`;
+                const audio = new Audio(url);
+                audio.volume = 1.0;
+                audio.play().catch(e => {
+                    console.log('TTS播放失败:', e);
+                    this.speakText(text);
+                });
+            },
+
+            cancelAutoEmergencyCall() {
+                this.clearAutoEmergencyCountdown();
+                this.stopEmergencySound();
+                this.showAutoEmergencyModal = false;
+                this.showAutoEmergencyProgress = false;
+                this.autoEmergencyAnswered = false;
+                this.autoEmergencyAnsweredName = '';
+
+                if (this.autoEmergencyStatusTimer) {
+                    clearInterval(this.autoEmergencyStatusTimer);
+                    this.autoEmergencyStatusTimer = null;
+                }
+
+                if (this.emergencySocket) {
+                    this.emergencySocket.emit('emergencyCallEnded', {
+                        fromUserId: this.userId,
+                        fromUserName: localStorage.getItem('nickname') || '长辈'
+                    });
+                    this.emergencySocket.disconnect();
+                    this.emergencySocket = null;
+                }
+
+                if (this.autoEmergencyCallRecordId && !this.autoEmergencyConfirmed) {
+                    axios.post(`/api/auto-emergency/cancel/${this.userId}`)
+                        .then(() => {
+                            console.log('已取消自动紧急呼叫');
+                        })
+                        .catch(err => {
+                            console.error('取消呼叫失败:', err);
+                        });
+                }
+
+                this.autoEmergencyCallRecordId = null;
+            },
+
+            stopEmergencySound() {
+                if (this.warningAudio) {
+                    try {
+                        this.warningAudio.pause();
+                        this.warningAudio.currentTime = 0;
+                        this.warningAudio = null;
+                    } catch (e) {
+                        console.log('停止警告铃声失败:', e);
+                    }
+                }
+            },
+
+            confirmAutoEmergencyCall() {
+                // 防止重复调用
+                if (this.autoEmergencyConfirmed) {
+                    return;
+                }
+                
+                this.clearAutoEmergencyCountdown();
+                this.stopEmergencySound();
+                this.autoEmergencyConfirmed = true;
+                this.showAutoEmergencyModal = false;
+                this.showAutoEmergencyProgress = true;
+
+                axios.post('/api/auto-emergency/trigger', {
+                    userId: this.userId,
+                    alertType: this.getAlertTypeCode(this.autoEmergencyAlertType),
+                    value1: parseFloat(this.autoEmergencyAlertValue),
+                    alertLevel: this.autoEmergencyAlertLevel
+                })
+                .then(response => {
+                    if (response.data && response.data.code === 200) {
+                        const data = response.data.data;
+                        this.autoEmergencyCallRecordId = data.callRecordId;
+                        this.autoEmergencyContacts = data.contacts || [];
+                        console.log('自动紧急呼叫已触发:', data);
+
+                        this.executeAutoEmergencyCall();
+                    } else {
+                        alert(response.data.msg || '呼叫失败');
+                        this.showAutoEmergencyProgress = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('触发自动紧急呼叫失败:', error);
+                    alert('呼叫失败，请稍后重试');
+                    this.showAutoEmergencyProgress = false;
+                });
+            },
+
+            executeAutoEmergencyCall() {
+                const contactIds = this.autoEmergencyContacts.map(c => c.contactUserId || c.id);
+                console.log('[自动紧急呼叫] 紧急联系人ID:', contactIds);
+
+                const signalingUrl = window.location.origin;
+                this.emergencySocket = io(signalingUrl, {
+                    path: '/socket.io',
+                    transports: ['websocket', 'polling']
+                });
+
+                const currentUserName = localStorage.getItem('nickname') || '长辈';
+
+                this.emergencySocket.on('connect', () => {
+                    console.log('[自动紧急呼叫] 信令服务器连接成功');
+                    this.emergencySocket.emit('login', {
+                        userId: this.userId,
+                        nickname: currentUserName,
+                        avatar: ''
+                    });
+                });
+
+                this.emergencySocket.on('loginSuccess', () => {
+                    console.log('[自动紧急呼叫] 登录成功，发送紧急呼叫');
+                    this.emergencySocket.emit('emergencyCall', {
+                        fromUserId: this.userId,
+                        toUserIds: contactIds,
+                        type: 'video',
+                        fromUserName: currentUserName,
+                        fromUserAvatar: '',
+                        isEmergency: true,
+                        alertType: this.autoEmergencyAlertType,
+                        alertValue: this.autoEmergencyAlertValue,
+                        alertLevel: this.autoEmergencyAlertLevel
+                    });
+                });
+
+                this.emergencySocket.on('emergencyCallSuccess', (data) => {
+                    console.log('[自动紧急呼叫] 成功向 ' + data.calledCount + ' 个联系人发送紧急呼叫');
+                });
+
+                this.emergencySocket.on('emergencyCallAnsweredBySomeone', async (data) => {
+                    console.log('[自动紧急呼叫] 有人接听了:', data);
+                    this.stopEmergencySound();
+                    this.autoEmergencyAnswered = true;
+                    this.autoEmergencyAnsweredName = data.answeredByName;
+
+                    if (this.autoEmergencyCallRecordId) {
+                        try {
+                            await axios.post('/api/emergency/call/answered', {
+                                callRecordId: this.autoEmergencyCallRecordId,
+                                answeredByUserId: data.answeredBy
+                            });
+                        } catch (e) {
+                            console.error('[自动紧急呼叫] 保存接听记录失败:', e);
+                        }
+                    }
+
+                    const answeredContact = this.autoEmergencyContacts.find(c => String(c.contactUserId || c.id) === String(data.answeredBy));
+                    if (answeredContact) {
+                        setTimeout(() => {
+                            this.showAutoEmergencyProgress = false;
+                            this.initiateEmergencyVideoCall(answeredContact);
+                        }, 1000);
+                    }
+                });
+
+                this.emergencySocket.on('callFailed', (msg) => {
+                    console.error('[自动紧急呼叫] 发送呼叫失败:', msg);
+                });
+            },
+
+            initiateEmergencyVideoCall(contact) {
+                const myName = localStorage.getItem('nickname') || '长辈';
+                const myAvatar = '';
+                const peerId = contact.contactUserId || contact.id;
+                const peerName = contact.contactName || contact.nickname || contact.name || '联系人';
+                const peerAvatar = contact.avatar || '';
+                const callType = 'video';
+
+                const url = `call.html?userId=${this.userId}&peerId=${peerId}&peerName=${encodeURIComponent(peerName)}&peerAvatar=${encodeURIComponent(peerAvatar)}&type=${callType}&incoming=false&myName=${encodeURIComponent(myName)}&myAvatar=${encodeURIComponent(myAvatar)}&isEmergency=true`;
+
+                console.log('[自动紧急呼叫] 跳转到通话页面:', url);
+                window.location.href = url;
+            },
+
+            getAlertTypeCode(typeName) {
+                const typeCodes = {
+                    '血压': 'BP',
+                    '心率': 'HR',
+                    '血氧': 'BO',
+                    '血糖': 'BG'
+                };
+                return typeCodes[typeName] || typeName;
+            },
+
+            startAutoEmergencyStatusCheck() {
+                this.autoEmergencyStatusTimer = setInterval(() => {
+                    axios.get(`/api/auto-emergency/status/${this.userId}`)
+                        .then(response => {
+                            if (response.data && response.data.code === 200) {
+                                const status = response.data.data;
+                                if (status.isAnswered && !this.autoEmergencyAnswered) {
+                                    this.autoEmergencyAnswered = true;
+                                    this.autoEmergencyAnsweredName = status.answeredContactName;
+                                }
+                            }
+                        })
+                        .catch(err => {
+                            console.error('检查呼叫状态失败:', err);
+                        });
+                }, 2000);
+            },
+
+            // ==================== 心率广播接收功能方法 ====================
+
+            /**
+             * 切换心率广播接收功能开关
+             * 开启时会请求蓝牙权限并开始扫描设备
+             */
+            async toggleHrBroadcast() {
+                if (this.hrBroadcastEnabled) {
+                    await this.stopHrBroadcast();
+                } else {
+                    await this.startHrBroadcast();
+                }
+            },
+
+            /**
+             * 开启心率广播接收功能
+             * 使用Web Bluetooth API扫描所有支持心率广播的设备
+             * 无需后端支持，浏览器直接通过BLE协议与设备通信
+             */
+            async startHrBroadcast() {
+                try {
+                    if (!navigator.bluetooth) {
+                        alert('您的浏览器不支持蓝牙功能，请使用Chrome、Edge等支持Web Bluetooth的浏览器');
+                        return;
+                    }
+
+                    this.hrBroadcastEnabled = true;
+                    this.hrBroadcastScanning = true;
+                    this.hrBroadcastReceiving = false;
+                    console.log('[心率广播] 开始扫描支持心率广播的蓝牙设备...');
+
+                    // 蓝牙官方标准别名对照表
+                    // 心率服务别名: heart_rate (UUID: 0000180d-0000-1000-8000-00805f9b34fb)
+                    // 心率特征值别名: heart_rate_measurement (UUID: 00002a37-0000-1000-8000-00805f9b34fb)
+                    // 注意：requestDevice 的 services/optionalServices 只能使用【服务别名】，不能用特征值别名
+
+                    // 扫描所有支持心率服务的设备（不限制品牌和型号）
+                    // 支持：小米手环、华为手环、Apple Watch、Garmin、Fitbit等所有支持心率广播的设备
+                    const device = await navigator.bluetooth.requestDevice({
+                        filters: [
+                            { services: ['heart_rate'] }  // 使用标准服务别名
+                        ],
+                        optionalServices: [
+                            'heart_rate',                    // 心率服务（标准别名）
+                            'battery_service',               // 电池服务
+                            'device_information'             // 设备信息服务
+                        ]
+                    }).catch(async (error) => {
+                        // 如果第一种方式失败，尝试不使用过滤器扫描所有设备
+                        console.log('[心率广播] 精确扫描失败，尝试扫描所有设备...', error);
+                        return await navigator.bluetooth.requestDevice({
+                            acceptAllDevices: true,
+                            optionalServices: [
+                                'heart_rate',
+                                'battery_service',
+                                'device_information'
+                            ]
+                        });
+                    });
+
+                    console.log('[心率广播] 发现设备:', device.name || '未命名设备');
+                    this.hrBroadcastDeviceName = device.name || '心率设备';
+                    this.hrBluetoothDevice = device;
+
+                    // 监听设备断开事件
+                    device.addEventListener('gattserverdisconnected', () => {
+                        console.log('[心率广播] 设备已断开连接');
+                        this.hrBroadcastReceiving = false;
+                        this.hrBroadcastScanning = false;
+                        if (this.hrBroadcastEnabled) {
+                            this.reconnectHrDevice();
+                        }
+                    });
+
+                    this.hrBroadcastScanning = false;
+                    
+                    // 连接设备
+                    try {
+                        await this.connectHrDevice(device);
+                    } catch (connectError) {
+                        console.error('[心率广播] 连接失败:', connectError);
+                        throw new Error('设备连接失败，请确保设备已开启心率广播功能并靠近电脑');
+                    }
+
+                } catch (error) {
+                    console.error('[心率广播] 启动失败:', error);
+                    this.hrBroadcastEnabled = false;
+                    this.hrBroadcastScanning = false;
+                    this.hrBroadcastReceiving = false;
+                    
+                    if (error.name === 'NotFoundError') {
+                        console.log('[心率广播] 用户取消了设备选择或未找到支持的设备');
+                    } else if (error.name === 'SecurityError') {
+                        alert('蓝牙权限被拒绝，请在浏览器设置中允许蓝牙访问');
+                    } else if (error.name === 'NotSupportedError') {
+                        alert('您的设备不支持蓝牙低功耗(BLE)功能');
+                    } else if (error.message && error.message.includes('User cancelled')) {
+                        console.log('[心率广播] 用户取消了设备选择');
+                    } else {
+                        alert('开启心率广播接收失败: ' + (error.message || error));
+                    }
+                }
+            },
+
+            /**
+             * 连接到心率设备并订阅心率通知
+             * @param {BluetoothDevice} device - 蓝牙设备对象
+             */
+            async connectHrDevice(device) {
+                const maxRetries = 3;
+                let retryCount = 0;
+                
+                while (retryCount < maxRetries) {
+                    try {
+                        // 如果设备已连接，先断开再重连
+                        if (device.gatt.connected) {
+                            console.log('[心率广播] 设备已连接，先断开...');
+                            device.gatt.disconnect();
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+
+                        console.log('[心率广播] 连接到GATT服务器... (尝试 ' + (retryCount + 1) + '/' + maxRetries + ')');
+                        
+                        // 连接GATT服务器
+                        const server = await device.gatt.connect();
+                        this.hrBluetoothServer = server;
+                        console.log('[心率广播] GATT服务器连接成功');
+
+                        // 等待连接稳定
+                        await new Promise(resolve => setTimeout(resolve, 300));
+
+                        // 检查连接状态
+                        if (!device.gatt.connected) {
+                            throw new Error('连接后立即断开');
+                        }
+
+                        console.log('[心率广播] 获取心率服务...');
+                        let heartRateService;
+                        
+                        // 获取心率服务（使用标准服务别名）
+                        try {
+                            heartRateService = await server.getPrimaryService('heart_rate');
+                            console.log('[心率广播] 获取心率服务成功');
+                        } catch (e) {
+                            console.log('[心率广播] 使用别名获取失败，尝试UUID...', e);
+                            heartRateService = await server.getPrimaryService('0000180d-0000-1000-8000-00805f9b34fb');
+                        }
+                        
+                        if (!heartRateService) {
+                            throw new Error('无法获取心率服务');
+                        }
+
+                        console.log('[心率广播] 获取心率测量特征值...');
+                        let heartRateMeasurement;
+                        
+                        // 获取心率特征值（使用标准特征值别名）
+                        // 注意：heart_rate_measurement 是特征值别名，只能用在 getCharacteristic 中
+                        try {
+                            heartRateMeasurement = await heartRateService.getCharacteristic('heart_rate_measurement');
+                            console.log('[心率广播] 获取心率特征值成功');
+                        } catch (e) {
+                            console.log('[心率广播] 使用别名获取失败，尝试UUID...', e);
+                            heartRateMeasurement = await heartRateService.getCharacteristic('00002a37-0000-1000-8000-00805f9b34fb');
+                        }
+                        
+                        if (!heartRateMeasurement) {
+                            throw new Error('无法获取心率测量特征值');
+                        }
+
+                        this.hrBluetoothCharacteristic = heartRateMeasurement;
+
+                        console.log('[心率广播] 订阅心率通知...');
+                        await heartRateMeasurement.startNotifications();
+
+                        heartRateMeasurement.addEventListener('characteristicvaluechanged', (event) => {
+                            this.handleHrData(event.target.value);
+                        });
+
+                        this.hrBroadcastReceiving = true;
+                        console.log('[心率广播] 已成功连接并订阅心率通知');
+                        
+                        // 启动心率数据定时保存定时器（每1分钟保存一次）
+                        this.startHrDataSaveTimer();
+                        
+                        return; // 成功，退出重试循环
+
+                    } catch (error) {
+                        retryCount++;
+                        console.error('[心率广播] 连接尝试 ' + retryCount + ' 失败:', error.message);
+                        
+                        if (retryCount < maxRetries) {
+                            console.log('[心率广播] 等待1秒后重试...');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+            },
+
+            /**
+             * 处理接收到的心率数据
+             * 解析心率广播数据格式，并根据阈值判断是否触发紧急呼叫
+             * - 心率超出阈值（高于最大值或低于最小值）：立即保存并触发紧急呼叫
+             * - 心率在阈值范围内：继续使用每分钟保存一次的逻辑
+             * @param {DataView} value - 蓝牙特征值数据
+             */
+            async handleHrData(value) {
+                try {
+                    const flags = value.getUint8(0);
+                    const is16Bit = flags & 0x01;
+                    
+                    let heartRate;
+                    if (is16Bit) {
+                        heartRate = value.getUint16(1, true);
+                    } else {
+                        heartRate = value.getUint8(1);
+                    }
+
+                    if (heartRate > 0 && heartRate < 300) {
+                        console.log('[心率广播] 接收到心率数据:', heartRate);
+                        
+                        this.hrBroadcastCurrentHr = heartRate;
+                        
+                        const now = new Date();
+                        this.hrBroadcastLastUpdate = now.getHours().toString().padStart(2, '0') + ':' +
+                                                      now.getMinutes().toString().padStart(2, '0') + ':' +
+                                                      now.getSeconds().toString().padStart(2, '0');
+
+                        // 将心率数据添加到缓冲区
+                        this.hrDataBuffer.push({
+                            heartRate: heartRate,
+                            timestamp: now.getTime()
+                        });
+
+                        // 保持缓冲区最多100条数据
+                        if (this.hrDataBuffer.length > 100) {
+                            this.hrDataBuffer.shift();
+                        }
+
+                        this.updateHeartRateDisplay(heartRate);
+
+                        const existingDevice = this.hrBroadcastDevices.find(d => d.id === this.hrBluetoothDevice.id);
+                        if (existingDevice) {
+                            existingDevice.heartRate = heartRate;
+                            existingDevice.lastUpdate = this.hrBroadcastLastUpdate;
+                        } else {
+                            this.hrBroadcastDevices.push({
+                                id: this.hrBluetoothDevice.id,
+                                name: this.hrBroadcastDeviceName,
+                                heartRate: heartRate,
+                                lastUpdate: this.hrBroadcastLastUpdate
+                            });
+                        }
+
+                        if (this.hrBroadcastDevices.length > 5) {
+                            this.hrBroadcastDevices.shift();
+                        }
+
+                        // 检查心率阈值并处理异常情况
+                        await this.checkHeartRateThreshold(heartRate);
+                    }
+                } catch (error) {
+                    console.error('[心率广播] 解析心率数据失败:', error);
+                }
+            },
+
+            /**
+             * 检查心率阈值
+             * - 心率超出阈值：立即保存并触发紧急呼叫
+             * - 心率在阈值范围内：重置紧急呼叫状态
+             * @param {number} heartRate - 心率值
+             */
+            async checkHeartRateThreshold(heartRate) {
+                // 获取用户健康配置（如果还没有获取）
+                if (!this.hrHealthConfig) {
+                    try {
+                        const response = await axios.get(`/api/health/config/${this.userId}`);
+                        if (response.data && response.data.code === 200 && response.data.data) {
+                            this.hrHealthConfig = response.data.data;
+                        } else {
+                            // 使用默认阈值
+                            this.hrHealthConfig = {
+                                hrMin: 60,
+                                hrMax: 100
+                            };
+                        }
+                    } catch (e) {
+                        // 使用默认阈值
+                        this.hrHealthConfig = {
+                            hrMin: 60,
+                            hrMax: 100
+                        };
+                    }
+                }
+
+                const config = this.hrHealthConfig;
+                const hrMin = config.hrMin || 60;
+                const hrMax = config.hrMax || 100;
+
+                console.log(`[心率广播] 阈值检查: 心率=${heartRate}, 最小=${hrMin}, 最大=${hrMax}`);
+
+                // 判断心率是否超出阈值
+                if (heartRate > hrMax || heartRate < hrMin) {
+                    console.log('[心率广播] 心率超出阈值！立即保存并触发紧急呼叫');
+                    
+                    // 立即保存异常心率数据到数据库
+                    await this.saveHrDataToDatabaseImmediately(heartRate, true);
+                    
+                    // 触发紧急呼叫（防止重复触发）
+                    if (!this.hrEmergencyTriggered && !this.showAutoEmergencyModal) {
+                        this.hrEmergencyTriggered = true;
+                        this.showAutoEmergencyCallModal('HR', heartRate.toString(), 3);
+                    }
+                } else {
+                    // 心率恢复正常，重置紧急呼叫状态
+                    if (this.hrEmergencyTriggered) {
+                        console.log('[心率广播] 心率已恢复正常');
+                        this.hrEmergencyTriggered = false;
+                    }
+                }
+            },
+
+            /**
+             * 立即保存心率数据到数据库（用于异常心率）
+             * @param {number} heartRate - 心率值
+             * @param {boolean} isAbnormal - 是否异常
+             */
+            async saveHrDataToDatabaseImmediately(heartRate, isAbnormal = false) {
+                try {
+                    console.log('[心率广播] 立即保存异常心率数据:', heartRate, '是否异常:', isAbnormal);
+
+                    const response = await axios.post('/api/health/heart-rate/save', {
+                        userId: this.userId,
+                        heartRate: heartRate,
+                        deviceId: this.hrBluetoothDevice.id || 'BLE_HR_DEVICE'
+                    });
+
+                    if (response.data && response.data.code === 200) {
+                        console.log('[心率广播] 异常心率数据保存成功');
+                        this.hrLastSaveTime = new Date();
+                        
+                        // 清空缓冲区
+                        this.hrDataBuffer = [];
+                    } else {
+                        console.error('[心率广播] 异常心率数据保存失败:', response.data);
+                    }
+                } catch (error) {
+                    console.error('[心率广播] 保存异常心率数据失败:', error);
+                }
+            },
+
+            /**
+             * 启动心率数据定时保存定时器
+             * 每1分钟将心率数据保存到数据库
+             */
+            startHrDataSaveTimer() {
+                // 清除已存在的定时器
+                if (this.hrSaveTimer) {
+                    clearInterval(this.hrSaveTimer);
+                }
+
+                console.log('[心率广播] 启动心率数据定时保存定时器（每1分钟保存一次）');
+                
+                // 每1分钟保存一次心率数据
+                this.hrSaveTimer = setInterval(() => {
+                    this.saveHrDataToDatabase();
+                }, 60000); // 60000ms = 1分钟
+
+                // 记录开始时间
+                this.hrLastSaveTime = new Date();
+            },
+
+            /**
+             * 停止心率数据定时保存定时器
+             */
+            stopHrDataSaveTimer() {
+                if (this.hrSaveTimer) {
+                    clearInterval(this.hrSaveTimer);
+                    this.hrSaveTimer = null;
+                    console.log('[心率广播] 已停止心率数据定时保存定时器');
+                }
+            },
+
+            /**
+             * 将心率数据保存到数据库
+             * 取缓冲区中的平均心率值进行保存
+             */
+            async saveHrDataToDatabase() {
+                // 如果没有数据或未连接，跳过
+                if (this.hrDataBuffer.length === 0 || !this.hrBroadcastEnabled) {
+                    return;
+                }
+
+                try {
+                    // 计算平均心率
+                    const sum = this.hrDataBuffer.reduce((acc, item) => acc + item.heartRate, 0);
+                    const avgHeartRate = Math.round(sum / this.hrDataBuffer.length);
+
+                    console.log('[心率广播] 保存心率数据到数据库，平均心率:', avgHeartRate, '数据条数:', this.hrDataBuffer.length);
+
+                    // 调用后端API保存数据
+                    const response = await axios.post('/api/health/heart-rate/save', {
+                        userId: this.userId,
+                        heartRate: avgHeartRate,
+                        deviceId: this.hrBluetoothDevice.id || 'BLE_HR_DEVICE'
+                    });
+
+                    if (response.data && response.data.code === 200) {
+                        console.log('[心率广播] 心率数据保存成功');
+                        this.hrLastSaveTime = new Date();
+                        
+                        // 清空缓冲区
+                        this.hrDataBuffer = [];
+                    } else {
+                        console.error('[心率广播] 心率数据保存失败:', response.data);
+                    }
+                } catch (error) {
+                    console.error('[心率广播] 保存心率数据失败:', error);
+                }
+            },
+
+            /**
+             * 更新页面心率显示区域
+             * 将接收到的心率数据同步到健康卡片
+             * @param {number} heartRate - 心率值
+             */
+            updateHeartRateDisplay(heartRate) {
+                const hrCard = this.healthCards.find(card => card.id === 2);
+                if (hrCard) {
+                    const oldHrCard = { ...hrCard };
+                    hrCard.value = heartRate.toString();
+                    hrCard.displayValue = heartRate.toString();
+                    hrCard.isUpdating = true;
+
+                    let status = '正常';
+                    if (heartRate < 60) {
+                        status = '偏低';
+                    } else if (heartRate > 100) {
+                        status = '稍高';
+                    }
+                    hrCard.status = status;
+
+                    this.animateNumber(hrCard.id, oldHrCard.value, heartRate.toString());
+
+                    setTimeout(() => {
+                        hrCard.isUpdating = false;
+                    }, 800);
+
+                    console.log('[心率广播] 已更新页面心率显示:', heartRate, '状态:', status);
+                }
+            },
+
+            /**
+             * 重新连接心率设备
+             * 当设备意外断开时自动尝试重连
+             */
+            async reconnectHrDevice() {
+                if (!this.hrBluetoothDevice) {
+                    return;
+                }
+
+                console.log('[心率广播] 尝试重新连接设备...');
+                this.hrBroadcastScanning = true;
+                this.hrBroadcastReceiving = false;
+
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    if (this.hrBluetoothDevice.gatt.connected) {
+                        console.log('[心率广播] 设备已连接');
+                        return;
+                    }
+
+                    await this.connectHrDevice(this.hrBluetoothDevice);
+                    console.log('[心率广播] 重连成功');
+                } catch (error) {
+                    console.error('[心率广播] 重连失败:', error);
+                    this.hrBroadcastScanning = false;
+                    
+                    if (this.hrBroadcastEnabled) {
+                        setTimeout(() => this.reconnectHrDevice(), 5000);
+                    }
+                }
+            },
+
+            /**
+             * 停止心率广播接收功能
+             * 断开蓝牙连接并清理资源
+             */
+            async stopHrBroadcast() {
+                console.log('[心率广播] 停止心率广播接收...');
+                
+                // 停止定时保存定时器
+                this.stopHrDataSaveTimer();
+                
+                // 如果有缓冲数据，先保存一次
+                if (this.hrDataBuffer.length > 0) {
+                    await this.saveHrDataToDatabase();
+                }
+                
+                this.hrBroadcastEnabled = false;
+                this.hrBroadcastScanning = false;
+                this.hrBroadcastReceiving = false;
+
+                if (this.hrBluetoothCharacteristic) {
+                    try {
+                        await this.hrBluetoothCharacteristic.stopNotifications();
+                        console.log('[心率广播] 已停止通知');
+                    } catch (e) {
+                        console.log('[心率广播] 停止通知时出错:', e);
+                    }
+                    this.hrBluetoothCharacteristic = null;
+                }
+
+                if (this.hrBluetoothDevice && this.hrBluetoothDevice.gatt.connected) {
+                    try {
+                        this.hrBluetoothDevice.gatt.disconnect();
+                        console.log('[心率广播] 已断开设备连接');
+                    } catch (e) {
+                        console.log('[心率广播] 断开连接时出错:', e);
+                    }
+                }
+
+                this.hrBluetoothDevice = null;
+                this.hrBluetoothServer = null;
+                this.hrBroadcastDeviceName = '';
+                this.hrBroadcastCurrentHr = null;
+                this.hrBroadcastLastUpdate = '';
+                this.hrBroadcastDevices = [];
+                this.hrDataBuffer = [];
+                this.hrLastSaveTime = null;
+                this.hrHealthConfig = null;
+                this.hrEmergencyTriggered = false;
+                
+                console.log('[心率广播] 心率广播接收已完全停止');
+            },
+
+            /**
+             * 格式化心率保存时间显示
+             * @param {Date} time - 时间对象
+             * @returns {string} 格式化后的时间字符串
+             */
+            formatHrSaveTime(time) {
+                if (!time) return '--';
+                const d = new Date(time);
+                return d.getHours().toString().padStart(2, '0') + ':' +
+                       d.getMinutes().toString().padStart(2, '0') + ':' +
+                       d.getSeconds().toString().padStart(2, '0');
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
+
+

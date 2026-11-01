@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chat.older.xiechen.dao.MedicineOperationLogMapper">
+    <resultMap id="MedicineOperationLogResultMap" type="com.chat.older.xiechen.model.MedicineOperationLog">
+        <id property="id" column="id"/>
+        <result property="userMedicineId" column="user_medicine_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="operatorId" column="operator_id"/>
+        <result property="operatorName" column="operator_name"/>
+        <result property="operatorRole" column="operator_role"/>
+        <result property="operationType" column="operation_type"/>
+        <result property="beforeData" column="before_data"/>
+        <result property="afterData" column="after_data"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.chat.older.xiechen.model.MedicineOperationLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO medicine_operation_log (user_medicine_id, user_id, operator_id, operator_name, operator_role, operation_type, before_data, after_data, remark, create_time)
+        VALUES (#{userMedicineId}, #{userId}, #{operatorId}, #{operatorName}, #{operatorRole}, #{operationType}, #{beforeData}, #{afterData}, #{remark}, NOW())
+    </insert>
+
+    <select id="selectByUserMedicineId" resultMap="MedicineOperationLogResultMap">
+        SELECT * FROM medicine_operation_log 
+        WHERE user_medicine_id = #{userMedicineId} 
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectByUserId" resultMap="MedicineOperationLogResultMap">
+        SELECT * FROM medicine_operation_log 
+        WHERE user_id = #{userId} 
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectByOperatorId" resultMap="MedicineOperationLogResultMap">
+        SELECT * FROM medicine_operation_log 
+        WHERE operator_id = #{operatorId} 
+        ORDER BY create_time DESC
+    </select>
+</mapper>

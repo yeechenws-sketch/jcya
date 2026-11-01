@@ -1,0 +1,3941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>用药监控 - 子女端 -解尘颐安</title>
+    <script src="js/image-compressor.js"></script>
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
+    <script src="lib/js/vue.global.js"></script>
+    <script src="lib/js/axios.min.js"></script>
+    <script src="lib/js/socket.io.min.js"></script>
+    <script src="/js/young-message-center.js"></script>
+    <script src="/js/medicine-form-utils.js"></script>
+    <script src="lib/js/quagga.min.js"></script>
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --primary-light: #3B82F6;
+            --primary-lighter: #60A5FA;
+            --danger: #EF4444;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --bg-light: #EFF6FF;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #DBEAFE 0%, #EFF6FF 50%, #F8FAFC 100%);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .back-btn i { 
+            font-size: 18px; 
+            color: white; 
+        }
+
+        .header h1 { 
+            font-size: 17px; 
+            font-weight: 700; 
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-alert {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .header-alert:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .header-alert i {
+            color: white;
+            font-size: 14px;
+        }
+
+        .header-alert span {
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 6px 16px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-item i {
+            font-size: 22px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .nav-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-item.active i,
+        .nav-item.active span {
+            color: var(--primary);
+        }
+
+        .nav-item:hover i,
+        .nav-item:hover span {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--danger);
+            color: white;
+            border-radius: 8px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            border: none;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-value.danger { color: var(--danger); }
+        .stat-value.success { color: var(--success); }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .chart-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+        }
+
+        .today-medication-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+        }
+
+        .today-table-container {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        .today-medication-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .today-medication-table th,
+        .today-medication-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .today-medication-table th {
+            background: #F8FAFC;
+            font-weight: 600;
+            color: #475569;
+            font-size: 13px;
+        }
+
+        .today-medication-table tbody tr:hover {
+            background: #F8FAFC;
+        }
+
+        .today-medication-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.normal {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .status-badge.early {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .status-badge.makeup {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .status-badge.missed {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .status-badge.pending {
+            background: #E2E8F0;
+            color: #475569;
+        }
+
+        .slide-enter-active,
+        .slide-leave-active {
+            transition: all 0.3s ease;
+            max-height: 500px;
+            overflow: hidden;
+        }
+
+        .slide-enter-from,
+        .slide-leave-to {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .chart-control-btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 2px solid #E2E8F0;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chart-control-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .chart-control-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .medicine-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .medicine-card {
+            background: white;
+            border-radius: 20px;
+            padding: 18px;
+            border: none;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .medicine-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .medicine-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15);
+        }
+
+        .medicine-card.alert {
+            border-left: none;
+        }
+
+        .medicine-card.alert::before {
+            background: linear-gradient(90deg, var(--danger) 0%, #F87171 100%);
+        }
+
+        .medicine-card.highlight {
+            animation: highlight-pulse 0.5s ease 4;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes highlight-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.8); }
+        }
+
+        .medicine-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .medicine-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .medicine-info { flex: 1; }
+
+        .medicine-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .medicine-type {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .medicine-type::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+        }
+
+        .stock-badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .stock-badge.warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.2) 100%);
+            color: #D97706;
+        }
+
+        .stock-badge.danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(248, 113, 113, 0.2) 100%);
+            color: #DC2626;
+        }
+
+        .stock-badge.normal {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.2) 100%);
+            color: #059669;
+        }
+
+        .medicine-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #F8FAFC;
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 12px;
+        }
+
+        .detail-item { 
+            text-align: center;
+            padding: 4px 0;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .reminder-times {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .time-tag {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .time-tag::before {
+            content: '⏰';
+            font-size: 10px;
+        }
+
+        .time-tag.taken {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.2) 100%);
+            color: #059669;
+        }
+
+        .time-tag.taken::before {
+            content: '✓';
+        }
+
+        .time-tag.pending {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.2) 100%);
+            color: #D97706;
+        }
+
+        .time-tag.pending::before {
+            content: '○';
+        }
+
+        .time-tag.overdue {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(248, 113, 113, 0.2) 100%);
+            color: #DC2626;
+        }
+
+        .time-tag.overdue::before {
+            content: '!';
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666666;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            opacity: 0.4;
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #666666;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #000000;
+            font-weight: 500;
+        }
+
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-header h2 {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #e2e8f0;
+        }
+
+        .modal-body { padding: 20px; }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .detail-card {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .detail-card.full { grid-column: span 2; }
+
+        .detail-card label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .detail-card .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .progress-fill.high { background: var(--success); }
+        .progress-fill.medium { background: var(--warning); }
+        .progress-fill.low { background: var(--danger); }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel { 
+            background: #f1f5f9; 
+            color: var(--text-secondary); 
+        }
+        
+        .btn-cancel:hover {
+            background: #e2e8f0;
+        }
+        
+        .btn-confirm { 
+            background: var(--primary); 
+            color: white; 
+        }
+        
+        .btn-confirm:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-edit {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #D97706;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .action-btn i,
+        .action-btn span {
+            pointer-events: none;
+        }
+
+        .action-btn:active {
+            transform: scale(0.96);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .action-btn.secondary {
+            background: white;
+            color: var(--primary);
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .action-btn.secondary:hover {
+            background: white;
+        }
+
+        .action-btn.scan {
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            color: white;
+        }
+
+        .action-btn.scan:hover {
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .scanner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-box {
+            width: min(300px, 80%);
+            aspect-ratio: 1/1;
+            background: black;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #scanner-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .close-scanner {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 10;
+            border: none;
+        }
+
+        .scanner-hint {
+            color: white;
+            margin-top: 16px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .barcode-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            width: min(300px, 80%);
+        }
+
+        .barcode-input-row input {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+        }
+
+        .barcode-input-row button {
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .upload-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            width: min(300px, 80%);
+        }
+
+        .upload-options button {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .upload-options button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .wizard-modal {
+            background: white;
+            border-radius: 20px;
+            width: 95%;
+            max-width: 500px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .wizard-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .wizard-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wizard-header h2 i {
+            color: var(--primary);
+        }
+
+        .wizard-steps-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: #f8fafc;
+            gap: 8px;
+        }
+
+        .wizard-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .wizard-step .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .wizard-step.active .step-num {
+            background: var(--primary);
+            color: white;
+        }
+
+        .wizard-step.done .step-num {
+            background: var(--success);
+            color: white;
+        }
+
+        .wizard-step .step-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .wizard-step.active .step-text {
+            color: var(--primary);
+        }
+
+        .wizard-line {
+            width: 40px;
+            height: 2px;
+            background: #e2e8f0;
+            margin-bottom: 18px;
+        }
+
+        .wizard-line.active {
+            background: var(--success);
+        }
+
+        .wizard-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .wizard-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        .wizard-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .wizard-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .wizard-btn.secondary {
+            background: #e2e8f0;
+            color: var(--text);
+        }
+
+        .wizard-btn.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .wizard-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .camera-area {
+            min-height: 200px;
+            border: 2px dashed #d1d5db;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: #f8fafc;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .camera-area:hover {
+            border-color: var(--primary);
+            background: #f0f9ff;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 14px;
+        }
+
+        .camera-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+
+        .camera-placeholder i {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        .camera-placeholder span {
+            font-size: 14px;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .camera-placeholder small {
+            font-size: 12px;
+        }
+
+        .processing-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            background: #f0f9ff;
+            border-radius: 12px;
+        }
+
+        .processing-box i {
+            font-size: 32px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .processing-box span {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .result-box {
+            background: #f0fdf4;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--success);
+        }
+
+        .result-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--success);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .result-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .guide-box {
+            background: #f5f3ff;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .guide-box h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #6B21A8;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .guide-box ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .guide-box li {
+            font-size: 13px;
+            color: var(--text);
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .voice-section {
+            background: #f5f3ff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .voice-title {
+            font-size: 13px;
+            color: var(--text);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .voice-btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 2px solid #8B5CF6;
+            background: white;
+            color: #8B5CF6;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .voice-btn.recording {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+
+        .voice-result {
+            margin-top: 12px;
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .success-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .success-page .success-icon {
+            font-size: 60px;
+            color: var(--success);
+            margin-bottom: 16px;
+        }
+
+        .success-page h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .success-page p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .success-tip {
+            background: #f0f9ff;
+            border-radius: 10px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--primary);
+        }
+
+        .add-modal {
+            background: white;
+            border-radius: 20px;
+            width: 95%;
+            max-width: 450px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .add-modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .time-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .time-tag-input {
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            background: #f1f5f9;
+            color: var(--text);
+            border: 2px solid transparent;
+        }
+
+        .time-tag-input.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .time-tag-input.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .calc-result {
+            background: #f0f9ff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: var(--primary);
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        .calc-result strong {
+            font-size: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .action-bar {
+                gap: 12px;
+            }
+
+            .action-btn {
+                font-size: 14px;
+                padding: 14px 20px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .action-bar {
+                flex-wrap: nowrap;
+            }
+
+            .action-btn {
+                min-width: auto;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+
+            .wizard-modal {
+                max-width: 90%;
+                max-height: 85vh;
+            }
+
+            .wizard-body {
+                padding: 12px;
+            }
+
+            .camera-area {
+                min-height: 150px;
+            }
+        }
+
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 41, 59, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show { opacity: 1; }
+
+        .alert-banner {
+            background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 16px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .alert-banner:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+        }
+
+        .alert-banner i { font-size: 20px; }
+
+        .alert-banner .content { flex: 1; }
+
+        .alert-banner .title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .alert-banner .desc {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            background: #fff;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .medicine-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .medicine-modal-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .medicine-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .medicine-modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .medicine-modal-header h3 i {
+            color: var(--primary);
+        }
+
+        .medicine-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .medicine-modal-close:hover {
+            background: #E0E7FF;
+        }
+
+        .medicine-modal-close i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .medicine-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .medicine-option {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .medicine-option:hover {
+            background: #E0E7FF;
+            border-color: var(--primary-light);
+        }
+
+        .medicine-option.active {
+            background: #DBEAFE;
+            border-color: var(--primary);
+        }
+
+        .medicine-option-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .medicine-option-icon.review {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+
+        .medicine-option-icon.monitor {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        }
+
+        .medicine-option-icon.box {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .medicine-option-icon i {
+            font-size: 22px;
+            color: white;
+        }
+
+        .medicine-option-info {
+            flex: 1;
+        }
+
+        .medicine-option-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .medicine-option-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .current-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            font-weight: 500;
+        }
+
+        .medicine-option-arrow {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .medicine-option-check {
+            color: var(--primary);
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 100%;
+            }
+            
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 24px;
+                padding-bottom: 100px;
+            }
+
+            .stats-row {
+                max-width: 600px;
+                margin: 0 auto 20px;
+                gap: 20px;
+            }
+
+            .alert-banner,
+            .action-bar,
+            .section-title,
+            .empty-state {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .medicine-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .medicine-card {
+                padding: 24px;
+            }
+
+            .medicine-icon {
+                width: 64px;
+                height: 64px;
+                font-size: 24px;
+            }
+
+            .medicine-name {
+                font-size: 19px;
+            }
+
+            .medicine-type {
+                font-size: 14px;
+            }
+
+            .stock-badge {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .medicine-details {
+                padding: 18px;
+                gap: 14px;
+            }
+
+            .detail-value {
+                font-size: 18px;
+            }
+
+            .detail-label {
+                font-size: 12px;
+            }
+
+            .time-tag {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+
+            .action-bar {
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+
+            .action-btn {
+                padding: 16px 20px;
+                font-size: 15px;
+            }
+
+            .section-title {
+                font-size: 18px;
+                margin-bottom: 16px;
+            }
+
+            .stat-card {
+                padding: 24px 16px;
+            }
+
+            .stat-value {
+                font-size: 32px;
+            }
+
+            .stat-label {
+                font-size: 13px;
+            }
+
+            .bottom-nav {
+                max-width: 700px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 30px rgba(0,0,0,0.1);
+                padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+                padding: 10px 24px;
+            }
+
+            .nav-item i {
+                font-size: 26px;
+            }
+
+            .nav-item span {
+                font-size: 12px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .app-container {
+                max-width: 100%;
+            }
+            
+            .medicine-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (orientation: landscape) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 12px 24px;
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .main-content {
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 20px 32px;
+                padding-bottom: 100px;
+            }
+
+            .stats-row {
+                max-width: 600px;
+                margin: 0 auto 20px;
+            }
+
+            .alert-banner,
+            .action-bar,
+            .section-title,
+            .empty-state {
+                max-width: 1400px;
+                margin: 0 auto 16px;
+            }
+
+            .medicine-list {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            .header {
+                padding: 10px 20px;
+            }
+
+            .main-content {
+                padding: 16px 24px;
+                padding-bottom: 100px;
+            }
+
+            .medicine-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .medicine-card,
+            .stat-card {
+                padding: 16px;
+            }
+
+            .bottom-nav {
+                display: flex !important;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .header {
+                padding: 8px 16px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .main-content {
+                padding: 12px 16px;
+                padding-bottom: 80px;
+            }
+
+            .action-bar {
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .action-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .stats-row {
+                gap: 10px;
+                margin-bottom: 12px;
+            }
+
+            .stat-card {
+                padding: 12px;
+            }
+
+            .stat-value {
+                font-size: 20px;
+            }
+
+            .medicine-list {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .medicine-card {
+                padding: 14px;
+            }
+
+            .medicine-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .medicine-name {
+                font-size: 14px;
+            }
+
+            .modal-box,
+            .wizard-modal {
+                max-height: 85vh;
+            }
+
+            .bottom-nav {
+                padding: 2px 0 calc(2px + env(safe-area-inset-bottom));
+            }
+
+            .nav-item {
+                position: relative;
+            }
+
+            .nav-item i {
+                font-size: 16px;
+            }
+
+            .nav-item span {
+                font-size: 8px;
+            }
+        }
+
+        @media (orientation: landscape) and (min-width: 1200px) and (max-height: 500px) {
+            .medicine-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="back-btn" @click="goBack">
+                        <i class="fa fa-angle-left"></i>
+                    </button>
+                    <h1>用药监控</h1>
+                </div>
+                <div class="header-right">
+                    <div v-if="criticalStockCount > 0" class="header-alert" @click="scrollToCriticalMedicine">
+                        <i class="fa fa-exclamation-circle"></i>
+                        <span>{{ criticalStockCount }}种急需</span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div v-if="alerts.length > 0" class="alert-banner" @click="showAlertsModal = true">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <div class="content">
+                        <div class="title">{{ alerts.length }} 条用药预警</div>
+                        <div class="desc">点击查看详情</div>
+                    </div>
+                    <i class="fa fa-angle-right"></i>
+                </div>
+
+                <div class="action-bar">
+                    <button class="action-btn primary" @click="openWizard">
+                        <i class="fa fa-magic"></i> 智能添加
+                    </button>
+                    <button class="action-btn secondary" @click="openAddModal">
+                        <i class="fa fa-plus"></i> 手动添加
+                    </button>
+                    <button class="action-btn scan" @click="openScanner">
+                        <i class="fa fa-camera"></i> 扫码添加
+                    </button>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-value">{{ medicines.length }}</div>
+                        <div class="stat-label">用药种类</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value success">{{ todayTaken }}/{{ todayTotal }}</div>
+                        <div class="stat-label">今日服药</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" :class="lowStockCount > 0 ? 'danger' : 'success'">
+                            {{ lowStockCount }}
+                        </div>
+                        <div class="stat-label">库存预警</div>
+                    </div>
+                </div>
+
+                <div v-if="medicines.length > 0" class="today-medication-section">
+                    <div class="section-title" style="margin-bottom: 16px; cursor: pointer;" @click="toggleTodayTable">
+                        <i class="fa fa-table"></i>
+                        今日用药记录
+                        <i :class="['fa', showTodayTable ? 'fa-chevron-up' : 'fa-chevron-down']" style="margin-left: auto;"></i>
+                    </div>
+                    <transition name="slide">
+                        <div v-show="showTodayTable" class="today-table-container">
+                            <table class="today-medication-table">
+                                <thead>
+                                    <tr>
+                                        <th>药品名称</th>
+                                        <th>服用剂量</th>
+                                        <th>用药时间</th>
+                                        <th>用药类型</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="record in todayMedicationRecords" :key="record.id">
+                                        <td>{{ record.medicineName }}</td>
+                                        <td>{{ record.dosage }}{{ record.unit }}</td>
+                                        <td>{{ record.time }}</td>
+                                        <td>
+                                            <span :class="['status-badge', record.statusClass]">{{ record.statusText }}</span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="todayMedicationRecords.length === 0">
+                                        <td colspan="4" style="text-align: center; color: #94A3B8; padding: 20px;">暂无今日用药记录</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </transition>
+                </div>
+
+                <div class="section-title">
+                    <i class="fa fa-medkit"></i>
+                    用药列表
+                    <button @click="loadDeletedMedicines" style="margin-left: auto; background: #F1F5F9; border: none; color: #1E293B; padding: 6px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-weight: 500;">
+                        <i class="fa fa-trash-o"></i> 已删除
+                    </button>
+                </div>
+
+                <div v-if="medicines.length === 0" class="empty-state">
+                    <i class="fa fa-medkit"></i>
+                    <h3>暂无用药记录</h3>
+                    <p>等待长辈录入用药信息</p>
+                </div>
+
+                <div v-else class="medicine-list">
+                    <div v-for="med in medicines" :key="med.id" 
+                         :class="['medicine-card', med.daysLeft < 2 ? 'alert' : '']"
+                         @click="showMedicineDetail(med)">
+                        <div class="medicine-header">
+                            <div class="medicine-icon">
+                                {{ getFirstChar(med.name) }}
+                            </div>
+                            <div class="medicine-info">
+                                <div class="medicine-name">{{ med.name }}</div>
+                                <div class="medicine-type">{{ med.type || '其他' }} · {{ med.spec }}</div>
+                            </div>
+                            <span :class="['stock-badge', getStockStatus(med.daysLeft)]">
+                                剩{{ med.daysLeft }}天
+                            </span>
+                        </div>
+                        <div class="medicine-details">
+                            <div class="detail-item">
+                                <div class="detail-value">{{ med.dosagePerTime }}{{ med.unit }}</div>
+                                <div class="detail-label">每次用量</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-value">{{ med.frequency }}次</div>
+                                <div class="detail-label">每日次数</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-value">{{ med.currentStock }}{{ med.unit }}</div>
+                                <div class="detail-label">剩余库存</div>
+                            </div>
+                        </div>
+                        <div class="reminder-times">
+                            <span v-for="time in med.reminderTimes" :key="time"
+                                  :class="['time-tag', getTimeStatus(time, med)]">
+                                {{ time }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <nav class="bottom-nav">
+                <div class="nav-item" @click="goToPage('home')">
+                    <i class="fa fa-home"></i>
+                    <span>首页</span>
+                </div>
+                <div class="nav-item active" @click="showMedicineModal = true">
+                    <i class="fa fa-medkit"></i>
+                    <span>用药</span>
+                </div>
+                <div class="nav-item" @click="goToPage('health')">
+                    <i class="fa fa-heartbeat"></i>
+                    <span>健康</span>
+                </div>
+                <div class="nav-item" @click="goToPage('msg')">
+                    <i class="fa fa-commenting-o"></i>
+                    <span>消息</span>
+                    <span v-if="totalUnread > 0" class="nav-badge">{{ totalUnread > 99 ? '99+' : totalUnread }}</span>
+                </div>
+                <div class="nav-item" @click="goToPage('profile')">
+                    <i class="fa fa-user"></i>
+                    <span>我的</span>
+                </div>
+            </nav>
+        </div>
+
+        <div v-if="showMedicineModal" class="medicine-modal" @click.self="showMedicineModal = false">
+            <div class="medicine-modal-content">
+                <div class="medicine-modal-header">
+                    <h3><i class="fa fa-medkit"></i> 用药功能</h3>
+                    <button class="medicine-modal-close" @click="showMedicineModal = false">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                <div class="medicine-options">
+                    <div class="medicine-option" @click="selectMedicineOption('review')">
+                        <div class="medicine-option-icon review">
+                            <i class="fa fa-check-square-o"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药审核</div>
+                            <div class="medicine-option-desc">审核长辈用药草稿</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                    <div class="medicine-option active" @click="selectMedicineOption('monitor')">
+                        <div class="medicine-option-icon monitor">
+                            <i class="fa fa-medkit"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">用药监控 <span class="current-badge">当前</span></div>
+                            <div class="medicine-option-desc">查看长辈用药记录</div>
+                        </div>
+                        <i class="fa fa-check medicine-option-check"></i>
+                    </div>
+                    <div class="medicine-option" @click="selectMedicineOption('box')">
+                        <div class="medicine-option-icon box">
+                            <i class="fa fa-cube"></i>
+                        </div>
+                        <div class="medicine-option-info">
+                            <div class="medicine-option-title">智能药盒</div>
+                            <div class="medicine-option-desc">监看长辈服药情况</div>
+                        </div>
+                        <i class="fa fa-chevron-right medicine-option-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <transition name="fade">
+            <div v-if="showDetailModal" class="modal-mask" @click.self="showDetailModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>{{ selectedMedicine.name }}</h2>
+                        <button class="modal-close" @click="showDetailModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="detail-section">
+                            <h3>用药信息</h3>
+                            <div class="detail-grid">
+                                <div class="detail-card">
+                                    <label>药品类型</label>
+                                    <div class="value">{{ selectedMedicine.type || '其他' }}</div>
+                                </div>
+                                <div class="detail-card">
+                                    <label>药品规格</label>
+                                    <div class="value">{{ selectedMedicine.spec }}</div>
+                                </div>
+                                <div class="detail-card">
+                                    <label>每次用量</label>
+                                    <div class="value">{{ selectedMedicine.dosagePerTime }} {{ selectedMedicine.unit }}</div>
+                                </div>
+                                <div class="detail-card">
+                                    <label>每日次数</label>
+                                    <div class="value">{{ selectedMedicine.frequency }} 次</div>
+                                </div>
+                                <div class="detail-card">
+                                    <label>提醒时间</label>
+                                    <div class="value">{{ (selectedMedicine.reminderTimes || []).join('、') }}</div>
+                                </div>
+                                <div class="detail-card">
+                                    <label>下次提醒</label>
+                                    <div class="value">{{ selectedMedicine.nextReminder || '-' }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>库存情况</h3>
+                            <div class="detail-card full">
+                                <label>当前库存</label>
+                                <div class="value">
+                                    {{ selectedMedicine.currentStock }} / {{ selectedMedicine.totalStock }} {{ selectedMedicine.unit }}
+                                </div>
+                                <div class="progress-bar">
+                                    <div :class="['progress-fill', getStockStatus(selectedMedicine.daysLeft)]"
+                                         :style="{ width: (selectedMedicine.stockPercent || 0) + '%' }"></div>
+                                </div>
+                            </div>
+                            <div class="detail-card">
+                                <label>可服用天数</label>
+                                <div class="value">{{ selectedMedicine.daysLeft }} 天</div>
+                            </div>
+                            <div class="detail-card">
+                                <label>库存状态</label>
+                                <div class="value" :style="{ color: selectedMedicine.daysLeft < 2 ? 'var(--danger)' : (selectedMedicine.daysLeft < 4 ? 'var(--warning)' : 'var(--success)') }">
+                                    {{ selectedMedicine.daysLeft < 2 ? '急需补充' : (selectedMedicine.daysLeft < 4 ? '需要补充' : '库存充足') }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedMedicine.drugInstruction" class="detail-section">
+                            <h3 @click="toggleInstruction" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                <span>用药说明</span>
+                                <i :class="['fa', showFullInstruction ? 'fa-angle-up' : 'fa-angle-down']" style="font-size: 14px;"></i>
+                            </h3>
+                            <div class="detail-card full" v-show="showFullInstruction">
+                                <div class="value" style="font-size: 13px; line-height: 1.6; white-space: pre-wrap;">
+                                    {{ selectedMedicine.drugInstruction }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showDetailModal = false">关闭</button>
+                        <button class="btn-edit" @click="openEditModal">
+                            <i class="fa fa-edit"></i> 编辑
+                        </button>
+                        <button class="btn-confirm" @click="replenishMedicine">补充药品</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showEditModal" class="modal-mask" @click.self="showEditModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>编辑药品信息</h2>
+                        <button class="modal-close" @click="showEditModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="edit-form">
+                            <div class="form-group">
+                                <label>药品名称 *</label>
+                                <input type="text" v-model="editForm.name" placeholder="请输入药品名称" @blur="validateEditField('name')">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>药品规格</label>
+                                    <input type="text" v-model="editForm.spec" placeholder="如：60片/盒" @blur="onEditSpecChange" @input="onEditSpecInput">
+                                </div>
+                                <div class="form-group">
+                                    <label>药品类型</label>
+                                    <select v-model="editForm.type">
+                                        <option value="">请选择</option>
+                                        <option value="降压药">降压药</option>
+                                        <option value="降糖药">降糖药</option>
+                                        <option value="降脂药">降脂药</option>
+                                        <option value="感冒药">感冒药</option>
+                                        <option value="抗生素">抗生素</option>
+                                        <option value="胃药">胃药</option>
+                                        <option value="钙片">钙片</option>
+                                        <option value="其他">其他</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>每次用量 <span style="color: #64748B; font-size: 12px;">(单位: {{ editForm.unit }})</span></label>
+                                    <input v-model.number="editForm.dosagePerTime" type="number" placeholder="数量" min="1" @blur="validateEditField('dosagePerTime')">
+                                </div>
+                                <div class="form-group">
+                                    <label>剂量单位</label>
+                                    <select v-model="editForm.unit" @change="onEditUnitChange">
+                                        <option v-for="u in editAvailableUnits" :key="u" :value="u">{{ u }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>每日次数</label>
+                                    <input v-model.number="editForm.frequency" type="number" placeholder="每日服用次数" min="1" max="6" @change="onEditFrequencyChange" @blur="validateEditField('frequency')">
+                                </div>
+                                <div class="form-group">
+                                    <label>每盒数量</label>
+                                    <input v-model.number="editForm.perPackage" type="number" placeholder="每盒药品数量" min="1">
+                                </div>
+                            </div>
+                            <div class="form-group" v-if="editCalculatedTotal > 0">
+                                <div style="background: #EEF2FF; padding: 12px; border-radius: 8px; color: var(--primary); font-size: 14px;">
+                                    <i class="fa fa-calculator" style="margin-right: 6px;"></i>
+                                    总药量: <strong>{{ editCalculatedTotal }}{{ editForm.unit }}</strong>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>注意事项</label>
+                                <textarea v-model="editForm.precautions" placeholder="用药注意事项"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>提醒时间 <span style="color: #64748B; font-size: 12px;">(需选择{{ editForm.frequency }}个时间点)</span></label>
+                                <div class="time-tags">
+                                    <span v-for="t in allTimeOptions" :key="t" 
+                                          class="time-tag-input" 
+                                          :class="{active: editForm.reminderTimes && editForm.reminderTimes.includes(t), disabled: !editForm.reminderTimes?.includes(t) && editForm.reminderTimes?.length >= editForm.frequency}" 
+                                          @click="toggleEditTime(t)">{{ t }}</span>
+                                </div>
+                                <div v-if="editTimeError" style="color: var(--danger); font-size: 12px; margin-top: 6px;">
+                                    <i class="fa fa-exclamation-circle"></i> {{ editTimeError }}
+                                </div>
+                            </div>
+                            <div class="form-group" v-if="editFormErrors.length > 0">
+                                <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px;">
+                                    <div v-for="error in editFormErrors" :key="error.field" style="color: #DC2626; font-size: 12px; margin-bottom: 4px;">
+                                        <i class="fa fa-exclamation-circle"></i> {{ error.message }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showEditModal = false">取消</button>
+                        <button class="btn-danger" @click="deleteMedicine" style="flex: 0.5;">
+                            <i class="fa fa-trash"></i> 删除
+                        </button>
+                        <button class="btn-confirm" @click="saveEdit">保存</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showAlertsModal" class="modal-mask" @click.self="showAlertsModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>用药预警</h2>
+                        <button class="modal-close" @click="showAlertsModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-for="alert in alerts" :key="alert.id" 
+                             style="background: #fef2f2; border-left: 3px solid var(--danger); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+                            <div style="font-weight: 700; color: var(--danger); margin-bottom: 4px;">
+                                <i class="fa fa-exclamation-circle"></i> {{ alert.medicineName }}
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                {{ alert.message }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-confirm" @click="showAlertsModal = false">知道了</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showDeletedModal" class="modal-mask" @click.self="showDeletedModal = false">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h2>已删除药物</h2>
+                        <button class="modal-close" @click="showDeletedModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="deletedMedicines.length === 0" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            <i class="fa fa-trash-o" style="font-size: 40px; margin-bottom: 12px; opacity: 0.5;"></i>
+                            <p>暂无已删除的药物</p>
+                        </div>
+                        <div v-else>
+                            <div v-for="med in deletedMedicines" :key="med.id" 
+                                 style="background: #f8fafc; border-left: 3px solid var(--text-secondary); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 700; color: var(--text); margin-bottom: 4px;">
+                                            {{ med.displayName || med.name }}
+                                        </div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">
+                                            {{ med.type || '其他' }} · {{ med.spec || '-' }}
+                                        </div>
+                                    </div>
+                                    <button @click="restoreMedicine(med.id)" 
+                                            style="background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;">
+                                        恢复
+                                    </button>
+                                </div>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; font-size: 12px; color: var(--text-secondary);">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <span><i class="fa fa-calendar" style="margin-right: 4px;"></i>用药时间：{{ formatDate(med.startDate) }}    {{ formatDate(med.endDate)}}</span>
+                                    </div>
+                                    <div style="margin-top: 4px;">
+                                        <span><i class="fa fa-user" style="margin-right: 4px;"></i>删除人：{{ med.deletedByName || '-' }}（{{ med.deletedByRole || '-' }}）</span>
+                                    </div>
+                                    <div style="margin-top: 4px;">
+                                        <span><i class="fa fa-clock-o" style="margin-right: 4px;"></i>删除时间：{{ formatTimeFull(med.deletedTime) }}</span>
+                                    </div>
+                                    <div style="margin-top: 4px;">
+                                        <span><i class="fa fa-comment-o" style="margin-right: 4px;"></i>删除原因：{{ med.deleteReason || '-' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showDeletedModal = false">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showDeleteReasonModal" class="modal-mask" @click.self="showDeleteReasonModal = false">
+                <div class="modal-box" style="max-width: 350px;">
+                    <div class="modal-header">
+                        <h2>删除确认</h2>
+                        <button class="modal-close" @click="showDeleteReasonModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                            删除后将停止该药物的用药提醒，历史记录仍可查询。
+                        </p>
+                        <div class="form-group">
+                            <label>请选择删除原因 *</label>
+                            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;" :style="{ borderColor: deleteReason === '病愈停药' ? 'var(--primary)' : '', background: deleteReason === '病愈停药' ? 'rgba(37, 99, 235, 0.05)' : '' }">
+                                    <input type="radio" v-model="deleteReason" value="病愈停药" style="margin: 0;">
+                                    <span>病愈停药</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;" :style="{ borderColor: deleteReason === '误录删除' ? 'var(--primary)' : '', background: deleteReason === '误录删除' ? 'rgba(37, 99, 235, 0.05)' : '' }">
+                                    <input type="radio" v-model="deleteReason" value="误录删除" style="margin: 0;">
+                                    <span>误录删除</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;" :style="{ borderColor: deleteReason === '其他' ? 'var(--primary)' : '', background: deleteReason === '其他' ? 'rgba(37, 99, 235, 0.05)' : '' }">
+                                    <input type="radio" v-model="deleteReason" value="其他" style="margin: 0;">
+                                    <span>其他</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showDeleteReasonModal = false">取消</button>
+                        <button class="btn-danger" @click="confirmDelete">
+                            <i class="fa fa-trash"></i> 确认删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <div v-if="scannerActive" class="scanner-overlay">
+            <div class="scanner-box">
+                <div id="scanner-container"></div>
+                <button class="close-scanner" @click="closeScanner"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="scanner-hint"><i class="fa fa-camera"></i> 将条形码对准扫描框</div>
+            <div class="barcode-input-row">
+                <input type="text" v-model="manualBarcode" placeholder="或手动输入条形码" @keyup.enter="searchByManualBarcode">
+                <button @click="searchByManualBarcode">查询</button>
+            </div>
+            <div class="upload-options">
+                <button @click="triggerImageUpload"><i class="fa fa-image"></i> 从相册选择</button>
+                <button @click="skipToManual"><i class="fa fa-pencil"></i> 手动输入</button>
+            </div>
+            <input type="file" id="image-upload-input" accept="image/*" @change="handleImageUpload" style="display:none">
+        </div>
+
+        <transition name="fade">
+            <div v-if="showAddModal" class="modal-mask" @click.self="showAddModal = false">
+                <div class="add-modal">
+                    <div class="modal-header">
+                        <h2><i class="fa fa-plus"></i> 手动添加药品</h2>
+                        <button class="modal-close" @click="showAddModal = false">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="add-modal-body">
+                        <div class="edit-form">
+                            <div class="form-group">
+                                <label>药品名称 *</label>
+                                <input type="text" v-model="addForm.name" placeholder="请输入药品名称" @blur="validateAddField('name')">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>药品规格</label>
+                                    <input type="text" v-model="addForm.spec" placeholder="如：60片/盒" @blur="onAddSpecChange" @input="onAddSpecInput">
+                                </div>
+                                <div class="form-group">
+                                    <label>药品类型</label>
+                                    <select v-model="addForm.type">
+                                        <option value="">请选择</option>
+                                        <option value="降压药">降压药</option>
+                                        <option value="降糖药">降糖药</option>
+                                        <option value="降脂药">降脂药</option>
+                                        <option value="感冒药">感冒药</option>
+                                        <option value="抗生素">抗生素</option>
+                                        <option value="胃药">胃药</option>
+                                        <option value="钙片">钙片</option>
+                                        <option value="其他">其他</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>每次用量 <span style="color: #64748B; font-size: 12px;">(单位: {{ addForm.unit }})</span></label>
+                                    <input v-model.number="addForm.dosagePerTime" type="number" placeholder="数量" min="1" @blur="validateAddField('dosagePerTime')">
+                                </div>
+                                <div class="form-group">
+                                    <label>剂量单位</label>
+                                    <select v-model="addForm.unit" @change="onAddUnitChange">
+                                        <option v-for="u in addAvailableUnits" :key="u" :value="u">{{ u }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>每日次数</label>
+                                    <input v-model.number="addForm.frequency" type="number" placeholder="每日服用次数" min="1" max="6" @change="onAddFrequencyChange" @blur="validateAddField('frequency')">
+                                </div>
+                                <div class="form-group">
+                                    <label>每盒数量</label>
+                                    <input v-model.number="addForm.perPackage" type="number" placeholder="每盒药品数量" min="1">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>盒/瓶数</label>
+                                    <input v-model.number="addForm.packages" type="number" placeholder="购买盒数" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>提醒时间 <span style="color: #64748B; font-size: 12px;">(需选{{ addForm.frequency }}个)</span></label>
+                                    <div class="time-tags">
+                                        <span v-for="t in allTimeOptions" :key="t" 
+                                              class="time-tag-input" 
+                                              :class="{active: addForm.reminderTimes.includes(t), disabled: !addForm.reminderTimes.includes(t) && addForm.reminderTimes.length >= addForm.frequency}" 
+                                              @click="toggleTime(t)">{{ t }}</span>
+                                    </div>
+                                    <div v-if="addTimeError" style="color: var(--danger); font-size: 12px; margin-top: 6px;">
+                                        <i class="fa fa-exclamation-circle"></i> {{ addTimeError }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>注意事项</label>
+                                <textarea v-model="addForm.precautions" placeholder="用药注意事项"></textarea>
+                            </div>
+                            <div v-if="addCalculatedTotal > 0" class="calc-result">
+                                总药量: <strong>{{ addCalculatedTotal }}{{ addForm.unit }}</strong>，
+                                可服用: <strong>{{ calculatedDays }}天</strong>
+                            </div>
+                            <div class="form-group" v-if="addFormErrors.length > 0">
+                                <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px;">
+                                    <div v-for="error in addFormErrors" :key="error.field" style="color: #DC2626; font-size: 12px; margin-bottom: 4px;">
+                                        <i class="fa fa-exclamation-circle"></i> {{ error.message }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @click="showAddModal = false">取消</button>
+                        <button class="btn-confirm" @click="saveAddMedicine">添加药品</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showWizardModal" class="modal-mask" @click.self="closeWizard">
+                <div class="wizard-modal">
+                    <div class="wizard-header">
+                        <h2><i class="fa fa-magic"></i> 智能添加药品</h2>
+                        <button class="modal-close" @click="closeWizard"><i class="fa fa-times"></i></button>
+                    </div>
+                    
+                    <div class="wizard-steps-bar">
+                        <div class="wizard-step" :class="{ active: wizardStep >= 1, done: wizardStep > 1 }">
+                            <span class="step-num">1</span>
+                            <span class="step-text">识别药名</span>
+                        </div>
+                        <div class="wizard-line" :class="{ active: wizardStep > 1 }"></div>
+                        <div class="wizard-step" :class="{ active: wizardStep >= 2, done: wizardStep > 2 }">
+                            <span class="step-num">2</span>
+                            <span class="step-text">采集信息</span>
+                        </div>
+                        <div class="wizard-line" :class="{ active: wizardStep > 2 }"></div>
+                        <div class="wizard-step" :class="{ active: wizardStep >= 3, done: wizardStep > 3 }">
+                            <span class="step-num">3</span>
+                            <span class="step-text">确认保存</span>
+                        </div>
+                        <div class="wizard-line" :class="{ active: wizardStep > 3 }"></div>
+                        <div class="wizard-step" :class="{ active: wizardStep >= 4 }">
+                            <span class="step-num">4</span>
+                            <span class="step-text">完成</span>
+                        </div>
+                    </div>
+
+                    <div class="wizard-body">
+                        <div v-if="wizardStep === 1">
+                            <div class="camera-area" @click="triggerWizardImage(1)">
+                                <template v-if="wizardData.nameImageUrl">
+                                    <img :src="wizardData.nameImageUrl" class="preview-image">
+                                </template>
+                                <template v-else>
+                                    <div class="camera-placeholder">
+                                        <i class="fa fa-camera"></i>
+                                        <span>点击拍摄药物名称</span>
+                                        <small>请拍摄药盒上的药物名称部分</small>
+                                    </div>
+                                </template>
+                            </div>
+                            <input type="file" id="wizard-name-img" accept="image/*" capture="environment" @change="handleWizardNameImage" style="display:none">
+                            
+                            <div v-if="wizardData.nameImageProcessing" class="processing-box" style="margin-top: 16px;">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                <span>正在识别...</span>
+                            </div>
+                            <div v-else-if="wizardData.recognizedName" class="result-box" style="margin-top: 16px;">
+                                <div class="result-title"><i class="fa fa-check-circle"></i> 识别结果</div>
+                                <div class="result-name">{{ wizardData.recognizedName }}</div>
+                            </div>
+                            <div v-else class="guide-box" style="margin-top: 16px;">
+                                <h4><i class="fa fa-lightbulb-o"></i> 操作提示</h4>
+                                <ul>
+                                    <li>请拍摄药盒正面，确保药物名称清晰可见</li>
+                                    <li>避免光线过暗或反光</li>
+                                    <li>保持手机稳定，防止模糊</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div v-if="wizardStep === 2">
+                            <div class="camera-area" @click="triggerWizardImage(2)">
+                                <template v-if="wizardData.instructionImageUrl">
+                                    <img :src="wizardData.instructionImageUrl" class="preview-image">
+                                </template>
+                                <template v-else>
+                                    <div class="camera-placeholder">
+                                        <i class="fa fa-file-text"></i>
+                                        <span>点击拍摄用药说明</span>
+                                        <small>请拍摄说明书上的用量方法</small>
+                                    </div>
+                                </template>
+                            </div>
+                            <input type="file" id="wizard-instruction-img" accept="image/*" capture="environment" @change="handleWizardInstructionImage" style="display:none">
+                            
+                            <div v-if="wizardData.instructionImageProcessing" class="processing-box" style="margin-top: 16px;">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                <span>正在识别...</span>
+                            </div>
+                            <div v-else-if="wizardData.recognizedInfo" class="result-box" style="margin-top: 16px;">
+                                <div class="result-title"><i class="fa fa-check-circle"></i> 识别结果</div>
+                                <div class="info-list">
+                                    <div class="info-item" v-if="wizardData.recognizedInfo.spec">
+                                        <span class="info-label">规格</span>
+                                        <span class="info-value">{{ wizardData.recognizedInfo.spec }}</span>
+                                    </div>
+                                    <div class="info-item" v-if="wizardData.recognizedInfo.pillsPerBox">
+                                        <span class="info-label">每盒粒数</span>
+                                        <span class="info-value">{{ wizardData.recognizedInfo.pillsPerBox }} {{ wizardData.recognizedInfo.unit || '粒' }}</span>
+                                    </div>
+                                    <div class="info-item" v-if="wizardData.recognizedInfo.dosagePerTime">
+                                        <span class="info-label">每次服用</span>
+                                        <span class="info-value">{{ wizardData.recognizedInfo.dosagePerTime }} {{ wizardData.recognizedInfo.unit || '粒' }}</span>
+                                    </div>
+                                    <div class="info-item" v-if="wizardData.recognizedInfo.frequency">
+                                        <span class="info-label">每日次数</span>
+                                        <span class="info-value">{{ wizardData.recognizedInfo.frequency }} 次</span>
+                                    </div>
+                                    <div class="info-item" v-if="wizardData.recognizedInfo.medicineType">
+                                        <span class="info-label">药品类型</span>
+                                        <span class="info-value">{{ wizardData.recognizedInfo.medicineType }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="guide-box" style="margin-top: 16px;">
+                                <h4><i class="fa fa-lightbulb-o"></i> 操作提示</h4>
+                                <ul>
+                                    <li>请拍摄药品说明书上的用法用量部分</li>
+                                    <li>确保文字清晰可见</li>
+                                    <li>也可以跳过此步骤，稍后手动补充</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div v-if="wizardStep === 3">
+                            <div class="edit-form">
+                                <div class="form-group">
+                                    <label>药品名称 *</label>
+                                    <input type="text" v-model="wizardData.finalInfo.name" placeholder="请输入药品名称">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>规格</label>
+                                        <input type="text" v-model="wizardData.finalInfo.spec" placeholder="如：60片/盒">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>药品类型</label>
+                                        <select v-model="wizardData.finalInfo.type">
+                                            <option value="">请选择</option>
+                                            <option value="降压药">降压药</option>
+                                            <option value="降糖药">降糖药</option>
+                                            <option value="降脂药">降脂药</option>
+                                            <option value="感冒药">感冒药</option>
+                                            <option value="抗生素">抗生素</option>
+                                            <option value="胃药">胃药</option>
+                                            <option value="钙片">钙片</option>
+                                            <option value="其他">其他</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>每次用量</label>
+                                        <input v-model.number="wizardData.finalInfo.dosagePerTime" type="number">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>单位</label>
+                                        <select v-model="wizardData.finalInfo.unit">
+                                            <option value="粒">粒</option>
+                                            <option value="片">片</option>
+                                            <option value="袋">袋</option>
+                                            <option value="毫升">毫升</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>每日次数</label>
+                                        <input v-model.number="wizardData.finalInfo.frequency" type="number">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>每盒数量</label>
+                                        <input v-model.number="wizardData.finalInfo.pillsPerBox" type="number">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="wizardStep === 4" class="success-page">
+                            <div class="success-icon"><i class="fa fa-check-circle"></i></div>
+                            <h3>添加成功！</h3>
+                            <p>{{ wizardData.finalInfo.name }} 已成功添加到用药列表</p>
+                            <div class="success-tip">
+                                <i class="fa fa-clock-o"></i>
+                                <span>系统将按时提醒长辈服药</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-footer">
+                        <button v-if="wizardStep > 1 && wizardStep < 4" class="wizard-btn secondary" @click="prevWizardStep">上一步</button>
+                        <button v-if="wizardStep === 1" class="wizard-btn primary" @click="nextWizardStep" :disabled="!wizardData.recognizedName">下一步</button>
+                        <button v-if="wizardStep === 2" class="wizard-btn primary" @click="nextWizardStep">下一步</button>
+                        <button v-if="wizardStep === 3" class="wizard-btn success" @click="confirmWizardSave"><i class="fa fa-check"></i> 确认保存</button>
+                        <button v-if="wizardStep === 4" class="wizard-btn primary" @click="closeWizard">完成</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    elderId: null,
+                    elderInfo: {},
+                    medicines: [],
+                    alerts: [],
+                    todayTaken: 0,
+                    todayTotal: 0,
+                    lowStockCount: 0,
+                    criticalStockCount: 0,
+                    selectedMedicine: null,
+                    showDetailModal: false,
+                    showEditModal: false,
+                    showAlertsModal: false,
+                    showDeletedModal: false,
+                    showDeleteReasonModal: false,
+                    showMedicineModal: false,
+                    showFullInstruction: false,
+                    deletedMedicines: [],
+                    deleteReason: '',
+                    refreshTimer: null,
+                    editForm: {
+                        name: '',
+                        spec: '',
+                        type: '',
+                        dosagePerTime: 1,
+                        unit: '片',
+                        frequency: 2,
+                        perPackage: 30,
+                        precautions: ''
+                    },
+                    scannerActive: false,
+                    manualBarcode: '',
+                    showAddModal: false,
+                    addForm: {
+                        name: '',
+                        spec: '',
+                        type: '',
+                        dosagePerTime: 1,
+                        unit: '片',
+                        frequency: 2,
+                        perPackage: 30,
+                        packages: 1,
+                        reminderTimes: ['08:00', '18:00'],
+                        precautions: ''
+                    },
+                    allTimeOptions: ['06:00', '08:00', '12:00', '18:00', '20:00', '21:00'],
+                    addAvailableUnits: ['片', '粒', '袋', '毫升', '克', '支', '颗', '丸'],
+                    editAvailableUnits: ['片', '粒', '袋', '毫升', '克', '支', '颗', '丸'],
+                    addTimeError: '',
+                    editTimeError: '',
+                    addFormErrors: [],
+                    editFormErrors: [],
+                    showWizardModal: false,
+                    wizardStep: 1,
+                    wizardData: {
+                        nameImageUrl: '',
+                        nameImageProcessing: false,
+                        recognizedName: '',
+                        ocrText: '',
+                        instructionImageUrl: '',
+                        instructionImageProcessing: false,
+                        recognizedInfo: null,
+                        finalInfo: {
+                            name: '',
+                            spec: '',
+                            dosagePerTime: 1,
+                            unit: '粒',
+                            frequency: 2,
+                            type: '',
+                            pillsPerBox: 30
+                        }
+                    },
+                    totalUnread: 0,
+                    showTodayTable: false,
+                    todayMedicationRecords: []
+                };
+            },
+            watch: {
+                medicines: {
+                    handler() {
+                        this.$nextTick(() => {
+                            this.buildTodayRecords();
+                        });
+                    },
+                    deep: true
+                }
+            },
+            computed: {
+                calculatedDays() {
+                    const total = this.addForm.packages * this.addForm.perPackage;
+                    const daily = this.addForm.dosagePerTime * this.addForm.frequency;
+                    return daily > 0 ? Math.floor(total / daily) : 0;
+                },
+                addCalculatedTotal() {
+                    return (this.addForm.packages || 0) * (this.addForm.perPackage || 0);
+                },
+                editCalculatedTotal() {
+                    return (this.editForm.packages || 0) * (this.editForm.perPackage || 0);
+                }
+            },
+            mounted() {
+                const urlParams = new URLSearchParams(window.location.search);
+                this.elderId = urlParams.get('elderId');
+                if (this.elderId) {
+                    this.loadElderInfo();
+                    this.loadAlerts();
+                    this.startAutoRefresh();
+                    this.loadUnreadCount();
+                    this.setupMessageCallbacks();
+                    this.loadMedicines().then(() => {
+                        this.buildTodayRecords();
+                    });
+                } else {
+                    window.location.href = 'young_index.html';
+                }
+            },
+            beforeUnmount() {
+                this.stopAutoRefresh();
+            },
+            methods: {
+                setupMessageCallbacks() {
+                    if (window.YoungMessageCenter) {
+                        YoungMessageCenter.onMessage((msg, contact) => {
+                            if (msg.fromId) {
+                                this.totalUnread++;
+                            }
+                        });
+                    }
+                },
+
+                async loadUnreadCount() {
+                    try {
+                        const res = await axios.get('/api/msg/unread/detail');
+                        if (res.data.code === 200 && Array.isArray(res.data.data)) {
+                            let total = 0;
+                            res.data.data.forEach(item => {
+                                total += item.count || item.unreadCount || item.unread_count || 0;
+                            });
+                            this.totalUnread = total;
+                        }
+                    } catch (e) {
+                        console.error('加载未读消息数失败', e);
+                    }
+                },
+
+                startAutoRefresh() {
+                    this.refreshTimer = setInterval(() => {
+                        this.loadMedicines();
+                        this.loadAlerts();
+                    }, 30000);
+                },
+                stopAutoRefresh() {
+                    if (this.refreshTimer) {
+                        clearInterval(this.refreshTimer);
+                        this.refreshTimer = null;
+                    }
+                },
+
+                async loadElderInfo() {
+                    try {
+                        const res = await axios.get('/api/friend/list/ordered');
+                        if (res.data.code === 200) {
+                            const elder = (res.data.data || []).find(e => e.id == this.elderId);
+                            if (elder) this.elderInfo = elder;
+                        }
+                    } catch (e) {}
+                },
+
+                async loadMedicines() {
+                    try {
+                        const res = await axios.get(`/api/medicine/family/${this.elderId}`);
+                        if (res.data.code === 200) {
+                            this.medicines = res.data.data || [];
+                            this.calculateStats();
+                            if (this.medicationChart) {
+                                this.$nextTick(() => {
+                                    this.safeChartUpdate();
+                                });
+                            }
+                        }
+                        return true;
+                    } catch (e) {
+                        console.error('加载用药列表失败', e);
+                        return false;
+                    }
+                },
+
+                async loadAlerts() {
+                    try {
+                        const res = await axios.get(`/api/medicine/alerts?familyId=${this.elderId}`);
+                        if (res.data.code === 200) {
+                            this.alerts = res.data.data || [];
+                        }
+                    } catch (e) {}
+                },
+
+                calculateStats() {
+                    // 计算今日所有提醒时间总数量
+                    this.todayTotal = this.medicines.reduce((sum, m) => sum + ((m.reminderTimes || []).length), 0);
+                    // 计算今日实际服药记录数量
+                    let actualTakenCount = 0;
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    this.medicines.forEach(m => {
+                        if (m.takeRecords) {
+                            const todayTakeRecords = m.takeRecords.filter(r => {
+                                if (!r.takeTime) return false;
+                                const recordDate = r.takeTime.split(' ')[0];
+                                return recordDate === todayStr;
+                            });
+                            actualTakenCount += todayTakeRecords.length;
+                        }
+                    });
+                    this.todayTaken = actualTakenCount;
+                    this.lowStockCount = this.medicines.filter(m => m.daysLeft < 4).length;
+                    this.criticalStockCount = this.medicines.filter(m => m.daysLeft < 2).length;
+                },
+
+                toggleTodayTable() {
+                    this.showTodayTable = !this.showTodayTable;
+                },
+
+                buildTodayRecords() {
+                    const records = [];
+                    const now = new Date();
+                    const todayStr = now.toISOString().split('T')[0];
+                    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+                    
+                    this.medicines.forEach(med => {
+                        const times = med.reminderTimes || [];
+                        const takeRecords = med.takeRecords || [];
+                        
+                        const todayTakeRecords = takeRecords.filter(r => {
+                            if (!r.takeTime) return false;
+                            const recordDate = r.takeTime.split(' ')[0];
+                            return recordDate === todayStr;
+                        });
+                        
+                        const usedRecords = new Set();
+                        
+                        times.forEach(time => {
+                            const [hours, minutes] = time.split(':').map(Number);
+                            const timeMinutes = hours * 60 + minutes;
+                            const status = this.getTimeStatus(time, med);
+                            
+                            if (status === 'pending') {
+                                return;
+                            }
+                            
+                            let statusText = '';
+                            let statusClass = '';
+                            let displayTime = time;
+                            let matchedRecord = null;
+                            
+                            if (status === 'taken') {
+                                for (let i = 0; i < todayTakeRecords.length; i++) {
+                                    if (usedRecords.has(i)) continue;
+                                    const record = todayTakeRecords[i];
+                                    if (!record.takeTime) continue;
+                                    
+                                    const recordTimePart = record.takeTime.split(' ')[1];
+                                    if (!recordTimePart) continue;
+                                    
+                                    const [recordHours, recordMinutes] = recordTimePart.split(':').map(Number);
+                                    const recordTimeMinutes = recordHours * 60 + recordMinutes;
+                                    
+                                    const diff = Math.abs(recordTimeMinutes - timeMinutes);
+                                    if (diff <= 180) {
+                                        matchedRecord = record;
+                                        usedRecords.add(i);
+                                        break;
+                                    }
+                                }
+                                
+                                if (matchedRecord) {
+                                    if (matchedRecord.isEarly) {
+                                        statusText = '提前服用';
+                                        statusClass = 'early';
+                                    } else if (matchedRecord.isMakeup) {
+                                        statusText = '补服';
+                                        statusClass = 'makeup';
+                                    } else {
+                                        statusText = '正常服用';
+                                        statusClass = 'normal';
+                                    }
+                                    if (matchedRecord.takeTime) {
+                                        const timePart = matchedRecord.takeTime.split(' ')[1];
+                                        if (timePart) {
+                                            displayTime = timePart.substring(0, 5);
+                                        }
+                                    }
+                                } else {
+                                    statusText = '正常服用';
+                                    statusClass = 'normal';
+                                }
+                            } else if (status === 'overdue') {
+                                statusText = '漏服';
+                                statusClass = 'missed';
+                            }
+                            
+                            records.push({
+                                id: `${med.id}-${time}`,
+                                medicineName: med.name,
+                                dosage: med.dosagePerTime || 1,
+                                unit: med.unit || '片',
+                                time: displayTime,
+                                timeMinutes: timeMinutes,
+                                status: status,
+                                statusText: statusText,
+                                statusClass: statusClass
+                            });
+                        });
+                    });
+                    
+                    records.sort((a, b) => a.timeMinutes - b.timeMinutes);
+                    this.todayMedicationRecords = records;
+                },
+
+                scrollToCriticalMedicine() {
+                    const criticalCards = document.querySelectorAll('.medicine-card.alert');
+                    if (criticalCards.length > 0) {
+                        criticalCards[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        criticalCards[0].classList.add('highlight');
+                        setTimeout(() => criticalCards[0].classList.remove('highlight'), 2000);
+                    }
+                },
+
+                getFirstChar(name) {
+                    if (!name) return '药';
+                    return name.charAt(0);
+                },
+
+                showMedicineDetail(med) {
+                    this.selectedMedicine = med;
+                    this.showFullInstruction = false;
+                    this.showDetailModal = true;
+                },
+
+                toggleInstruction() {
+                    this.showFullInstruction = !this.showFullInstruction;
+                },
+
+                openEditModal() {
+                    this.editForm = {
+                        name: this.selectedMedicine.name || '',
+                        spec: this.selectedMedicine.spec || '',
+                        type: this.selectedMedicine.type || '',
+                        dosagePerTime: this.selectedMedicine.dosagePerTime || 1,
+                        unit: this.selectedMedicine.unit || '片',
+                        frequency: this.selectedMedicine.frequency || 2,
+                        perPackage: this.selectedMedicine.perPackage || 30,
+                        precautions: this.selectedMedicine.precautions || '',
+                        reminderTimes: this.selectedMedicine.reminderTimes || ['08:00', '18:00']
+                    };
+                    this.showDetailModal = false;
+                    this.showEditModal = true;
+                },
+                
+                async saveEdit() {
+                    if (!this.validateEditForm()) {
+                        this.showToast('请修正表单中的错误');
+                        return;
+                    }
+                    
+                    if (this.editForm.reminderTimes && this.editForm.reminderTimes.length !== this.editForm.frequency) {
+                        this.showToast('提醒时间与用药次数不匹配，请选择' + this.editForm.frequency + '个提醒时间');
+                        return;
+                    }
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine/update/${this.selectedMedicine.id}`, this.editForm);
+                        if (res.data.code === 200) {
+                            this.showToast('保存成功');
+                            this.showEditModal = false;
+                            this.loadMedicines();
+                        } else {
+                            this.showToast(res.data.msg || '保存失败');
+                        }
+                    } catch (e) {
+                        this.showToast('保存失败');
+                    }
+                },
+
+                async deleteMedicine() {
+                    this.deleteReason = '';
+                    this.showDeleteReasonModal = true;
+                },
+
+                async confirmDelete() {
+                    if (!this.deleteReason) {
+                        this.showToast('请选择删除原因');
+                        return;
+                    }
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine/delete/${this.selectedMedicine.id}`, { reason: this.deleteReason });
+                        if (res.data.code === 200) {
+                            this.showToast('删除成功');
+                            this.showDeleteReasonModal = false;
+                            this.showEditModal = false;
+                            this.loadMedicines();
+                        } else {
+                            this.showToast(res.data.msg || '删除失败');
+                        }
+                    } catch (e) {
+                        this.showToast('删除失败');
+                    }
+                },
+
+                async replenishMedicine() {
+                    if (!confirm('确认补充1盒药品？')) return;
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine/replenish/${this.selectedMedicine.id}`, { packages: 1 });
+                        if (res.data.code === 200) {
+                            this.showToast('补充成功');
+                            this.showDetailModal = false;
+                            this.loadMedicines();
+                        } else {
+                            this.showToast(res.data.msg || '操作失败');
+                        }
+                    } catch (e) {
+                        this.showToast('操作失败');
+                    }
+                },
+
+                getStockStatus(daysLeft) {
+                    if (daysLeft < 2) return 'low';
+                    if (daysLeft < 4) return 'medium';
+                    return 'high';
+                },
+
+                getTimeStatus(time, med) {
+                    if (med.timeStatusMap && med.timeStatusMap[time]) {
+                        return med.timeStatusMap[time];
+                    }
+                    return 'pending';
+                },
+
+                showToast(msg) {
+                    const toast = document.getElementById('toast');
+                    toast.textContent = msg;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 3000);
+                },
+
+                goBack() {
+                    window.location.href = 'young_index.html';
+                },
+
+                goToPage(page) {
+                    const pages = {
+                        'home': 'young_index.html',
+                        'health': 'young_health.html',
+                        'msg': 'young_msg.html',
+                        'profile': 'young_settings.html'
+                    };
+                    if (pages[page]) {
+                        window.location.href = pages[page];
+                    }
+                },
+
+                selectMedicineOption(option) {
+                    this.showMedicineModal = false;
+                    if (option === 'review') {
+                        window.location.href = 'young_draft_review.html';
+                    } else if (option === 'monitor') {
+                        // 当前页面，不做跳转
+                    } else if (option === 'box') {
+                        if (this.elderId) {
+                            window.location.href = `young_medicine_box.html?elderId=${this.elderId}`;
+                        } else {
+                            window.location.href = 'young_medicine_box.html';
+                        }
+                    }
+                },
+
+                async loadDeletedMedicines() {
+                    try {
+                        const res = await axios.get(`/api/medicine/deleted/${this.elderId}`);
+                        if (res.data.code === 200) {
+                            this.deletedMedicines = res.data.data || [];
+                            this.showDeletedModal = true;
+                        }
+                    } catch (e) {
+                        this.showToast('加载失败');
+                    }
+                },
+
+                async restoreMedicine(medicineId) {
+                    if (!confirm('确认恢复该药物？恢复后将重新开始用药提醒。')) return;
+                    
+                    try {
+                        const res = await axios.post(`/api/medicine/restore/${medicineId}`);
+                        if (res.data.code === 200) {
+                            this.showToast('恢复成功');
+                            this.showDeletedModal = false;
+                            this.loadMedicines();
+                        } else {
+                            this.showToast(res.data.msg || '恢复失败');
+                        }
+                    } catch (e) {
+                        this.showToast('恢复失败');
+                    }
+                },
+
+                formatTime(time) {
+                    if (!time) return '-';
+                    const date = new Date(time);
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                },
+
+                formatTimeFull(time) {
+                    if (!time) return '-';
+                    const date = new Date(time);
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+                },
+
+                formatDate(date) {
+                    if (!date) return '';
+                    const d = new Date(date);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                },
+
+                openScanner() {
+                    this.scannerActive = true;
+                    this.manualBarcode = '';
+                    this.$nextTick(() => {
+                        this.initQuagga();
+                    });
+                },
+
+                initQuagga() {
+                    if (!window.Quagga) {
+                        this.showToast('扫码库未加载，请手动输入条形码');
+                        return;
+                    }
+                    Quagga.init({
+                        inputStream: {
+                            name: 'Live',
+                            type: 'LiveStream',
+                            target: document.querySelector('#scanner-container'),
+                            constraints: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        },
+                        decoder: {
+                            readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader', 'upc_e_reader']
+                        },
+                        locate: true,
+                        frequency: 10
+                    }, (err) => {
+                        if (err) {
+                            console.error(err);
+                            this.showToast('摄像头启动失败，请手动输入条形码');
+                            return;
+                        }
+                        Quagga.start();
+                    });
+                    Quagga.onDetected(this.onBarcodeDetected);
+                },
+
+                async onBarcodeDetected(result) {
+                    const code = result.codeResult.code;
+                    Quagga.stop();
+                    this.scannerActive = false;
+                    await this.searchByBarcode(code);
+                },
+
+                async searchByBarcode(code) {
+                    try {
+                        const res = await axios.get('/api/medicine/barcode/' + code);
+                        if (res.data && res.data.code === 200) {
+                            const drug = res.data.data;
+                            this.openAddModalWithScan(drug);
+                        } else {
+                            this.showToast('未找到该药品信息，请手动输入');
+                            this.openAddModal();
+                        }
+                    } catch (e) {
+                        this.showToast('扫码失败，请手动输入');
+                        this.openAddModal();
+                    }
+                },
+
+                async searchByManualBarcode() {
+                    if (!this.manualBarcode) {
+                        this.showToast('请输入条形码');
+                        return;
+                    }
+                    if (window.Quagga) Quagga.stop();
+                    this.scannerActive = false;
+                    await this.searchByBarcode(this.manualBarcode);
+                },
+
+                skipToManual() {
+                    if (window.Quagga) Quagga.stop();
+                    this.scannerActive = false;
+                    this.openAddModal();
+                },
+
+                closeScanner() {
+                    if (window.Quagga) Quagga.stop();
+                    this.scannerActive = false;
+                },
+
+                triggerImageUpload() {
+                    document.getElementById('image-upload-input').click();
+                },
+
+                async handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (window.Quagga) Quagga.stop();
+                    this.scannerActive = false;
+
+                    try {
+                        let processedFile = file;
+                        if (typeof compressImage === 'function' && file.size > 100 * 1024) {
+                            try {
+                                processedFile = await compressImage(file, { targetSize: 800 * 1024 });
+                                console.log(`[条码识图] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                            } catch (e) {
+                                console.warn('[条码识图] 压缩失败，使用原图:', e);
+                            }
+                        }
+
+                        const fd = new FormData();
+                        fd.append('file', processedFile);
+
+                        const res = await axios.post('/api/medicine/barcode/image', fd);
+                        if (res.data && res.data.code === 200) {
+                            const drug = res.data.data;
+                            this.openAddModalWithScan(drug);
+                        } else {
+                            this.showToast('未能识别条形码，请手动输入');
+                            this.openAddModal();
+                        }
+                    } catch (e) {
+                        console.error('图片识别失败', e);
+                        this.showToast('图片识别失败，请手动输入');
+                        this.openAddModal();
+                    }
+
+                    event.target.value = '';
+                },
+
+                openAddModal() {
+                    this.addForm = {
+                        name: '',
+                        spec: '',
+                        type: '',
+                        dosagePerTime: 1,
+                        unit: '片',
+                        frequency: 2,
+                        perPackage: 30,
+                        packages: 1,
+                        reminderTimes: ['08:00', '18:00'],
+                        precautions: ''
+                    };
+                    this.showAddModal = true;
+                },
+
+                openAddModalWithScan(drug) {
+                    this.addForm = {
+                        name: drug.name || '',
+                        spec: drug.spec || '',
+                        type: drug.type || '',
+                        dosagePerTime: 1,
+                        unit: drug.agentiaUnit || drug.unit || '片',
+                        frequency: 2,
+                        perPackage: this.parsePerPackage(drug.spec) || 30,
+                        packages: 1,
+                        reminderTimes: ['08:00', '18:00'],
+                        precautions: ''
+                    };
+                    this.showAddModal = true;
+                    this.showToast('识别到 ' + drug.name + '，请补充其他信息');
+                },
+
+                parsePerPackage(spec) {
+                    if (!spec) return null;
+                    const match = spec.match(/(\d+)\s*(粒|片|袋)/);
+                    if (match) return parseInt(match[1]);
+                    const match2 = spec.match(/[*×x](\d+)/);
+                    if (match2) return parseInt(match2[1]);
+                    return null;
+                },
+
+                toggleTime(t) {
+                    const idx = this.addForm.reminderTimes.indexOf(t);
+                    if (idx > -1) {
+                        this.addForm.reminderTimes.splice(idx, 1);
+                    } else {
+                        if (this.addForm.reminderTimes.length >= this.addForm.frequency) {
+                            this.addTimeError = `已达到每日${this.addForm.frequency}次的提醒时间上限，请先删除一个时间`;
+                            return;
+                        }
+                        this.addForm.reminderTimes.push(t);
+                    }
+                    this.addForm.reminderTimes.sort();
+                    this.validateAddTimeSelection();
+                },
+
+                toggleEditTime(t) {
+                    if (!this.editForm.reminderTimes) {
+                        this.editForm.reminderTimes = [];
+                    }
+                    const idx = this.editForm.reminderTimes.indexOf(t);
+                    if (idx > -1) {
+                        this.editForm.reminderTimes.splice(idx, 1);
+                    } else {
+                        if (this.editForm.reminderTimes.length >= this.editForm.frequency) {
+                            this.editTimeError = `已达到每日${this.editForm.frequency}次的提醒时间上限，请先删除一个时间`;
+                            return;
+                        }
+                        this.editForm.reminderTimes.push(t);
+                    }
+                    this.editForm.reminderTimes.sort();
+                    this.validateEditTimeSelection();
+                },
+
+                onAddSpecChange() {
+                    const parsed = MedicineFormUtils.parseSpec(this.addForm.spec);
+                    if (parsed.unit) {
+                        this.addForm.unit = parsed.unit;
+                        this.addAvailableUnits = [parsed.unit];
+                    }
+                    if (parsed.quantity) {
+                        this.addForm.perPackage = parsed.quantity;
+                    }
+                },
+
+                onAddSpecInput() {
+                    const parsed = MedicineFormUtils.parseSpec(this.addForm.spec);
+                    if (parsed.unit) {
+                        this.addForm.unit = parsed.unit;
+                        this.addAvailableUnits = [parsed.unit];
+                    }
+                    if (parsed.quantity) {
+                        this.addForm.perPackage = parsed.quantity;
+                    }
+                },
+
+                onAddUnitChange() {
+                    // 单位已根据规格自动设置
+                },
+
+                onAddFrequencyChange() {
+                    const freq = parseInt(this.addForm.frequency) || 2;
+                    if (freq < 1) this.addForm.frequency = 1;
+                    if (freq > 6) this.addForm.frequency = 6;
+                    this.addForm.reminderTimes = MedicineFormUtils.getDefaultReminderTimes(this.addForm.frequency);
+                    this.validateAddTimeSelection();
+                },
+
+                onEditSpecChange() {
+                    const parsed = MedicineFormUtils.parseSpec(this.editForm.spec);
+                    if (parsed.unit) {
+                        this.editForm.unit = parsed.unit;
+                        this.editAvailableUnits = [parsed.unit];
+                    }
+                    if (parsed.quantity) {
+                        this.editForm.perPackage = parsed.quantity;
+                    }
+                },
+
+                onEditSpecInput() {
+                    const parsed = MedicineFormUtils.parseSpec(this.editForm.spec);
+                    if (parsed.unit) {
+                        this.editForm.unit = parsed.unit;
+                        this.editAvailableUnits = [parsed.unit];
+                    }
+                    if (parsed.quantity) {
+                        this.editForm.perPackage = parsed.quantity;
+                    }
+                },
+
+                onEditUnitChange() {
+                    // 单位已根据规格自动设置
+                },
+
+                onEditFrequencyChange() {
+                    const freq = parseInt(this.editForm.frequency) || 2;
+                    if (freq < 1) this.editForm.frequency = 1;
+                    if (freq > 6) this.editForm.frequency = 6;
+                    this.editForm.reminderTimes = MedicineFormUtils.getDefaultReminderTimes(this.editForm.frequency);
+                    this.validateEditTimeSelection();
+                },
+
+                validateAddTimeSelection() {
+                    const result = MedicineFormUtils.validateReminderTimes(this.addForm.frequency, this.addForm.reminderTimes);
+                    this.addTimeError = result.valid ? '' : result.message;
+                    return result.valid;
+                },
+
+                validateEditTimeSelection() {
+                    const result = MedicineFormUtils.validateReminderTimes(this.editForm.frequency, this.editForm.reminderTimes);
+                    this.editTimeError = result.valid ? '' : result.message;
+                    return result.valid;
+                },
+
+                validateAddField(fieldName) {
+                    this.addFormErrors = this.addFormErrors.filter(e => e.field !== fieldName);
+                },
+
+                validateEditField(fieldName) {
+                    this.editFormErrors = this.editFormErrors.filter(e => e.field !== fieldName);
+                },
+
+                validateAddForm() {
+                    this.addFormErrors = [];
+                    
+                    if (!this.addForm.name || !this.addForm.name.trim()) {
+                        this.addFormErrors.push({ field: 'name', message: '请输入药品名称' });
+                    }
+                    
+                    if (!this.addForm.dosagePerTime || this.addForm.dosagePerTime <= 0) {
+                        this.addFormErrors.push({ field: 'dosagePerTime', message: '每次用量必须大于0' });
+                    }
+                    
+                    if (!this.addForm.frequency || this.addForm.frequency < 1 || this.addForm.frequency > 6) {
+                        this.addFormErrors.push({ field: 'frequency', message: '每日次数应在1-6次之间' });
+                    }
+                    
+                    if (this.addForm.reminderTimes.length !== this.addForm.frequency) {
+                        this.addFormErrors.push({ 
+                            field: 'reminderTimes', 
+                            message: `提醒时间数量(${this.addForm.reminderTimes.length}个)与每日次数(${this.addForm.frequency}次)不匹配` 
+                        });
+                    }
+                    
+                    return this.addFormErrors.length === 0;
+                },
+
+                validateEditForm() {
+                    this.editFormErrors = [];
+                    
+                    if (!this.editForm.name || !this.editForm.name.trim()) {
+                        this.editFormErrors.push({ field: 'name', message: '请输入药品名称' });
+                    }
+                    
+                    if (!this.editForm.dosagePerTime || this.editForm.dosagePerTime <= 0) {
+                        this.editFormErrors.push({ field: 'dosagePerTime', message: '每次用量必须大于0' });
+                    }
+                    
+                    if (!this.editForm.frequency || this.editForm.frequency < 1 || this.editForm.frequency > 6) {
+                        this.editFormErrors.push({ field: 'frequency', message: '每日次数应在1-6次之间' });
+                    }
+                    
+                    if (this.editForm.reminderTimes && this.editForm.reminderTimes.length !== this.editForm.frequency) {
+                        this.editFormErrors.push({ 
+                            field: 'reminderTimes', 
+                            message: `提醒时间数量(${this.editForm.reminderTimes.length}个)与每日次数(${this.editForm.frequency}次)不匹配` 
+                        });
+                    }
+                    
+                    return this.editFormErrors.length === 0;
+                },
+
+                async saveAddMedicine() {
+                    if (!this.validateAddForm()) {
+                        this.showToast('请修正表单中的错误');
+                        return;
+                    }
+                    
+                    if (this.addForm.reminderTimes.length !== this.addForm.frequency) {
+                        this.showToast('提醒时间与用药次数不匹配，请选择' + this.addForm.frequency + '个提醒时间');
+                        return;
+                    }
+                    
+                    try {
+                        const params = {
+                            medicineName: this.addForm.name,
+                            spec: this.addForm.spec || (this.addForm.perPackage + this.addForm.unit + '/盒'),
+                            dosagePerTime: this.addForm.dosagePerTime,
+                            unit: this.addForm.unit,
+                            frequency: this.addForm.frequency,
+                            pillsPerBox: this.addForm.perPackage,
+                            type: this.addForm.type,
+                            reminderTimes: this.addForm.reminderTimes,
+                            precautions: this.addForm.precautions,
+                            packages: this.addForm.packages,
+                            familyId: this.elderId,
+                            inputMethod: 'MANUAL'
+                        };
+
+                        const res = await axios.post('/api/medicine/add-for-family', params);
+                        if (res.data && res.data.code === 200) {
+                            this.showToast('添加成功');
+                            this.showAddModal = false;
+                            this.loadMedicines();
+                            this.loadAlerts();
+                        } else {
+                            this.showToast(res.data?.msg || '添加失败');
+                        }
+                    } catch (e) {
+                        console.error('添加失败', e);
+                        this.showToast('添加失败');
+                    }
+                },
+
+                openWizard() {
+                    this.wizardStep = 1;
+                    this.wizardData = {
+                        nameImageUrl: '',
+                        nameImageProcessing: false,
+                        recognizedName: '',
+                        ocrText: '',
+                        instructionImageUrl: '',
+                        instructionImageProcessing: false,
+                        recognizedInfo: null,
+                        finalInfo: {
+                            name: '',
+                            spec: '',
+                            dosagePerTime: 1,
+                            unit: '粒',
+                            frequency: 2,
+                            type: '',
+                            pillsPerBox: 30
+                        }
+                    };
+                    this.showWizardModal = true;
+                },
+
+                closeWizard() {
+                    this.showWizardModal = false;
+                    this.wizardStep = 1;
+                    this.wizardData = {
+                        nameImageUrl: '',
+                        nameImageProcessing: false,
+                        recognizedName: '',
+                        ocrText: '',
+                        instructionImageUrl: '',
+                        instructionImageProcessing: false,
+                        recognizedInfo: null,
+                        finalInfo: {
+                            name: '',
+                            spec: '',
+                            dosagePerTime: 1,
+                            unit: '粒',
+                            frequency: 2,
+                            type: '',
+                            pillsPerBox: 30
+                        }
+                    };
+                    this.loadMedicines();
+                },
+
+                nextWizardStep() {
+                    if (this.wizardStep === 1) {
+                        this.wizardData.finalInfo.name = this.wizardData.recognizedName;
+                    } else if (this.wizardStep === 2) {
+                        this.mergeRecognizedInfo();
+                    }
+
+                    if (this.wizardStep < 4) {
+                        this.wizardStep++;
+                    }
+                },
+
+                prevWizardStep() {
+                    if (this.wizardStep > 1) {
+                        this.wizardStep--;
+                    }
+                },
+
+                mergeRecognizedInfo() {
+                    if (this.wizardData.recognizedInfo) {
+                        const info = this.wizardData.recognizedInfo;
+                        if (info.spec) this.wizardData.finalInfo.spec = info.spec;
+                        if (info.dosagePerTime) this.wizardData.finalInfo.dosagePerTime = info.dosagePerTime;
+                        if (info.unit) this.wizardData.finalInfo.unit = info.unit;
+                        if (info.frequency) this.wizardData.finalInfo.frequency = info.frequency;
+                        if (info.medicineType) this.wizardData.finalInfo.type = info.medicineType;
+                        if (info.pillsPerBox) this.wizardData.finalInfo.pillsPerBox = info.pillsPerBox;
+                        if (info.name && !this.wizardData.finalInfo.name) {
+                            this.wizardData.finalInfo.name = info.name;
+                        }
+                    }
+                },
+
+                triggerWizardImage(step) {
+                    if (step === 1) {
+                        document.getElementById('wizard-name-img').click();
+                    } else {
+                        document.getElementById('wizard-instruction-img').click();
+                    }
+                },
+
+                async handleWizardNameImage(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    this.wizardData.nameImageProcessing = true;
+
+                    try {
+                        let processedFile = file;
+                        if (typeof compressImage === 'function' && file.size > 100 * 1024) {
+                            try {
+                                processedFile = await compressImage(file, { targetSize: 800 * 1024 });
+                                console.log(`[药品识图] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                            } catch (e) {
+                                console.warn('[药品识图] 压缩失败，使用原图:', e);
+                            }
+                        }
+
+                        const fd = new FormData();
+                        fd.append('file', processedFile);
+
+                        const uploadRes = await axios.post('/api/upload', fd);
+
+                        if (uploadRes.data && uploadRes.data.code === 200) {
+                            this.wizardData.nameImageUrl = uploadRes.data.url;
+
+                            const coverRes = await axios.post('/api/medicine/process/cover', {
+                                imageUrl: this.wizardData.nameImageUrl
+                            });
+
+                            if (coverRes.data && coverRes.data.code === 200) {
+                                this.wizardData.ocrText = coverRes.data.data.coverText || '';
+
+                                const nameMatch = this.wizardData.ocrText.match(/【药品名称】([^\n【]*)/);
+                                if (nameMatch) {
+                                    this.wizardData.recognizedName = nameMatch[1].trim();
+                                }
+
+                                if (this.wizardData.recognizedName) {
+                                    this.showToast('识别到：' + this.wizardData.recognizedName);
+                                }
+                            }
+                        } else {
+                            this.showToast('图片上传失败');
+                        }
+                    } catch (e) {
+                        console.error('识别失败', e);
+                        this.showToast('识别失败，请重试');
+                    }
+
+                    this.wizardData.nameImageProcessing = false;
+                    event.target.value = '';
+                },
+
+                async handleWizardInstructionImage(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    this.wizardData.instructionImageProcessing = true;
+
+                    try {
+                        let processedFile = file;
+                        if (typeof compressImage === 'function' && file.size > 100 * 1024) {
+                            try {
+                                processedFile = await compressImage(file, { targetSize: 800 * 1024 });
+                                console.log(`[说明书识图] 原始大小: ${(file.size / 1024).toFixed(1)}KB，压缩后: ${(processedFile.size / 1024).toFixed(1)}KB`);
+                            } catch (e) {
+                                console.warn('[说明书识图] 压缩失败，使用原图:', e);
+                            }
+                        }
+
+                        const fd = new FormData();
+                        fd.append('file', processedFile);
+
+                        const uploadRes = await axios.post('/api/upload', fd);
+
+                        if (uploadRes.data && uploadRes.data.code === 200) {
+                            this.wizardData.instructionImageUrl = uploadRes.data.url;
+
+                            const processRes = await axios.post('/api/medicine/process/instruction', {
+                                imageUrl: this.wizardData.instructionImageUrl,
+                                coverText: this.wizardData.ocrText
+                            });
+
+                            if (processRes.data && processRes.data.code === 200) {
+                                const data = processRes.data.data;
+                                this.wizardData.recognizedInfo = {
+                                    spec: data.spec,
+                                    dosagePerTime: data.dosagePerTime,
+                                    unit: data.unit,
+                                    frequency: data.frequency,
+                                    medicineType: data.medicineType,
+                                    pillsPerBox: data.pillsPerBox,
+                                    name: data.name
+                                };
+                                this.showToast('已识别用药信息');
+                            }
+                        } else {
+                            this.showToast('图片上传失败');
+                        }
+                    } catch (e) {
+                        console.error('识别失败', e);
+                        this.showToast('识别失败，请重试');
+                    }
+
+                    this.wizardData.instructionImageProcessing = false;
+                    event.target.value = '';
+                },
+
+                async confirmWizardSave() {
+                    if (!this.wizardData.finalInfo.name) {
+                        this.showToast('请输入药品名称');
+                        return;
+                    }
+
+                    try {
+                        const params = {
+                            medicineName: this.wizardData.finalInfo.name,
+                            spec: this.wizardData.finalInfo.spec,
+                            dosagePerTime: this.wizardData.finalInfo.dosagePerTime,
+                            unit: this.wizardData.finalInfo.unit,
+                            frequency: this.wizardData.finalInfo.frequency,
+                            type: this.wizardData.finalInfo.type,
+                            pillsPerBox: this.wizardData.finalInfo.pillsPerBox,
+                            nameImageUrl: this.wizardData.nameImageUrl,
+                            instructionImageUrl: this.wizardData.instructionImageUrl,
+                            familyId: this.elderId,
+                            inputMethod: 'OCR'
+                        };
+
+                        const res = await axios.post('/api/medicine/add-for-family', params);
+                        if (res.data && res.data.code === 200) {
+                            this.wizardStep = 4;
+                        } else {
+                            this.showToast(res.data?.msg || '保存失败');
+                        }
+                    } catch (e) {
+                        console.error('保存失败', e);
+                        this.showToast('保存失败');
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
+
